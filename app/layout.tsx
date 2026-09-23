@@ -31,7 +31,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <span className="text-[17px] font-bold tracking-tight text-brand">강사잇다</span>
           </header>
 
-          <main className="flex-1 px-4 pt-5 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+          {/* 아래 여백 = 하단 탭 높이(4rem) + 탭 윗선(1px) + 위쪽과 같은 여백(1.25rem).
+              이보다 작으면 맨 아래 내용이 하단 탭에 가려진다. */}
+          <main className="flex-1 px-4 pt-5 pb-[calc(4rem+1px+1.25rem+env(safe-area-inset-bottom))]">
             {children}
           </main>
 
