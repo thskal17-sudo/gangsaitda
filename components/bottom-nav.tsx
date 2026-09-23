@@ -44,23 +44,35 @@ export default function BottomNav() {
               <Link
                 href={tab.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
-                  isActive ? "text-brand" : "text-muted"
-                }`}
+                className="flex h-16 flex-col items-center justify-center gap-0.5"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.7}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-6 w-6"
-                  aria-hidden="true"
+                {/* 지금 보고 있는 탭은 연보라 알약 배경 + 진한 보라 아이콘,
+                    나머지는 배경 없이 회색. 색 하나에만 기대지 않게 한다. */}
+                <span
+                  className={`flex h-8 w-16 items-center justify-center rounded-badge transition-colors ${
+                    isActive ? "bg-brand/12 text-brand" : "text-muted"
+                  }`}
                 >
-                  {tab.icon}
-                </svg>
-                {tab.label}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={isActive ? 2.1 : 1.7}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-[22px] w-[22px]"
+                    aria-hidden="true"
+                  >
+                    {tab.icon}
+                  </svg>
+                </span>
+                <span
+                  className={`text-[11px] transition-colors ${
+                    isActive ? "font-bold text-brand" : "font-medium text-muted"
+                  }`}
+                >
+                  {tab.label}
+                </span>
               </Link>
             </li>
           );
