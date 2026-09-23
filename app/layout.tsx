@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_KR } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
+import TopNav from "@/components/top-nav";
 
 const plexKr = IBM_Plex_Sans_KR({
   weight: ["400", "500", "600", "700"],
@@ -21,24 +23,31 @@ export const viewport: Viewport = {
   themeColor: "#3d2a6b",
 };
 
+/*
+ * 화면 폭에 따라 두 가지 모양을 쓴다.
+ * - 휴대폰 (768px 미만): 390px 기준. 넓어도 가운데 430px 로 모으고, 메뉴는 하단 탭.
+ * - PC·태블릿 (768px 이상): 본문 최대 1080px, 메뉴는 위쪽 띠 오른쪽.
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={`${plexKr.variable} antialiased`}>
-      <body className="bg-bg font-sans text-ink">
-        {/* 강사 화면은 390px 기준. 넓은 화면에서는 가운데로 모아 휴대폰처럼 보이게 한다. */}
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col">
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center border-b border-line bg-bg/90 px-4 backdrop-blur">
-            <span className="text-[17px] font-bold tracking-tight text-brand">강사잇다</span>
-          </header>
+      <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink">
+        <header className="sticky top-0 z-10 mx-auto w-full max-w-[430px] shrink-0 border-b border-line bg-bg/90 backdrop-blur md:max-w-none">
+          <div className="mx-auto flex h-14 items-center justify-between px-4 md:h-16 md:max-w-[1080px] md:px-8">
+            <Link href="/" className="text-[17px] font-bold tracking-tight text-brand md:text-[19px]">
+              강사잇다
+            </Link>
+            <TopNav />
+          </div>
+        </header>
 
-          {/* 아래 여백 = 하단 탭 높이(4rem) + 탭 윗선(1px) + 위쪽과 같은 여백(1.25rem).
-              이보다 작으면 맨 아래 내용이 하단 탭에 가려진다. */}
-          <main className="flex-1 px-4 pt-5 pb-[calc(4rem+1px+1.25rem+env(safe-area-inset-bottom))]">
-            {children}
-          </main>
+        {/* 휴대폰 아래 여백 = 하단 탭 높이(4rem) + 탭 윗선(1px) + 위쪽과 같은 여백(1.25rem).
+            이보다 작으면 맨 아래 내용이 하단 탭에 가려진다. PC 에는 하단 탭이 없다. */}
+        <main className="mx-auto w-full max-w-[430px] flex-1 px-4 pt-5 pb-[calc(4rem+1px+1.25rem+env(safe-area-inset-bottom))] md:max-w-[1080px] md:px-8 md:pt-10 md:pb-16">
+          {children}
+        </main>
 
-          <BottomNav />
-        </div>
+        <BottomNav />
       </body>
     </html>
   );

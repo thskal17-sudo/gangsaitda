@@ -2,42 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { TABS, isTabActive } from "@/components/nav-tabs";
 
-/**
- * 하단 탭 메뉴.
- * 메뉴를 늘리거나 이름을 바꿀 때는 아래 TABS 배열만 고치면 된다.
- */
-const TABS = [
-  {
-    href: "/",
-    label: "홈",
-    icon: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
-  },
-  {
-    href: "/jobs",
-    label: "공고",
-    icon: (
-      <>
-        <rect x="3" y="7" width="18" height="13" rx="2" />
-        <path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7" />
-        <path d="M3 12h18" />
-      </>
-    ),
-  },
-];
-
+/** 휴대폰 화면의 하단 탭. PC(가로 768px 이상)에서는 숨기고 위쪽 메뉴를 쓴다. */
 export default function BottomNav() {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="주요 메뉴"
-      className="fixed bottom-0 left-1/2 z-20 w-full max-w-[430px] -translate-x-1/2 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-1/2 z-20 w-full max-w-[430px] -translate-x-1/2 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="flex">
         {TABS.map((tab) => {
-          const isActive =
-            tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+          const isActive = isTabActive(tab.href, pathname);
 
           return (
             <li key={tab.href} className="flex-1">

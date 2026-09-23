@@ -11,7 +11,7 @@ export default async function JobsPage() {
 
   return (
     <section>
-      <h1 className="text-[22px] font-bold leading-snug">공고</h1>
+      <h1 className="text-[22px] font-bold leading-snug md:text-[28px]">공고</h1>
       <p className="mt-1 text-sm text-muted">
         지원할 수 있는 공고 <span className="nums font-semibold text-ink">{jobs.length}</span>건
       </p>
@@ -23,7 +23,7 @@ export default async function JobsPage() {
           지금은 지원할 수 있는 공고가 없습니다.
         </p>
       ) : (
-        <ul className="mt-4 flex flex-col gap-3">
+        <ul className="mt-4 grid grid-cols-1 gap-3 md:mt-6 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
           {jobs.map((job) => (
             <li key={job.id}>
               <JobCard job={job} today={today} />

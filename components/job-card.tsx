@@ -22,7 +22,7 @@ function DeadlineBadge({ daysLeft }: { daysLeft: number }) {
 
 export default function JobCard({ job, today }: { job: Job; today: string }) {
   return (
-    <article className="rounded-card border border-line bg-white p-4">
+    <article className="flex h-full flex-col rounded-card border border-line bg-white p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="min-w-0 truncate text-[13px] font-medium text-muted">{job.organization}</p>
         <DeadlineBadge daysLeft={daysBetween(today, job.deadline)} />
@@ -32,7 +32,7 @@ export default function JobCard({ job, today }: { job: Job; today: string }) {
         {job.title}
       </h2>
 
-      <p className="nums mt-2 text-[13px] text-muted">
+      <p className="nums mt-auto pt-2 text-[13px] text-muted">
         {job.region} · {formatKoreanDate(job.deadline)} 마감
       </p>
     </article>

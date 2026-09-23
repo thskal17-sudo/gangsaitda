@@ -12,7 +12,8 @@ npm run dev
 ```
 
 브라우저에서 <http://localhost:3000> 을 엽니다.
-아래쪽에 **홈 / 공고** 탭 두 개가 보이고, 눌러서 화면이 바뀌면 정상입니다.
+휴대폰 폭에서는 **아래쪽**, PC에서는 **위쪽 오른쪽**에 **홈 / 공고** 메뉴가 보이고,
+눌러서 화면이 바뀌면 정상입니다.
 
 ## 폴더
 
@@ -20,9 +21,11 @@ npm run dev
 |---|---|
 | `app/page.tsx` | 홈 화면 |
 | `app/jobs/page.tsx` | 공고 화면 |
-| `app/layout.tsx` | 모든 화면을 감싸는 틀 (위쪽 띠, 하단 탭 위치) |
+| `app/layout.tsx` | 모든 화면을 감싸는 틀 (위쪽 띠, 본문 폭, 휴대폰/PC 구분) |
 | `app/globals.css` | 색·글꼴·모서리 값 (디자인 토큰) |
-| `components/bottom-nav.tsx` | 하단 탭 메뉴 |
+| `components/nav-tabs.tsx` | 메뉴 목록 (하단 탭과 위쪽 메뉴가 함께 씀) |
+| `components/bottom-nav.tsx` | 휴대폰 하단 탭 |
+| `components/top-nav.tsx` | PC 위쪽 메뉴 |
 | `components/job-card.tsx` | 공고 카드 한 장 |
 | `lib/jobs.ts` | 공고 데이터 (지금은 샘플) |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
