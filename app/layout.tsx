@@ -5,15 +5,20 @@ import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
 import TopNav from "@/components/top-nav";
 
+/*
+ * 한글 글꼴은 글자 묶음별로 잘게 나뉜 파일 수백 개로 되어 있다.
+ * 미리 받기(preload)를 켜두면 모든 화면이 처음 열릴 때 전부(약 2.4MB) 받으므로 끈다.
+ * 끄면 브라우저가 화면에 실제로 나온 글자에 필요한 파일만 받는다.
+ */
 const plexKr = IBM_Plex_Sans_KR({
   weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
+  preload: false,
   display: "swap",
   variable: "--font-plex-kr",
 });
 
 export const metadata: Metadata = {
-  title: "강사잇다",
+  title: { default: "강사잇다", template: "%s | 강사잇다" },
   description: "강사와 기관을 연결하는 구인구직 플랫폼",
 };
 

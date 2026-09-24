@@ -22,14 +22,17 @@ npm run dev
 | 위치 | 내용 |
 |---|---|
 | `app/page.tsx` | 홈 화면 |
-| `app/jobs/page.tsx` | 공고 화면 |
+| `app/jobs/page.tsx` | 공고 목록 화면 |
+| `app/jobs/[id]/page.tsx` | 공고 상세 화면 (회원 전용) |
 | `app/layout.tsx` | 모든 화면을 감싸는 틀 (위쪽 띠, 본문 폭, 휴대폰/PC 구분) |
 | `app/globals.css` | 색·글꼴·모서리 값 (디자인 토큰) |
 | `components/nav-tabs.tsx` | 메뉴 목록 (하단 탭과 위쪽 메뉴가 함께 씀) |
 | `components/bottom-nav.tsx` | 휴대폰 하단 탭 |
 | `components/top-nav.tsx` | PC 위쪽 메뉴 |
-| `components/job-card.tsx` | 공고 카드 한 장 |
+| `components/job-card.tsx` | 공고 카드 한 장, 남은 날짜 배지 |
+| `components/job-detail.tsx` | 상세 화면 조각 (요약, 지원 버튼, 회원 전용 안내) |
 | `lib/jobs.ts` | 공고 데이터 (지금은 샘플) |
+| `lib/member.ts` | 회원인지 확인 (지금은 항상 비회원) |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |
 
