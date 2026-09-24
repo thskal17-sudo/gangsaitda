@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { connection } from "next/server";
 import JobCard from "@/components/job-card";
 import { todayInSeoul } from "@/lib/date";
 import { getOpenJobs } from "@/lib/jobs";
+
+export const metadata: Metadata = { title: "공고" };
 
 export default async function JobsPage() {
   // 오늘 날짜로 D-day 를 세므로, 미리 만들어두지 않고 열 때마다 새로 그린다.

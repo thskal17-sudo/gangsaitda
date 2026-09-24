@@ -18,7 +18,7 @@ const plexKr = IBM_Plex_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "강사잇다",
+  title: { default: "강사잇다", template: "%s | 강사잇다" },
   description: "강사와 기관을 연결하는 구인구직 플랫폼",
 };
 
