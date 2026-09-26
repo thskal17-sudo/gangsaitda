@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { JobInput } from "@/lib/admin-job-schema";
 import { seoulDateOf } from "@/lib/date";
 import { getCurrentMember } from "@/lib/member";
 import { createClient } from "@/lib/supabase/server";
@@ -45,12 +46,15 @@ export type AdminJob = {
   organization?: string;
   region?: string;
   deadline?: string;
+  /** 숨긴 공고 (사이트에는 안 보이고 관리자 화면에만 보임) */
+  hidden: boolean;
 };
 
 type AdminJobRow = {
   id: number;
   title: string;
   created_at: string;
+  hidden_at: string | null;
   job_details: { organization: string; region: string; deadline: string } | null;
 };
 
@@ -59,7 +63,7 @@ export async function getAllJobsForAdmin(): Promise<AdminJob[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("jobs")
-    .select("id, title, created_at, job_details(organization, region, deadline)")
+    .select("id, title, created_at, hidden_at, job_details(organization, region, deadline)")
     .order("id", { ascending: false });
   if (error) throw new Error(`공고를 불러오지 못했습니다 (관리자 목록): ${error.message}`);
 
@@ -70,5 +74,62 @@ export async function getAllJobsForAdmin(): Promise<AdminJob[]> {
     organization: row.job_details?.organization,
     region: row.job_details?.region,
     deadline: row.job_details?.deadline,
+    hidden: row.hidden_at !== null,
   }));
+}
+
+type EditRow = {
+  id: number;
+  title: string;
+  hidden_at: string | null;
+  job_details: {
+    organization: string;
+    region: string;
+    deadline: string;
+    schedule: string;
+    target: string | null;
+    headcount: number | null;
+    description: string;
+    qualifications: string | null;
+    documents: string | null;
+    source_url: string | null;
+    apply_url: string | null;
+    apply_email: string | null;
+  } | null;
+};
+
+/** 수정 화면에 채워 넣을 공고 하나 (숨긴 공고, 상세가 없는 공고도). 없으면 null. */
+export async function getJobForEdit(id: string): Promise<{ id: string; hidden: boolean; values: JobInput } | null> {
+  if (!/^\d{1,15}$/.test(id)) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("id, title, hidden_at, job_details(*)")
+    .eq("id", Number(id))
+    .maybeSingle();
+  if (error) throw new Error(`공고를 불러오지 못했습니다 (수정): ${error.message}`);
+  if (!data) return null;
+
+  const row = data as unknown as EditRow;
+  const d = row.job_details;
+  return {
+    id: String(row.id),
+    hidden: row.hidden_at !== null,
+    values: {
+      title: row.title,
+      organization: d?.organization ?? "",
+      region: d?.region ?? "",
+      deadline: d?.deadline ?? "",
+      schedule: d?.schedule ?? "",
+      target: d?.target ?? "",
+      headcount: d?.headcount ? String(d.headcount) : "",
+      description: d?.description ?? "",
+      qualifications: d?.qualifications ?? "",
+      documents: d?.documents ?? "",
+      sourceUrl: d?.source_url ?? "",
+      applyUrl: d?.apply_url ?? "",
+      applyEmail: d?.apply_email ?? "",
+    },
+  };
 }

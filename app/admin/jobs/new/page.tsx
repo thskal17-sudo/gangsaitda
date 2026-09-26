@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import JobForm from "@/components/admin-job-form";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin } from "@/lib/admin";
-import JobForm from "./job-form";
 
 export const metadata: Metadata = { title: "공고 등록", robots: { index: false, follow: false } };
 
