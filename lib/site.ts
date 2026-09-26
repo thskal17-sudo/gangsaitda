@@ -2,8 +2,8 @@
  * 사이트 곳곳에 보여주는 운영 정보. 바뀌면 여기만 고친다.
  */
 
-/** 비밀번호를 잊은 회원이 연락할 곳 (사이트에 공개됨). 정해지기 전에는 null. */
-export const SUPPORT_CONTACT: string | null = null;
+/** 비밀번호를 잊은 회원이 연락할 곳 (사이트에 공개됨). 운영자 이메일과 같다 (임시). 정해지지 않았으면 null. */
+export const SUPPORT_CONTACT: string | null = "thskal17@gmail.com";
 
 /**
  * 운영자 정보. 사이트 맨 아래(푸터)에 공개된다.

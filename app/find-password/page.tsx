@@ -29,7 +29,13 @@ export default function FindPasswordPage() {
         <div className="rounded-control bg-bg px-4 py-4">
           <p className="text-sm text-muted">문의처</p>
           <p className="mt-1 text-[17px] font-bold tracking-tight break-all">
-            {SUPPORT_CONTACT ?? "준비 중입니다"}
+            {SUPPORT_CONTACT?.includes("@") ? (
+              <a href={`mailto:${SUPPORT_CONTACT}`} className="text-brand underline-offset-2 hover:underline">
+                {SUPPORT_CONTACT}
+              </a>
+            ) : (
+              (SUPPORT_CONTACT ?? "준비 중입니다")
+            )}
           </p>
         </div>
         <Link
