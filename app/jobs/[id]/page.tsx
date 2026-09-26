@@ -65,13 +65,13 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
             <DeadlineBadge daysLeft={daysLeft} />
           </div>
         )}
-        <h1 className="text-[22px] leading-snug font-bold md:text-[28px]">{job.title}</h1>
+        <h1 className="text-[24px] leading-snug font-bold tracking-tight md:text-[30px]">{job.title}</h1>
       </header>
 
       {detail && daysLeft !== null ? (
         /* 휴대폰: 요약 → 본문 순서로 한 줄. PC: 왼쪽 본문, 오른쪽 요약(스크롤해도 따라옴). */
         <div className="mt-5 grid gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
-          <aside className="rounded-card border border-line bg-white p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
+          <aside className="rounded-card bg-white p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
             <FactList
               facts={[
                 { label: "지역", value: detail.region },

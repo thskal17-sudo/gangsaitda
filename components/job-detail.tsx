@@ -25,8 +25,8 @@ export function FactList({ facts }: { facts: Fact[] }) {
 /** 제목이 있는 흰 카드 한 칸 (상세 내용, 지원 자격 등). */
 export function TextSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-card border border-line bg-white p-5 md:p-6">
-      <h2 className="text-base font-bold text-ink">{title}</h2>
+    <section className="rounded-card bg-white p-5 md:p-6">
+      <h2 className="text-[17px] font-bold tracking-tight text-ink">{title}</h2>
       <div className="mt-2.5 text-[15px] leading-relaxed text-ink">{children}</div>
     </section>
   );
@@ -87,10 +87,10 @@ export function ApplyActions({ job }: { job: JobDetail }) {
               <a
                 href={action.href}
                 {...(action.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                className={`flex h-12 items-center justify-center rounded-control text-[15px] font-semibold transition-colors ${
+                className={`flex h-14 items-center justify-center rounded-control text-[16px] font-semibold transition-colors ${
                   index === 0
                     ? "bg-brand text-white hover:bg-brand/90"
-                    : "border border-line bg-white text-ink hover:border-brand/40"
+                    : "bg-bg text-ink hover:bg-line"
                 }`}
               >
                 {action.label}
@@ -146,7 +146,7 @@ export function MembersOnlyNotice({ next }: { next: string }) {
   const query = `?next=${encodeURIComponent(next)}`;
 
   return (
-    <section className="rounded-card border border-line bg-white p-6 text-center md:p-10">
+    <section className="rounded-card bg-white p-6 text-center md:p-10">
       <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-badge bg-brand/12 text-brand">
         <svg
           viewBox="0 0 24 24"
@@ -170,7 +170,7 @@ export function MembersOnlyNotice({ next }: { next: string }) {
       </p>
       <Link
         href={`/signup${query}`}
-        className="mx-auto mt-5 flex h-12 w-full max-w-xs items-center justify-center rounded-control bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand/90"
+        className="mx-auto mt-6 flex h-14 w-full max-w-xs items-center justify-center rounded-control bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand/90"
       >
         무료 회원가입하고 자세히 보기
       </Link>

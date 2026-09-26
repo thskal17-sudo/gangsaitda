@@ -16,7 +16,7 @@ export default function TopNav() {
 
           return (
             <li key={tab.href}>
-              {/* 하단 탭과 같은 표시 방식: 지금 보는 메뉴는 연보라 알약 + 굵은 보라 글씨 */}
+              {/* 하단 탭과 같은 표시 방식: 지금 보는 메뉴는 연파랑 알약 + 굵은 파란 글씨 */}
               <Link
                 href={tab.href}
                 aria-current={isActive ? "page" : undefined}

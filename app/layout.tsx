@@ -1,23 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans_KR } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
+// 글꼴: Pretendard (무료, 상업적 이용 가능). 화면에 나온 글자에 필요한 조각만 받는다.
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
 import HeaderAuth from "@/components/header-auth";
 import TopNav from "@/components/top-nav";
 import { getCurrentMember } from "@/lib/member";
-
-/*
- * 한글 글꼴은 글자 묶음별로 잘게 나뉜 파일 수백 개로 되어 있다.
- * 미리 받기(preload)를 켜두면 모든 화면이 처음 열릴 때 전부(약 2.4MB) 받으므로 끈다.
- * 끄면 브라우저가 화면에 실제로 나온 글자에 필요한 파일만 받는다.
- */
-const plexKr = IBM_Plex_Sans_KR({
-  weight: ["400", "500", "600", "700"],
-  preload: false,
-  display: "swap",
-  variable: "--font-plex-kr",
-});
 
 export const metadata: Metadata = {
   title: { default: "강사잇다", template: "%s | 강사잇다" },
@@ -27,7 +17,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#3d2a6b",
+  themeColor: "#ffffff",
 };
 
 /*
@@ -40,12 +30,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const member = await getCurrentMember();
 
   return (
-    <html lang="ko" className={`${plexKr.variable} antialiased`}>
+    <html lang="ko" className="antialiased">
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink">
-        <header className="sticky top-0 z-10 mx-auto w-full max-w-[430px] shrink-0 border-b border-line bg-bg/90 backdrop-blur md:max-w-none">
+        <header className="sticky top-0 z-10 mx-auto w-full max-w-[430px] shrink-0 bg-white/90 backdrop-blur md:max-w-none">
           <div className="mx-auto flex h-14 items-center justify-between px-4 md:h-16 md:max-w-[1080px] md:px-8">
-            <Link href="/" className="text-[17px] font-bold tracking-tight text-brand md:text-[19px]">
-              강사잇다
+            {/* 로고 그림 (public/logo.png, 배경 투명). 글자 대신 그림이라 로고 모양이 그대로 나온다. */}
+            <Link href="/" aria-label="강사잇다 홈" className="flex items-center">
+              <Image
+                src="/logo.png"
+                alt="강사잇다"
+                width={833}
+                height={205}
+                loading="eager"
+                fetchPriority="high"
+                className="h-[22px] w-auto md:h-[26px]"
+              />
             </Link>
             <div className="flex items-center gap-2 md:gap-4">
               <TopNav />

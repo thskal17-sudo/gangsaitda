@@ -28,7 +28,7 @@ export default function HeaderAuth({ isMember }: { isMember: boolean }) {
   return (
     <Link
       href={`/login${query}`}
-      className="flex h-9 items-center rounded-control border border-line bg-white px-3.5 text-sm font-semibold text-brand transition-colors hover:border-brand/40"
+      className="flex h-9 items-center rounded-control bg-brand/10 px-3.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/15"
     >
       로그인
     </Link>

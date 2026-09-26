@@ -24,7 +24,7 @@ export default function BottomNav() {
                 aria-current={isActive ? "page" : undefined}
                 className="flex h-16 flex-col items-center justify-center gap-0.5"
               >
-                {/* 지금 보고 있는 탭은 연보라 알약 배경 + 진한 보라 아이콘,
+                {/* 지금 보고 있는 탭은 연파랑 알약 배경 + 파란 아이콘,
                     나머지는 배경 없이 회색. 색 하나에만 기대지 않게 한다. */}
                 <span
                   className={`flex h-8 w-16 items-center justify-center rounded-badge transition-colors ${

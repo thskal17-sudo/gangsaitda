@@ -17,9 +17,9 @@ export function AuthCard({
 }) {
   return (
     <div className="mx-auto w-full max-w-[420px] md:pt-4">
-      <h1 className="text-[22px] font-bold text-ink md:text-[26px]">{title}</h1>
+      <h1 className="text-[26px] font-bold tracking-tight text-ink md:text-[30px]">{title}</h1>
       <p className="mt-1.5 text-sm leading-relaxed text-muted">{description}</p>
-      <div className="mt-5 rounded-card border border-line bg-white p-5 md:p-7">{children}</div>
+      <div className="mt-5 rounded-card bg-white p-5 md:p-7">{children}</div>
       <p className="mt-5 text-center text-sm text-muted">{footer}</p>
     </div>
   );
@@ -44,8 +44,8 @@ export function Field({
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`mt-1.5 block h-12 w-full rounded-control border bg-white px-4 text-[16px] text-ink transition-colors outline-none placeholder:text-muted/60 focus:border-brand focus:ring-2 focus:ring-brand/15 ${
-          error ? "border-warn" : "border-line"
+        className={`mt-2 block h-14 w-full rounded-control border-2 bg-bg px-4 text-[16px] text-ink transition-colors outline-none placeholder:text-muted/70 focus:border-brand focus:bg-white ${
+          error ? "border-warn" : "border-transparent"
         }`}
         {...inputProps}
       />
@@ -64,13 +64,13 @@ export function Field({
   );
 }
 
-/** 보라색 제출 버튼. 처리 중에는 눌리지 않게 한다. */
+/** 파란색 제출 버튼. 처리 중에는 눌리지 않게 한다. */
 export function SubmitButton({ pending, children }: { pending: boolean; children: ReactNode }) {
   return (
     <button
       type="submit"
       disabled={pending}
-      className="flex h-12 w-full items-center justify-center rounded-control bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-wait disabled:opacity-60"
+      className="flex h-14 w-full items-center justify-center rounded-control bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-wait disabled:opacity-60"
     >
       {pending ? "잠시만 기다려 주세요…" : children}
     </button>
