@@ -8,3 +8,6 @@ alter table public.instructor_requests
   drop constraint if exists instructor_requests_contact_email_check,
   add constraint instructor_requests_contact_email_check
     check (char_length(contact_email) between 3 and 100 and contact_email like '%_@_%');
+
+-- Supabase에게 새 표·함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+notify pgrst, 'reload schema';

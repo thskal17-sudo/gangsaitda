@@ -18,3 +18,6 @@ alter table public.job_details
 
 comment on column public.job_details.apply_url is '지원서 링크. 지원서 링크·이메일 중 하나 이상 필수';
 comment on column public.job_details.apply_email is '지원 이메일. 지원서 링크·이메일 중 하나 이상 필수';
+
+-- Supabase에게 새 표·함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+notify pgrst, 'reload schema';

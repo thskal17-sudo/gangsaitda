@@ -21,3 +21,6 @@ $$;
 
 revoke execute on function public.today_job_titles(date) from public;
 grant execute on function public.today_job_titles(date) to anon, authenticated;
+
+-- Supabase에게 새 표·함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+notify pgrst, 'reload schema';

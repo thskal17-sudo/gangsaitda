@@ -40,3 +40,6 @@ revoke all on public.instructor_requests from anon, authenticated;
 grant insert (org_name, org_type, region, contact_name, contact_phone, contact_email,
               subject, schedule, target, headcount, budget, message)
   on public.instructor_requests to anon, authenticated;
+
+-- Supabase에게 새 표·함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+notify pgrst, 'reload schema';
