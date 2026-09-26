@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Field, FormError, SubmitButton, TextAreaField } from "@/components/auth-form";
-import { createJob } from "@/lib/admin-job-actions";
-import { type JobInput, jobSchema } from "@/lib/admin-job-schema";
+import { createJob, updateJob } from "@/lib/admin-job-actions";
+import { type JobInput, jobSchema, newJobSchema } from "@/lib/admin-job-schema";
 import { todayInSeoul } from "@/lib/date";
 
 const EMPTY: JobInput = {
@@ -25,24 +25,32 @@ const EMPTY: JobInput = {
   applyEmail: "",
 };
 
-export default function JobForm() {
+/**
+ * 공고 입력 양식. 공고 등록과 공고 수정이 함께 쓴다.
+ * job 을 넘기면 '수정' — 칸을 그 공고 내용으로 채우고, 저장하면 그 공고를 고친다.
+ */
+export default function JobForm({ job }: { job?: { id: string; values: JobInput } }) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string>();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting, isSubmitSuccessful },
-  } = useForm<JobInput>({ resolver: zodResolver(jobSchema), defaultValues: EMPTY });
+  } = useForm<JobInput>({
+    // 새 공고만 '마감일이 지났어요'를 확인한다 (이미 마감된 공고도 고칠 수는 있게).
+    resolver: zodResolver(job ? jobSchema : newJobSchema),
+    defaultValues: job?.values ?? EMPTY,
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(undefined);
-    const result = await createJob(values);
+    const result = job ? await updateJob(job.id, values) : await createJob(values);
     if ("error" in result) {
       setServerError(result.error);
       throw new Error(result.error); // 저장 실패는 '성공'으로 치지 않는다 (버튼 다시 누를 수 있게).
     }
-    // 목록으로 돌아가 방금 올린 공고를 알려준다.
-    router.push(`/admin?created=${result.id}`);
+    // 목록으로 돌아가 방금 올리거나 고친 공고를 알려준다.
+    router.push(job ? `/admin?updated=${result.id}` : `/admin?created=${result.id}`);
   });
 
   return (
@@ -58,7 +66,7 @@ export default function JobForm() {
         />
         <Field id="organization" label="기관명" placeholder="예) 해운대초등학교" error={errors.organization?.message} {...register("organization")} />
         <Field id="region" label="지역" placeholder="예) 부산 해운대구" error={errors.region?.message} {...register("region")} />
-        <Field id="deadline" label="마감일" type="date" min={todayInSeoul()} error={errors.deadline?.message} {...register("deadline")} />
+        <Field id="deadline" label="마감일" type="date" min={job ? undefined : todayInSeoul()} error={errors.deadline?.message} {...register("deadline")} />
       </Section>
 
       <Section title="수업">
@@ -122,7 +130,7 @@ export default function JobForm() {
       </Section>
 
       <FormError message={serverError} />
-      <SubmitButton pending={isSubmitting || isSubmitSuccessful}>공고 올리기</SubmitButton>
+      <SubmitButton pending={isSubmitting || isSubmitSuccessful}>{job ? "고친 내용 저장" : "공고 올리기"}</SubmitButton>
     </form>
   );
 }

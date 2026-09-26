@@ -22,8 +22,7 @@ export const jobSchema = z.object({
   deadline: z
     .string()
     .min(1, "마감일을 골라 주세요.")
-    .refine((value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)), "마감일을 확인해 주세요.")
-    .refine((value) => value >= todayInSeoul(), "마감일이 이미 지났어요."),
+    .refine((value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)), "마감일을 확인해 주세요."),
   schedule: required("수업 일정", 500),
   target: optional("수업 대상", 200),
   headcount: z
@@ -43,3 +42,12 @@ export const jobSchema = z.object({
 });
 
 export type JobInput = z.infer<typeof jobSchema>;
+
+/**
+ * 새 공고는 마감일이 오늘 이후여야 한다.
+ * (고칠 때는 이미 마감된 공고의 다른 칸도 고칠 수 있게 이 확인을 하지 않는다.)
+ */
+export const newJobSchema = jobSchema.refine((v) => v.deadline === "" || v.deadline >= todayInSeoul(), {
+  message: "마감일이 이미 지났어요.",
+  path: ["deadline"],
+});
