@@ -1,22 +1,22 @@
 -- 강사잇다 · 관리자 화면에서 공고 수정·숨기기
 -- admins.sql, admin-job-create.sql 을 먼저 실행한 뒤, Supabase SQL Editor 에 통째로 붙여넣고 Run 을 한 번 누릅니다.
--- 두 번 실행하면 "already exists" 오류가 납니다. 이미 만든 것이므로 괜찮습니다.
+-- 여러 번 실행해도 괜찮습니다 (이미 있는 것은 새로 덮어씁니다).
 --
 -- 숨기기: 공고를 지우지 않고 사이트에서만 안 보이게 합니다. 언제든 다시 올릴 수 있습니다.
---   jobs 표에 '숨긴 시각(hidden_at)' 칸을 더합니다. 비어 있으면 보이는 공고, 시각이 적혀 있으면 숨긴 공고입니다.
+--   jobs 표에 숨긴 시각(hidden_at) 칸을 더합니다. 비어 있으면 보이는 공고, 시각이 적혀 있으면 숨긴 공고입니다.
 --   숨긴 공고는 비회원·회원 누구에게도 나오지 않고, 관리자 화면에서만 보입니다.
 
 -- 1) 숨긴 시각 칸
-alter table public.jobs add column hidden_at timestamptz;
+alter table public.jobs add column if not exists hidden_at timestamptz;
 comment on column public.jobs.hidden_at is '숨긴 시각. 비어 있으면 사이트에 보이고, 적혀 있으면 관리자에게만 보인다.';
 
 -- 2) 회원이 읽는 규칙: 숨긴 공고는 빼고. 관리자는 전부.
-drop policy "회원은 공고 제목을 읽는다" on public.jobs;
+drop policy if exists "회원은 공고 제목을 읽는다" on public.jobs;
 create policy "회원은 공고 제목을 읽는다"
   on public.jobs for select to authenticated
   using (hidden_at is null or (select public.is_admin()));
 
-drop policy "회원은 공고 상세를 읽는다" on public.job_details;
+drop policy if exists "회원은 공고 상세를 읽는다" on public.job_details;
 create policy "회원은 공고 상세를 읽는다"
   on public.job_details for select to authenticated
   using (
@@ -24,10 +24,13 @@ create policy "회원은 공고 상세를 읽는다"
     or (select public.is_admin())
   );
 
--- 3) 비회원용 함수들도 숨긴 공고는 빼고 (내용은 전과 같고 'hidden_at is null' 만 더함)
+-- 3) 비회원용 함수들도 숨긴 공고는 빼고 (내용은 전과 같고 hidden_at is null 조건만 더함)
 create or replace function public.open_job_titles(today date)
 returns table (id bigint, title text)
-language sql stable security definer set search_path = ''
+language sql
+stable
+security definer
+set search_path = ''
 as $$
   select j.id, j.title
   from public.jobs j
@@ -38,7 +41,10 @@ $$;
 
 create or replace function public.job_title(job_id bigint)
 returns table (id bigint, title text)
-language sql stable security definer set search_path = ''
+language sql
+stable
+security definer
+set search_path = ''
 as $$
   select j.id, j.title
   from public.jobs j
@@ -48,7 +54,10 @@ $$;
 
 create or replace function public.today_job_count(today date)
 returns integer
-language sql stable security definer set search_path = ''
+language sql
+stable
+security definer
+set search_path = ''
 as $$
   select count(*)::integer
   from public.jobs j
@@ -60,7 +69,10 @@ $$;
 
 create or replace function public.today_job_titles(today date)
 returns table (id bigint, title text)
-language sql stable security definer set search_path = ''
+language sql
+stable
+security definer
+set search_path = ''
 as $$
   select j.id, j.title
   from public.jobs j
@@ -72,7 +84,7 @@ as $$
 $$;
 
 -- 4) 공고 고치기 (관리자만). 칸 규칙은 admin_create_job 과 같다. 상세가 아직 없는 공고면 새로 만든다.
-create function public.admin_update_job(
+create or replace function public.admin_update_job(
   p_id             bigint,
   p_title          text,
   p_organization   text,
@@ -131,7 +143,7 @@ end;
 $$;
 
 -- 5) 숨기기 / 다시 올리기 (관리자만)
-create function public.admin_set_job_hidden(p_id bigint, p_hidden boolean)
+create or replace function public.admin_set_job_hidden(p_id bigint, p_hidden boolean)
 returns void
 language plpgsql
 security definer
@@ -156,5 +168,5 @@ grant execute on function public.admin_update_job(bigint, text, text, text, date
 revoke execute on function public.admin_set_job_hidden(bigint, boolean) from public, anon;
 grant execute on function public.admin_set_job_hidden(bigint, boolean) to authenticated;
 
--- Supabase에게 바뀐 표·새 함수를 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+-- Supabase에게 바뀐 표·새 함수를 알리기 (이게 없으면 schema cache 오류가 날 수 있음)
 notify pgrst, 'reload schema';
