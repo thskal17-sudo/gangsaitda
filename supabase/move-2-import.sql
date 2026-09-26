@@ -9,26 +9,43 @@
 
 begin;
 
-create temp table src on commit drop as
-with pasted as (select btrim($data$
-[[여기를 지우고 붙여넣기]]
-$data$, E' \n\r\t') as t)
-select case
-         -- 'Copy as JSON' 으로 복사한 경우: [{"옮길_데이터": "..."}]
-         when left(t, 1) = '[' then (select value::jsonb from jsonb_each_text((t::jsonb) -> 0) limit 1)
-         -- 칸 내용을 그대로 복사한 경우: {"jobs": [...], ...}
-         else t::jsonb
-       end as d
-from pasted;
+create temp table src (d jsonb) on commit drop;
 
--- 붙여넣은 내용이 알맞은지 확인 (아니면 여기서 멈추고 아무것도 넣지 않음)
-do $check$
+-- 붙여넣은 내용을 알아본다. 어떤 방식으로 복사했든(칸 복사, Copy as JSON, [[ ]] 괄호가 남은 경우)
+-- 겉을 한 겹씩 벗겨 jobs·job_details·instructor_requests 가 든 덩어리를 찾는다. 못 찾으면 여기서 멈춘다.
+do $unwrap$
+declare
+  t text := btrim($data$
+[[여기를 지우고 붙여넣기]]
+$data$, E' \n\r\t');
+  v jsonb;
 begin
-  if not exists (select 1 from src where jsonb_typeof(d) = 'object' and d ? 'jobs' and d ? 'job_details' and d ? 'instructor_requests') then
-    raise exception '붙여넣은 내용을 알아볼 수 없습니다. move-1-export.sql 결과를 빠짐없이 붙여넣었는지 확인해 주세요.';
-  end if;
+  begin
+    v := t::jsonb;
+  exception when others then
+    raise exception '붙여넣은 내용이 잘렸거나 아직 붙여넣지 않았습니다. move-1-export.sql 결과를 처음부터 끝까지 붙여넣어 주세요.';
+  end;
+  for i in 1..6 loop
+    if jsonb_typeof(v) = 'object' and v ? 'jobs' and v ? 'job_details' and v ? 'instructor_requests' then
+      insert into src values (v);
+      return;
+    elsif jsonb_typeof(v) = 'array' and jsonb_array_length(v) > 0 then
+      v := v -> 0;                                        -- [ ... ] 벗기기
+    elsif jsonb_typeof(v) = 'object' and (select count(*) from jsonb_object_keys(v)) = 1 then
+      v := (select value from jsonb_each(v));             -- {"옮길_데이터": ...} 벗기기
+    elsif jsonb_typeof(v) = 'string' then
+      begin
+        v := (v #>> '{}')::jsonb;                         -- "{...}" 글자를 JSON 으로
+      exception when others then
+        exit;
+      end;
+    else
+      exit;
+    end if;
+  end loop;
+  raise exception '붙여넣은 내용을 알아볼 수 없습니다. move-1-export.sql 결과를 빠짐없이 붙여넣었는지 확인해 주세요.';
 end
-$check$;
+$unwrap$;
 
 insert into public.jobs (id, title, created_at, hidden_at) overriding system value
 select id, title, created_at, hidden_at
