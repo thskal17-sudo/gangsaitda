@@ -25,3 +25,18 @@ export const OPERATOR = {
   /** 이메일 (임시) */
   email: "thskal17@gmail.com",
 };
+
+/** 개인정보처리방침(/privacy)에 들어가는 값 */
+export const PRIVACY = {
+  /** 개인정보 보호책임자 (대표자가 맡음) */
+  officer: `${OPERATOR.representative} (대표자)`,
+  /** 보호책임자 연락처 */
+  officerEmail: OPERATOR.email,
+  /** 시행일 */
+  effectiveDate: "2026년 10월 1일",
+  /**
+   * 회원 정보가 저장되는 Supabase 데이터베이스의 위치 (Supabase → Project Settings → General → Region).
+   * 예: "일본 (도쿄)", "대한민국 (서울)"
+   */
+  databaseRegion: "확인 필요",
+};

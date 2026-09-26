@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
 type Terms = { items: string; purpose: string; retention: string; refusal: string };
@@ -37,6 +38,9 @@ export default function PrivacyConsent({
           <dd>{terms.retention}</dd>
         </dl>
         <p className="mt-2 leading-relaxed">{terms.refusal}</p>
+        <Link href="/privacy" target="_blank" className="mt-2 inline-block font-medium text-brand underline underline-offset-2">
+          개인정보처리방침 전체 보기
+        </Link>
       </details>
 
       {error && (
