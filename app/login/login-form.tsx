@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Field, FormError, SubmitButton } from "@/components/auth-form";
@@ -44,6 +45,16 @@ export default function LoginForm({ next }: { next: string }) {
 
       <FormError message={serverError} />
       <SubmitButton pending={isSubmitting}>로그인</SubmitButton>
+
+      <p className="flex items-center justify-center gap-3 text-sm text-muted">
+        <Link href="/find-email" className="hover:text-ink">
+          이메일 찾기
+        </Link>
+        <span aria-hidden="true" className="h-3 w-px bg-line" />
+        <Link href="/find-password" className="hover:text-ink">
+          비밀번호 찾기
+        </Link>
+      </p>
     </form>
   );
 }

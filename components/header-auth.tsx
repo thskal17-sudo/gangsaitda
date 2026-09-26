@@ -13,8 +13,8 @@ import { logout } from "@/lib/auth-actions";
 export default function HeaderAuth({ isMember }: { isMember: boolean }) {
   const pathname = usePathname();
 
-  // 가입·로그인 화면에서는 같은 곳으로 가는 버튼이라 숨긴다.
-  if (pathname === "/login" || pathname === "/signup") return null;
+  // 가입·로그인·계정 찾기 화면에서는 같은 곳으로 가는 버튼이라 숨긴다.
+  if (["/login", "/signup", "/find-email", "/find-password"].includes(pathname)) return null;
 
   if (isMember) {
     return (
