@@ -64,6 +64,46 @@ export function Field({
   );
 }
 
+/** 여러 줄 입력칸 (요청 사항 등). 모양은 Field 와 같다. */
+export function TextAreaField({
+  id,
+  label,
+  hint,
+  error,
+  ...textareaProps
+}: { id: string; label: string; hint?: string; error?: string } & ComponentProps<"textarea">) {
+  const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-semibold text-ink">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        rows={4}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+        className={`mt-2 block w-full resize-y rounded-control border-2 bg-bg px-4 py-3.5 text-[16px] leading-relaxed text-ink transition-colors outline-none placeholder:text-muted/70 focus:border-brand focus:bg-white ${
+          error ? "border-warn" : "border-transparent"
+        }`}
+        {...textareaProps}
+      />
+      {error ? (
+        <p id={`${id}-error`} className="mt-1.5 text-sm text-warn">
+          {error}
+        </p>
+      ) : (
+        hint && (
+          <p id={`${id}-hint`} className="mt-1.5 text-xs text-muted">
+            {hint}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
 /** 파란색 제출 버튼. 처리 중에는 눌리지 않게 한다. */
 export function SubmitButton({ pending, children }: { pending: boolean; children: ReactNode }) {
   return (
