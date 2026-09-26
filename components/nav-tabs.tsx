@@ -31,7 +31,7 @@ export const TABS = [
   },
   {
     href: "/request",
-    label: "강사섭외의뢰",
+    label: "강사섭외",
     icon: (
       <>
         <path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16" />
