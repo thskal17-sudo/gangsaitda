@@ -40,7 +40,7 @@ export type JobDetail = Job & {
   qualifications?: string;
   /** 제출 서류. 예: "이력서, 자격증 사본" */
   documents?: string;
-  /** 지원 방법 — 둘 중 하나 이상 */
+  /** 지원 방법 (없으면 원문 공고에서 확인하도록 안내한다) */
   applyUrl?: string;
   applyEmail?: string;
 };

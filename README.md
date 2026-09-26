@@ -43,7 +43,8 @@ npm run dev
 | `proxy.ts` | 화면을 열 때마다 로그인 유지 기간을 연장 |
 | `supabase/members.sql` | 회원 정보 표를 만드는 SQL (Supabase SQL Editor 에 붙여넣음) |
 | `supabase/jobs.sql` | 공고 표 두 개(jobs, job_details)를 만드는 SQL |
-| `supabase/jobs-change-1.sql` | 공고 표에서 강사료·전화번호 칸 없애기 (jobs.sql 을 이미 실행한 경우만) |
+| `supabase/jobs-change-1.sql` | 공고 표에서 강사료·전화번호 칸 없애기 (옛 jobs.sql 을 실행한 경우만) |
+| `supabase/jobs-change-2.sql` | 지원 방법을 선택 사항으로 (jobs.sql 을 이미 실행한 경우) |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |
 

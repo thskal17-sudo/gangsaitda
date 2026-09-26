@@ -77,7 +77,9 @@ export function ApplyActions({ job }: { job: JobDetail }) {
       {job.documents && <p className="mt-1.5 text-sm text-muted">제출 서류: {job.documents}</p>}
 
       {actions.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">지원 방법은 기관에 문의해 주세요.</p>
+        <p className="mt-3 rounded-control bg-bg px-4 py-3 text-sm text-ink">
+          방문·우편 접수 등 이메일로 받지 않는 공고입니다. 지원 방법은 위 <b>원문 공고</b>에서 확인해 주세요.
+        </p>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
           {actions.map((action, index) => (

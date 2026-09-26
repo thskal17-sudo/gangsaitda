@@ -32,12 +32,8 @@ create table public.job_details (
   documents      text,           -- 제출 서류
   apply_url      text,           -- 지원서 링크
   apply_email    text,           -- 지원 이메일
-  created_at     timestamptz not null default now(),
-
-  -- 지원 방법(링크·이메일)은 하나 이상 적어야 한다.
-  constraint job_details_apply_required check (
-    coalesce(nullif(btrim(apply_url), ''), nullif(btrim(apply_email), '')) is not null
-  )
+  created_at     timestamptz not null default now()
+  -- 지원 방법(링크·이메일)은 비워도 된다. 방문·우편 접수 공고는 원문에서 확인하도록 안내한다.
 );
 
 comment on table public.job_details is '공고 상세. 회원만 볼 수 있다. job_id 에 jobs 표의 번호를 적는다.';
@@ -52,8 +48,8 @@ comment on column public.job_details.headcount is '모집 인원 (숫자)';
 comment on column public.job_details.description is '상세 내용 (필수). 줄바꿈 그대로 보임';
 comment on column public.job_details.qualifications is '지원 자격. 한 줄에 하나씩';
 comment on column public.job_details.documents is '제출 서류. 예: 이력서, 자격증 사본';
-comment on column public.job_details.apply_url is '지원서 링크. 지원서 링크·이메일 중 하나 이상 필수';
-comment on column public.job_details.apply_email is '지원 이메일. 지원서 링크·이메일 중 하나 이상 필수';
+comment on column public.job_details.apply_url is '지원서 링크 (없으면 비워 둠)';
+comment on column public.job_details.apply_email is '지원 이메일 (방문·우편 접수만 받으면 비워 둠)';
 
 -- 3) 누가 읽고 쓸 수 있나 --------------------------------------------------
 -- 두 표 모두 회원(로그인한 사람)만 직접 읽을 수 있다.
