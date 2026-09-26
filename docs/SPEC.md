@@ -156,6 +156,11 @@
 
 - Supabase 프로젝트 `gangsaitda`, 지역 Seoul. **Authentication → Email → Confirm email 끔.**
 - 회원 정보 표: `supabase/members.sql`을 SQL Editor에서 실행 (**완료**).
+- Vercel 배포 (**완료**): GitHub 저장소 연결, 환경변수 두 개(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) 입력.
+  main 에 합치면 자동으로 다시 올라가고, PR 마다 미리보기 주소가 생깁니다.
+  환경변수를 바꾸면 Deployments → Redeploy 를 해야 반영됩니다.
+- 나중에 도메인을 사면 Vercel Settings → Domains 에서 연결합니다. 메일 기능을 붙일 때
+  Supabase Authentication → URL Configuration 에 그 주소를 적습니다.
 - 작업 공간 설정
   - Network access: `*.supabase.co` 허용
   - 환경변수: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
@@ -196,8 +201,8 @@
   | 순서 | 할 일 | 상태 |
   |---|---|---|
   | 1 | 공고 상세 화면 (회원 전용) | 완료 (샘플 데이터) |
-  | 2 | 회원가입·로그인 | 화면 완성 (Supabase 표 만들기·실제 가입 확인 남음) |
-  | 3 | 진짜 공고 데이터 (Supabase) | 예정 |
+  | 2 | 회원가입·로그인 | 완료 (실제 가입·로그인·로그아웃, members 표 확인함) |
+  | 3 | 진짜 공고 데이터 (Supabase) | 다음 차례 |
   | 4 | 홈 화면 | 예정 |
   | 5 | 공개 전 마무리: 사이트 아이콘, 링크 미리보기, 없는 주소 안내 화면, 개인정보처리방침·회원 탈퇴 방법 | 예정 |
 - **회사 홈페이지와의 관계**: 한국엑스퍼트교육원 회사 홈페이지(링크허브, `rinktree` 저장소)와는
