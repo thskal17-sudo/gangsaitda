@@ -83,7 +83,7 @@ export default function RequestForm() {
         />
         <Field
           id="contactEmail"
-          label="이메일 (선택)"
+          label="이메일"
           type="email"
           autoComplete="email"
           placeholder="name@example.com"

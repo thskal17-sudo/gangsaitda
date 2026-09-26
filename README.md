@@ -52,6 +52,7 @@ npm run dev
 | `components/privacy-consent.tsx` | 개인정보 동의 칸 (가입·의뢰서 함께 씀) |
 | `lib/site.ts` | 운영 정보 (문의처 등) |
 | `supabase/instructor-requests.sql` | 강사섭외 의뢰 표 (보내기만 되고 사이트에서는 못 읽음) |
+| `supabase/instructor-requests-change-1.sql` | 의뢰 표에서 담당자 이메일을 필수로 (위 파일을 이미 실행한 경우) |
 | `supabase/jobs.sql` | 공고 표 두 개(jobs, job_details)를 만드는 SQL |
 | `supabase/jobs-change-1.sql` | 공고 표에서 강사료·전화번호 칸 없애기 (옛 jobs.sql 을 실행한 경우만) |
 | `supabase/jobs-change-2.sql` | 지원 방법을 선택 사항으로 (jobs.sql 을 이미 실행한 경우) |
