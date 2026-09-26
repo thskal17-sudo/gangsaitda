@@ -47,5 +47,13 @@ export const findEmailSchema = signupSchema.pick({ name: true, phone: true });
 
 export type FindEmailInput = z.infer<typeof findEmailSchema>;
 
+/** 회원 탈퇴: 본인 확인용 비밀번호 + 되돌릴 수 없다는 안내 확인 */
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "비밀번호를 입력해 주세요."),
+  confirmed: z.literal(true, "안내를 확인했다고 체크해 주세요."),
+});
+
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
+
 /** 서버에서 돌려주는 결과. 성공하면 서버가 바로 다음 화면으로 보내므로 실패만 담는다. */
 export type AuthResult = { error: string } | undefined;
