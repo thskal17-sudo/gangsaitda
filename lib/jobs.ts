@@ -91,6 +91,14 @@ function fail(what: string, error: { message: string }): never {
   throw new Error(`공고를 불러오지 못했습니다 (${what}): ${error.message}`);
 }
 
+/** 오늘(한국 날짜) 올라온 공고 중 아직 마감되지 않은 공고의 수. 누구나 볼 수 있다 (홈 화면). */
+export async function getTodayJobCount(today: string): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("today_job_count", { today });
+  if (error) fail("오늘 올라온 공고 수", error);
+  return data as number;
+}
+
 /** 지원할 수 있는 공고의 번호·제목 — 비회원용. 마감이 지나지 않은 것만, 마감 가까운 순. */
 export async function getOpenJobTitles(today: string): Promise<JobTitle[]> {
   const supabase = await createClient();
