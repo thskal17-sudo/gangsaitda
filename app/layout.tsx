@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               />
             </Link>
             <div className="flex items-center gap-2 md:gap-4">
-              <TopNav />
+              <TopNav isMember={member !== null} />
               <HeaderAuth isMember={member !== null} />
             </div>
           </div>
@@ -59,7 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
 
-        <BottomNav />
+        <BottomNav isMember={member !== null} />
       </body>
     </html>
   );
