@@ -3,7 +3,9 @@ import { IBM_Plex_Sans_KR } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
+import HeaderAuth from "@/components/header-auth";
 import TopNav from "@/components/top-nav";
+import { getCurrentMember } from "@/lib/member";
 
 /*
  * 한글 글꼴은 글자 묶음별로 잘게 나뉜 파일 수백 개로 되어 있다.
@@ -33,7 +35,10 @@ export const viewport: Viewport = {
  * - 휴대폰 (768px 미만): 390px 기준. 넓어도 가운데 430px 로 모으고, 메뉴는 하단 탭.
  * - PC·태블릿 (768px 이상): 본문 최대 1080px, 메뉴는 위쪽 띠 오른쪽.
  */
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // 위쪽 띠에 로그인/로그아웃 중 무엇을 보여줄지 정한다.
+  const member = await getCurrentMember();
+
   return (
     <html lang="ko" className={`${plexKr.variable} antialiased`}>
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink">
@@ -42,7 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="text-[17px] font-bold tracking-tight text-brand md:text-[19px]">
               강사잇다
             </Link>
-            <TopNav />
+            <div className="flex items-center gap-2 md:gap-4">
+              <TopNav />
+              <HeaderAuth isMember={member !== null} />
+            </div>
           </div>
         </header>
 
