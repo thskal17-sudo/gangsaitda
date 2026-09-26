@@ -5,7 +5,7 @@ import NotFoundCard from "@/components/not-found-card";
 const MENU = [
   { key: "jobs", label: "공고 관리", href: "/admin" },
   { key: "new", label: "공고 등록", href: "/admin/jobs/new" },
-  { key: "upload", label: "엑셀로 올리기", href: null },
+  { key: "upload", label: "엑셀로 올리기", href: "/admin/jobs/upload" },
   { key: "requests", label: "강사섭외 의뢰", href: "/admin/requests" },
   { key: "members", label: "회원", href: null },
 ] as const;

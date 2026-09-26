@@ -66,6 +66,8 @@ npm run dev
 | `supabase/admin-job-edit.sql` | 공고 수정·숨기기 함수 + 숨긴 공고를 사이트에서 빼는 규칙 |
 | `app/admin/requests/`, `lib/admin-requests.ts`, `lib/admin-request-actions.ts`, `lib/request-status.ts`, `components/admin-request-status.tsx` | 관리자 · 강사섭외 의뢰 보기·처리 상태 바꾸기 |
 | `supabase/admin-requests.sql` | 관리자만 의뢰를 읽고 상태를 바꾸게 하는 규칙·함수 |
+| `app/admin/jobs/upload/`, `components/admin-excel-upload.tsx`, `lib/job-excel.ts` | 관리자 · 엑셀로 공고 여러 개 올리기 (미리보기 → 올리기) |
+| `public/gangsaitda-job-template.xlsx` | 엑셀 올리기 양식 (공고·예시·안내 시트) |
 | `supabase/admin-add.sql` | [운영자용] 회원을 관리자로 지정하기 |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |
