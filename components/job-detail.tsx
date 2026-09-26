@@ -47,7 +47,7 @@ export function LineList({ text }: { text: string }) {
 
 type ApplyAction = { key: string; href: string; label: string; note: string; external?: boolean };
 
-/** 지원 방법 버튼들. 지원서 링크 → 이메일 → 전화 순서이고, 맨 앞의 것을 가장 눈에 띄게 한다. */
+/** 지원 방법 버튼들. 지원서 링크 → 이메일 순서이고, 맨 앞의 것을 가장 눈에 띄게 한다. */
 export function ApplyActions({ job }: { job: JobDetail }) {
   const actions: ApplyAction[] = [];
 
@@ -68,14 +68,6 @@ export function ApplyActions({ job }: { job: JobDetail }) {
       href: `mailto:${job.applyEmail}?subject=${subject}`,
       label: "이메일로 지원하기",
       note: job.applyEmail,
-    });
-  }
-  if (job.applyPhone) {
-    actions.push({
-      key: "phone",
-      href: `tel:${job.applyPhone.replace(/[^0-9+]/g, "")}`,
-      label: "전화로 문의하기",
-      note: job.applyPhone,
     });
   }
 
@@ -170,7 +162,7 @@ export function MembersOnlyNotice({ next }: { next: string }) {
       </span>
       <h2 className="mt-4 text-lg font-bold text-ink">회원만 볼 수 있는 내용입니다</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        기관, 지역, 마감일, 강사료, 수업 일정, 지원 방법, 원문 공고는 회원가입 후 볼 수 있습니다.
+        기관, 지역, 마감일, 수업 일정, 지원 방법, 원문 공고는 회원가입 후 볼 수 있습니다.
         <br />
         가입은 무료입니다.
       </p>

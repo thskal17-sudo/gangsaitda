@@ -16,7 +16,7 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
   return (
     <AuthCard
       title="회원가입"
-      description="가입하면 공고의 강사료·수업 일정·지원 방법을 볼 수 있습니다. 가입은 무료입니다."
+      description="가입하면 공고의 기관·마감일·수업 일정·지원 방법을 볼 수 있습니다. 가입은 무료입니다."
       footer={
         <>
           이미 회원이세요? <AuthSwitchLink href="/login" next={next}>로그인</AuthSwitchLink>

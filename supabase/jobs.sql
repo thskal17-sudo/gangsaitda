@@ -24,7 +24,6 @@ create table public.job_details (
   region         text not null,  -- 지역
   deadline       date not null,  -- 마감일 (예: 2026-10-02)
   source_url     text,           -- 원문 공고 주소
-  pay            text not null,  -- 강사료
   schedule       text not null,  -- 수업 일정
   target         text,           -- 수업 대상
   headcount      integer check (headcount > 0),  -- 모집 인원
@@ -33,12 +32,11 @@ create table public.job_details (
   documents      text,           -- 제출 서류
   apply_url      text,           -- 지원서 링크
   apply_email    text,           -- 지원 이메일
-  apply_phone    text,           -- 지원 전화번호
   created_at     timestamptz not null default now(),
 
-  -- 지원 방법(링크·이메일·전화)은 하나 이상 적어야 한다.
+  -- 지원 방법(링크·이메일)은 하나 이상 적어야 한다.
   constraint job_details_apply_required check (
-    coalesce(nullif(btrim(apply_url), ''), nullif(btrim(apply_email), ''), nullif(btrim(apply_phone), '')) is not null
+    coalesce(nullif(btrim(apply_url), ''), nullif(btrim(apply_email), '')) is not null
   )
 );
 
@@ -48,16 +46,14 @@ comment on column public.job_details.organization is '기관명 (필수)';
 comment on column public.job_details.region is '지역 (필수). 예: 서울 마포구';
 comment on column public.job_details.deadline is '마감일 (필수). 예: 2026-10-02';
 comment on column public.job_details.source_url is '원문 공고 주소. https:// 로 시작';
-comment on column public.job_details.pay is '강사료 (필수). 예: 시간당 40,000원';
 comment on column public.job_details.schedule is '수업 일정 (필수). 예: 매주 화·목 14:00~15:30 (10주)';
 comment on column public.job_details.target is '수업 대상. 예: 초등 3~4학년 약 20명';
 comment on column public.job_details.headcount is '모집 인원 (숫자)';
 comment on column public.job_details.description is '상세 내용 (필수). 줄바꿈 그대로 보임';
 comment on column public.job_details.qualifications is '지원 자격. 한 줄에 하나씩';
 comment on column public.job_details.documents is '제출 서류. 예: 이력서, 자격증 사본';
-comment on column public.job_details.apply_url is '지원서 링크. 지원 방법 셋 중 하나 이상 필수';
-comment on column public.job_details.apply_email is '지원 이메일. 지원 방법 셋 중 하나 이상 필수';
-comment on column public.job_details.apply_phone is '지원 전화번호. 지원 방법 셋 중 하나 이상 필수';
+comment on column public.job_details.apply_url is '지원서 링크. 지원서 링크·이메일 중 하나 이상 필수';
+comment on column public.job_details.apply_email is '지원 이메일. 지원서 링크·이메일 중 하나 이상 필수';
 
 -- 3) 누가 읽고 쓸 수 있나 --------------------------------------------------
 -- 두 표 모두 회원(로그인한 사람)만 직접 읽을 수 있다.

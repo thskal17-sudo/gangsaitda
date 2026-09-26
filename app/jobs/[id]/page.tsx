@@ -76,7 +76,6 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
               facts={[
                 { label: "지역", value: detail.region },
                 { label: "마감", value: formatKoreanDate(detail.deadline) },
-                { label: "강사료", value: detail.pay },
                 { label: "수업 일정", value: detail.schedule },
                 { label: "수업 대상", value: detail.target },
                 { label: "모집 인원", value: detail.headcount ? `${detail.headcount}명` : undefined },
