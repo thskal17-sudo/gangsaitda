@@ -1,13 +1,13 @@
 import Link from "next/link";
 import NotFoundCard from "@/components/not-found-card";
 
-/** 관리자 메뉴. 아직 만들지 않은 메뉴는 '준비 중'으로 보여주고 누를 수 없다. */
+/** 관리자 메뉴 */
 const MENU = [
   { key: "jobs", label: "공고 관리", href: "/admin" },
   { key: "new", label: "공고 등록", href: "/admin/jobs/new" },
   { key: "upload", label: "엑셀로 올리기", href: "/admin/jobs/upload" },
   { key: "requests", label: "강사섭외 의뢰", href: "/admin/requests" },
-  { key: "members", label: "회원", href: null },
+  { key: "members", label: "회원", href: "/admin/members" },
 ] as const;
 
 export type AdminMenuKey = (typeof MENU)[number]["key"];
@@ -27,20 +27,13 @@ export default function AdminShell({ active, children }: { active: AdminMenuKey;
               "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-control px-4 text-[15px] font-semibold md:h-11 md:w-full";
             return (
               <li key={item.key}>
-                {item.href ? (
-                  <Link
-                    href={item.href}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`${base} ${isActive ? "bg-ink text-white" : "bg-white text-ink hover:bg-line md:bg-transparent"}`}
-                  >
-                    {item.label}
-                  </Link>
-                ) : (
-                  <span className={`${base} cursor-not-allowed bg-white text-muted md:bg-transparent`} aria-disabled="true">
-                    {item.label}
-                    <span className="rounded-badge bg-bg px-2 py-0.5 text-[11px] font-semibold text-muted">준비 중</span>
-                  </span>
-                )}
+                <Link
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`${base} ${isActive ? "bg-ink text-white" : "bg-white text-ink hover:bg-line md:bg-transparent"}`}
+                >
+                  {item.label}
+                </Link>
               </li>
             );
           })}
