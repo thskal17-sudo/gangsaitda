@@ -30,8 +30,9 @@ export const requestSchema = z.object({
   contactEmail: z
     .string()
     .trim()
+    .min(1, "이메일을 입력해 주세요.")
     .max(100, "이메일은 100자까지 입력할 수 있습니다.")
-    .refine((value) => value === "" || z.email().safeParse(value).success, "이메일 주소 형식이 아닙니다."),
+    .pipe(z.email("이메일 주소 형식이 아닙니다. 예) name@example.com")),
   subject: required("필요한 분야·과목", 200),
   schedule: required("희망 일정", 500),
   target: optional("수업 대상", 200),
