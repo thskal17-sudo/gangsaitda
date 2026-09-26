@@ -1,6 +1,7 @@
 "use server";
 
 import type { AuthError } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   type AuthResult,
@@ -36,6 +37,7 @@ export async function signup(input: unknown, next: unknown): Promise<AuthResult>
     return { error: "가입 신청이 접수되었습니다. 이메일로 받은 확인 링크를 누른 뒤 로그인해 주세요." };
   }
 
+  refreshAllScreens();
   redirect(safeNext(next));
 }
 
@@ -47,7 +49,23 @@ export async function login(input: unknown, next: unknown): Promise<AuthResult> 
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: loginErrorMessage(error) };
 
+  refreshAllScreens();
   redirect(safeNext(next));
+}
+
+/** 로그아웃. 보던 화면에 그대로 머물고, 회원 전용 내용만 사라진다. */
+export async function logout(): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  refreshAllScreens();
+}
+
+/**
+ * 로그인 상태가 바뀌었으니 위쪽 띠의 로그인/로그아웃 버튼과
+ * 회원 전용 내용이 있는 화면을 모두 새로 그리게 한다.
+ */
+function refreshAllScreens() {
+  revalidatePath("/", "layout");
 }
 
 function signupErrorMessage(error: AuthError): string {
