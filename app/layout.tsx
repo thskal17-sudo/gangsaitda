@@ -6,6 +6,7 @@ import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
 import HeaderAuth from "@/components/header-auth";
+import SiteFooter from "@/components/site-footer";
 import TopNav from "@/components/top-nav";
 import { getCurrentMember } from "@/lib/member";
 
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             이보다 작으면 맨 아래 내용이 하단 탭에 가려진다. PC 에는 하단 탭이 없다. */}
         <main className="mx-auto w-full max-w-[430px] flex-1 px-4 pt-5 pb-[calc(4rem+1px+1.25rem+env(safe-area-inset-bottom))] md:max-w-[1080px] md:px-8 md:pt-10 md:pb-16">
           {children}
+          <SiteFooter isMember={member !== null} />
         </main>
 
         <BottomNav isMember={member !== null} />

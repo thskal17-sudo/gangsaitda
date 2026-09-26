@@ -9,7 +9,7 @@ import { getCurrentMember } from "@/lib/member";
 /** 홈에 보여줄 '마감이 가까운 공고' 개수 */
 const DEADLINE_SOON_COUNT = 5;
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: PageProps<"/">) {
   // 오늘 날짜와 로그인 상태에 따라 달라지므로, 열 때마다 새로 그린다.
   await connection();
   const today = todayInSeoul();
@@ -21,9 +21,17 @@ export default async function HomePage() {
     getTodayJobCount(today),
   ]);
   const soonJobs = openJobs.slice(0, DEADLINE_SOON_COUNT);
+  // 회원 탈퇴를 마치고 홈으로 온 경우 (?deleted=1)
+  const justDeleted = !member && (await searchParams).deleted === "1";
 
   return (
     <div className="flex flex-col gap-8 md:gap-12">
+      {justDeleted && (
+        <p role="status" className="rounded-card bg-white px-5 py-4 text-[15px] text-ink">
+          회원 탈퇴가 끝났어요. 회원 정보는 모두 지워졌어요. 그동안 이용해 주셔서 감사합니다.
+        </p>
+      )}
+
       {/* ① 첫인사 */}
       <section className="pt-2 md:pt-6">
         <h1 className="text-[30px] leading-tight font-extrabold tracking-tight md:text-[44px]">

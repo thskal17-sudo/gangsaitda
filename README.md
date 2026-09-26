@@ -70,6 +70,8 @@ npm run dev
 | `public/gangsaitda-job-template.xlsx` | 엑셀 올리기 양식 (공고·예시·안내 시트) |
 | `app/admin/members/`, `lib/admin-members.ts` | 관리자 · 회원 목록 (보기만) |
 | `supabase/admin-members.sql` | 관리자만 모든 회원 정보를 읽게 하는 규칙 |
+| `app/account/delete/`, `components/site-footer.tsx` | 회원 탈퇴 화면, 사이트 맨 아래(회원에게만 '회원 탈퇴' 링크) |
+| `supabase/delete-account.sql` | 로그인한 회원이 자기 계정만 지우는 함수 |
 | `supabase/admin-add.sql` | [운영자용] 회원을 관리자로 지정하기 |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |

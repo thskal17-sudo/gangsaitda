@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   type AuthResult,
+  deleteAccountSchema,
   findEmailSchema,
   loginSchema,
   phoneDigits,
@@ -59,6 +60,39 @@ export async function logout(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   refreshAllScreens();
+}
+
+/**
+ * 회원 탈퇴. 비밀번호로 본인인지 한 번 더 확인한 뒤, 데이터베이스 함수(supabase/delete-account.sql)로
+ * 자기 계정을 지운다. 회원 정보(members)도 함께 지워진다. 성공하면 로그아웃된 채 홈으로 간다.
+ */
+export async function deleteAccount(input: unknown): Promise<AuthResult> {
+  const parsed = deleteAccountSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const email = claims?.claims.email;
+  if (!email) return { error: "로그인이 풀렸습니다. 다시 로그인한 뒤 탈퇴해 주세요." };
+
+  // 본인 확인: 지금 로그인한 계정의 이메일 + 입력한 비밀번호가 맞는지
+  const { error: checkError } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
+  if (checkError) {
+    return {
+      error: checkError.code === "invalid_credentials" ? "비밀번호가 맞지 않습니다." : commonErrorMessage(checkError, "본인 확인을 하지 못했습니다."),
+    };
+  }
+
+  const { error } = await supabase.rpc("delete_my_account");
+  if (error) {
+    console.error("[account] 회원 탈퇴 실패", error.code, error.message);
+    return { error: "탈퇴를 처리하지 못했습니다. 잠시 뒤에 다시 시도해 주세요." };
+  }
+
+  // 계정이 지워졌으니 이 브라우저의 로그인 기록(쿠키)도 지운다.
+  await supabase.auth.signOut({ scope: "local" });
+  refreshAllScreens();
+  redirect("/?deleted=1");
 }
 
 /**
