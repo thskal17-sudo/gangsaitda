@@ -32,3 +32,8 @@ export function formatKoreanDate(date: string): string {
   const d = new Date(toUtcMs(date));
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일(${WEEKDAYS[d.getUTCDay()]})`;
 }
+
+/** 데이터베이스의 시각(예: "2026-09-23T15:30:00+00:00")이 한국 날짜로 며칠인지. 예: "2026-09-24" */
+export function seoulDateOf(timestamp: string): string {
+  return new Date(Date.parse(timestamp) + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
