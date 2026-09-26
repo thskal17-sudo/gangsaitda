@@ -2,27 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useFormStatus } from "react-dom";
-import { logout } from "@/lib/auth-actions";
 
 /**
- * 위쪽 띠 오른쪽의 로그인/로그아웃 버튼. 휴대폰·PC 모두 보인다.
- * 비회원: '로그인' (로그인 뒤 지금 보던 화면으로 돌아온다)
- * 회원: '로그아웃' (누르면 지금 화면에 그대로 머문다)
+ * 위쪽 띠 오른쪽의 '로그인' 버튼 (비회원에게만, 휴대폰·PC 모두).
+ * 로그인 뒤 지금 보던 화면으로 돌아온다. 회원의 '로그아웃'은 메뉴 마지막 칸에 있다.
  */
 export default function HeaderAuth({ isMember }: { isMember: boolean }) {
   const pathname = usePathname();
 
-  // 가입·로그인·계정 찾기 화면에서는 같은 곳으로 가는 버튼이라 숨긴다.
-  if (["/login", "/signup", "/find-email", "/find-password"].includes(pathname)) return null;
-
-  if (isMember) {
-    return (
-      <form action={logout}>
-        <LogoutButton />
-      </form>
-    );
-  }
+  // 회원이거나, 가입·로그인·계정 찾기 화면이면 숨긴다.
+  if (isMember || ["/login", "/signup", "/find-email", "/find-password"].includes(pathname)) return null;
 
   const query = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname)}`;
   return (
@@ -32,18 +21,5 @@ export default function HeaderAuth({ isMember }: { isMember: boolean }) {
     >
       로그인
     </Link>
-  );
-}
-
-function LogoutButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="flex h-9 items-center rounded-control px-3 text-sm font-medium text-muted transition-colors hover:text-ink disabled:opacity-60"
-    >
-      {pending ? "로그아웃 중…" : "로그아웃"}
-    </button>
   );
 }

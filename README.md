@@ -26,11 +26,13 @@ npm run dev
 | `app/jobs/[id]/page.tsx` | 공고 상세 화면 (회원 전용) |
 | `app/signup/` | 회원가입 화면 |
 | `app/login/` | 로그인 화면 |
+| `app/certificates/` | 자격증 (준비 중) |
+| `app/request/` | 기관의뢰 (준비 중) |
 | `app/find-email/` | 이메일(아이디) 찾기 화면 |
 | `app/find-password/` | 비밀번호 찾기 안내 (지금은 운영자 문의) |
 | `app/layout.tsx` | 모든 화면을 감싸는 틀 (위쪽 띠, 본문 폭, 휴대폰/PC 구분) |
 | `app/globals.css` | 색·글꼴·모서리 값 (디자인 토큰) |
-| `components/nav-tabs.tsx` | 메뉴 목록 (하단 탭과 위쪽 메뉴가 함께 씀) |
+| `components/nav-tabs.tsx` | 메뉴 목록 (하단 탭과 위쪽 메뉴가 함께 씀, 마지막 칸은 회원가입/로그아웃) |
 | `components/bottom-nav.tsx` | 휴대폰 하단 탭 |
 | `components/top-nav.tsx` | PC 위쪽 메뉴 |
 | `components/job-card.tsx` | 공고 카드 한 장, 남은 날짜 배지 |

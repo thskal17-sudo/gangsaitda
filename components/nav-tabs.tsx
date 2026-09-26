@@ -19,7 +19,48 @@ export const TABS = [
       </>
     ),
   },
+  {
+    href: "/certificates",
+    label: "자격증",
+    icon: (
+      <>
+        <circle cx="12" cy="9" r="5.5" />
+        <path d="m8.5 13.3-1.5 7.7 5-2.5 5 2.5-1.5-7.7" />
+      </>
+    ),
+  },
+  {
+    href: "/request",
+    label: "기관의뢰",
+    icon: (
+      <>
+        <path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16" />
+        <path d="M15 9h3a2 2 0 0 1 2 2v10" />
+        <path d="M2.5 21h19M8 7h3M8 11h3M8 15h3" />
+      </>
+    ),
+  },
 ];
+
+/**
+ * 마지막 칸은 로그인 상태에 따라 바뀐다.
+ * 비회원: '회원가입' (가입 화면으로), 회원: '로그아웃' (누르면 보던 화면에 그대로 머문다)
+ */
+export const SIGNUP_TAB = {
+  href: "/signup",
+  label: "회원가입",
+  icon: (
+    <>
+      <circle cx="10" cy="8" r="4" />
+      <path d="M2.5 20.5a7.5 7.5 0 0 1 15 0M19 8v6M16 11h6" />
+    </>
+  ),
+};
+
+export const LOGOUT_TAB = {
+  label: "로그아웃",
+  icon: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
+};
 
 /** 지금 주소(pathname)가 이 메뉴에 속하는지. 예: /jobs/123 은 '공고'에 속한다. */
 export function isTabActive(href: string, pathname: string): boolean {
