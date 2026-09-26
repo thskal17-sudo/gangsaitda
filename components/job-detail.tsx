@@ -110,6 +110,34 @@ export function ApplyActions({ job }: { job: JobDetail }) {
   );
 }
 
+/** 원문 공고 링크. 새 창으로 열린다. 운영자가 입력한 값이라도 http(s) 주소만 링크로 만든다. */
+export function SourceLink({ url }: { url?: string }) {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand underline-offset-2 hover:underline"
+    >
+      원문 공고 보기
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-3.5 w-3.5"
+        aria-hidden="true"
+      >
+        <path d="M7 17 17 7M9 7h8v8" />
+      </svg>
+    </a>
+  );
+}
+
 /** 마감이 지난 공고에서 지원 버튼 대신 보여준다. */
 export function ClosedNotice() {
   return (
@@ -142,7 +170,7 @@ export function MembersOnlyNotice({ next }: { next: string }) {
       </span>
       <h2 className="mt-4 text-lg font-bold text-ink">회원만 볼 수 있는 내용입니다</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        강사료, 수업 일정, 수업 대상, 지원 자격, 지원 방법은 회원가입 후 볼 수 있습니다.
+        기관, 지역, 마감일, 강사료, 수업 일정, 지원 방법, 원문 공고는 회원가입 후 볼 수 있습니다.
         <br />
         가입은 무료입니다.
       </p>

@@ -2,15 +2,19 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import JobCard from "@/components/job-card";
 import { todayInSeoul } from "@/lib/date";
-import { getOpenJobs } from "@/lib/jobs";
+import { getOpenJobTitles, getOpenJobs } from "@/lib/jobs";
+import { getCurrentMember } from "@/lib/member";
 
 export const metadata: Metadata = { title: "공고" };
 
 export default async function JobsPage() {
-  // 오늘 날짜로 D-day 를 세므로, 미리 만들어두지 않고 열 때마다 새로 그린다.
+  // 오늘 날짜와 로그인 상태에 따라 달라지므로, 열 때마다 새로 그린다.
   await connection();
   const today = todayInSeoul();
-  const jobs = await getOpenJobs(today);
+
+  // 회원은 기관·지역·마감일까지, 비회원은 제목만 받는다.
+  const member = await getCurrentMember();
+  const jobs = member ? await getOpenJobs(today) : await getOpenJobTitles(today);
 
   return (
     <section>
@@ -18,8 +22,6 @@ export default async function JobsPage() {
       <p className="mt-1 text-sm text-muted">
         지원할 수 있는 공고 <span className="nums font-semibold text-ink">{jobs.length}</span>건
       </p>
-      {/* 샘플 데이터를 쓰는 동안만 둔다. Supabase 를 붙이면 지운다. */}
-      <p className="mt-1 text-xs text-muted">※ 지금 보이는 공고는 화면 확인용 샘플입니다.</p>
 
       {jobs.length === 0 ? (
         <p className="mt-4 rounded-card border border-line bg-white p-5 text-sm text-muted">
