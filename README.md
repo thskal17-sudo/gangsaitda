@@ -26,6 +26,8 @@ npm run dev
 | `app/jobs/[id]/page.tsx` | 공고 상세 화면 (회원 전용) |
 | `app/signup/` | 회원가입 화면 |
 | `app/login/` | 로그인 화면 |
+| `app/find-email/` | 이메일(아이디) 찾기 화면 |
+| `app/find-password/` | 비밀번호 찾기 안내 (지금은 운영자 문의) |
 | `app/layout.tsx` | 모든 화면을 감싸는 틀 (위쪽 띠, 본문 폭, 휴대폰/PC 구분) |
 | `app/globals.css` | 색·글꼴·모서리 값 (디자인 토큰) |
 | `components/nav-tabs.tsx` | 메뉴 목록 (하단 탭과 위쪽 메뉴가 함께 씀) |
@@ -42,6 +44,9 @@ npm run dev
 | `lib/supabase/` | Supabase 연결 |
 | `proxy.ts` | 화면을 열 때마다 로그인 유지 기간을 연장 |
 | `supabase/members.sql` | 회원 정보 표를 만드는 SQL (Supabase SQL Editor 에 붙여넣음) |
+| `supabase/find-email.sql` | 이메일 찾기 함수 (이메일을 가려서 돌려줌) |
+| `supabase/admin-reset-password.sql` | [운영자용] 회원에게 임시 비밀번호 정해 주기 |
+| `lib/site.ts` | 운영 정보 (문의처 등) |
 | `supabase/jobs.sql` | 공고 표 두 개(jobs, job_details)를 만드는 SQL |
 | `supabase/jobs-change-1.sql` | 공고 표에서 강사료·전화번호 칸 없애기 (옛 jobs.sql 을 실행한 경우만) |
 | `supabase/jobs-change-2.sql` | 지원 방법을 선택 사항으로 (jobs.sql 을 이미 실행한 경우) |

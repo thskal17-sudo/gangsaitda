@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   type AuthResult,
+  findEmailSchema,
   loginSchema,
   phoneDigits,
   signupSchema,
@@ -66,6 +67,27 @@ export async function logout(): Promise<void> {
  */
 function refreshAllScreens() {
   revalidatePath("/", "layout");
+}
+
+/**
+ * 이메일(아이디) 찾기. 이름·연락처가 모두 맞는 회원의 이메일을 **가려서** 돌려준다.
+ * 가리는 일은 데이터베이스 함수(supabase/find-email.sql)가 하므로 전체 이메일은 여기로 오지 않는다.
+ */
+export async function findEmail(input: unknown): Promise<{ emails: string[] } | { error: string }> {
+  const parsed = findEmailSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { name, phone } = parsed.data;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("find_member_email", {
+    member_name: name,
+    member_phone: phoneDigits(phone),
+  });
+  if (error) {
+    console.error("[auth] 이메일 찾기 실패", error.code, error.message);
+    return { error: "지금은 이메일을 찾을 수 없습니다. 잠시 뒤에 다시 시도해 주세요." };
+  }
+  return { emails: data as string[] };
 }
 
 function signupErrorMessage(error: AuthError): string {

@@ -42,5 +42,10 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/** 이메일(아이디) 찾기: 가입할 때 적은 이름·연락처 */
+export const findEmailSchema = signupSchema.pick({ name: true, phone: true });
+
+export type FindEmailInput = z.infer<typeof findEmailSchema>;
+
 /** 서버에서 돌려주는 결과. 성공하면 서버가 바로 다음 화면으로 보내므로 실패만 담는다. */
 export type AuthResult = { error: string } | undefined;
