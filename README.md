@@ -24,6 +24,8 @@ npm run dev
 | `app/page.tsx` | 홈 화면 |
 | `app/jobs/page.tsx` | 공고 목록 화면 |
 | `app/jobs/[id]/page.tsx` | 공고 상세 화면 (회원 전용) |
+| `app/signup/` | 회원가입 화면 |
+| `app/login/` | 로그인 화면 |
 | `app/layout.tsx` | 모든 화면을 감싸는 틀 (위쪽 띠, 본문 폭, 휴대폰/PC 구분) |
 | `app/globals.css` | 색·글꼴·모서리 값 (디자인 토큰) |
 | `components/nav-tabs.tsx` | 메뉴 목록 (하단 탭과 위쪽 메뉴가 함께 씀) |
@@ -31,11 +33,18 @@ npm run dev
 | `components/top-nav.tsx` | PC 위쪽 메뉴 |
 | `components/job-card.tsx` | 공고 카드 한 장, 남은 날짜 배지 |
 | `components/job-detail.tsx` | 상세 화면 조각 (요약, 지원 버튼, 회원 전용 안내) |
+| `components/auth-form.tsx` | 가입·로그인 화면 조각 (입력칸, 버튼, 오류 안내) |
 | `lib/jobs.ts` | 공고 데이터 (지금은 샘플) |
-| `lib/member.ts` | 회원인지 확인 (지금은 항상 비회원) |
+| `lib/member.ts` | 회원인지 확인 (Supabase 로그인) |
+| `lib/auth-schema.ts` | 가입·로그인 입력 규칙 (화면과 서버가 함께 씀) |
+| `lib/auth-actions.ts` | 가입·로그인 처리 (서버) |
+| `lib/safe-next.ts` | 가입·로그인 뒤 돌아갈 주소 확인 (사이트 안 주소만) |
+| `lib/supabase/` | Supabase 연결 |
+| `proxy.ts` | 화면을 열 때마다 로그인 유지 기간을 연장 |
+| `supabase/members.sql` | 회원 정보 표를 만드는 SQL (Supabase SQL Editor 에 붙여넣음) |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |
 
 ## 기술
 
-Next.js (App Router) · TypeScript · Tailwind CSS · Vercel 배포
+Next.js (App Router) · TypeScript · Tailwind CSS · Supabase (회원) · react-hook-form + zod (입력 폼) · Vercel 배포
