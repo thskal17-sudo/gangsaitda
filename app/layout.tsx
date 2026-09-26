@@ -33,7 +33,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink">
         <header className="sticky top-0 z-10 mx-auto w-full max-w-[430px] shrink-0 bg-white/90 backdrop-blur md:max-w-none">
           <div className="mx-auto flex h-14 items-center justify-between px-4 md:h-16 md:max-w-[1080px] md:px-8">
-            <Link href="/" className="text-[17px] font-bold tracking-tight text-brand md:text-[19px]">
+            <Link href="/" className="text-[18px] font-extrabold tracking-tight text-brand-deep md:text-[20px]">
               강사잇다
             </Link>
             <div className="flex items-center gap-2 md:gap-4">

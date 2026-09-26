@@ -3,6 +3,7 @@
 /* 디자인 토큰 — CLAUDE.md 의 값과 1:1로 맞춘다. 값을 바꿀 때는 여기만 고친다. */
 :root {
   --brand: #2f6bf0; /* 파랑 — 주요 색, 버튼·강조 */
+  --brand-deep: #1b3a8c; /* 딥블루 — 서비스 이름(로고 글자) */
   --accent: #e8593f; /* 주황 — 포인트, 마감임박·배지 */
   --ink: #191f28; /* 본문 텍스트 */
   --muted: #6b7684; /* 보조 텍스트 */
@@ -14,6 +15,7 @@
 
 @theme inline {
   --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
   --color-accent: var(--accent);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
