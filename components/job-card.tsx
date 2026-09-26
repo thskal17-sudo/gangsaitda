@@ -24,7 +24,7 @@ export function DeadlineBadge({ daysLeft }: { daysLeft: number }) {
   }
 
   return (
-    <span className="nums shrink-0 rounded-badge border border-line px-2 py-0.5 text-[11px] font-medium text-muted">
+    <span className="nums shrink-0 rounded-badge bg-bg px-2 py-0.5 text-[11px] font-semibold text-muted">
       D-{daysLeft}
     </span>
   );
@@ -39,7 +39,7 @@ export default function JobCard({ job, today }: { job: Job | JobTitle; today: st
       href={`/jobs/${job.id}`}
       className="group block h-full rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
     >
-      <article className="flex h-full flex-col rounded-card border border-line bg-white p-4 transition-colors group-hover:border-brand/40">
+      <article className="flex h-full flex-col rounded-card bg-white p-5 transition-transform duration-150 group-active:scale-[0.98]">
         {summary && (
           <div className="mb-1.5 flex items-center justify-between gap-3">
             <p className="min-w-0 truncate text-[13px] font-medium text-muted">{summary.organization}</p>
@@ -47,7 +47,7 @@ export default function JobCard({ job, today }: { job: Job | JobTitle; today: st
           </div>
         )}
 
-        <h2 className="line-clamp-2 text-base leading-snug font-semibold text-ink">{job.title}</h2>
+        <h2 className="line-clamp-2 text-[17px] leading-snug font-bold tracking-tight text-ink">{job.title}</h2>
 
         {summary ? (
           <p className="nums mt-auto pt-2 text-[13px] text-muted">

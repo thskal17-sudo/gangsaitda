@@ -66,7 +66,7 @@ export default function SignupForm({ next }: { next: string }) {
 /** 개인정보 수집·이용 동의 (필수). 무엇을 왜 얼마나 보관하는지 펼쳐 볼 수 있다. */
 function PrivacyConsent({ error, ...checkbox }: { error?: string } & UseFormRegisterReturn) {
   return (
-    <div className={`rounded-control border p-4 ${error ? "border-warn" : "border-line"}`}>
+    <div className={`rounded-control border-2 bg-bg p-4 ${error ? "border-warn" : "border-transparent"}`}>
       <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"

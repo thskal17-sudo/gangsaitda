@@ -18,13 +18,13 @@ export default async function JobsPage() {
 
   return (
     <section>
-      <h1 className="text-[22px] font-bold leading-snug md:text-[28px]">공고</h1>
+      <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">공고</h1>
       <p className="mt-1 text-sm text-muted">
         지원할 수 있는 공고 <span className="nums font-semibold text-ink">{jobs.length}</span>건
       </p>
 
       {jobs.length === 0 ? (
-        <p className="mt-4 rounded-card border border-line bg-white p-5 text-sm text-muted">
+        <p className="mt-4 rounded-card bg-white p-5 text-sm text-muted">
           지금은 지원할 수 있는 공고가 없습니다.
         </p>
       ) : (
