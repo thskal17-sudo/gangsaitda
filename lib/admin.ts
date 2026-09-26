@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { seoulDateOf } from "@/lib/date";
 import { getCurrentMember } from "@/lib/member";
 import { createClient } from "@/lib/supabase/server";
@@ -23,6 +24,16 @@ export async function getAdminStatus(): Promise<AdminStatus> {
     return "member";
   }
   return data === true ? "admin" : "member";
+}
+
+/**
+ * 관리자 화면 입구. 로그인 안 했으면 로그인 화면으로 보내고(로그인 뒤 path 로 돌아옴),
+ * 로그인했으면 관리자인지(true) 아닌지(false) 돌려준다.
+ */
+export async function checkAdmin(path: string): Promise<boolean> {
+  const status = await getAdminStatus();
+  if (status === "guest") redirect(`/login?next=${encodeURIComponent(path)}`);
+  return status === "admin";
 }
 
 /** 관리자 목록 한 줄. 상세(기관·지역·마감일)가 아직 없는 공고는 그 칸이 비어 있다. */

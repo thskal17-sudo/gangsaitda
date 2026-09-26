@@ -1,9 +1,10 @@
 import Link from "next/link";
+import NotFoundCard from "@/components/not-found-card";
 
 /** 관리자 메뉴. 아직 만들지 않은 메뉴는 '준비 중'으로 보여주고 누를 수 없다. */
 const MENU = [
   { key: "jobs", label: "공고 관리", href: "/admin" },
-  { key: "new", label: "공고 등록", href: null },
+  { key: "new", label: "공고 등록", href: "/admin/jobs/new" },
   { key: "upload", label: "엑셀로 올리기", href: null },
   { key: "requests", label: "강사섭외 의뢰", href: null },
   { key: "members", label: "회원", href: null },
@@ -47,5 +48,16 @@ export default function AdminShell({ active, children }: { active: AdminMenuKey;
       </nav>
       <div className="min-w-0">{children}</div>
     </div>
+  );
+}
+
+/** 관리자가 아닌 회원이 관리자 화면 주소로 들어왔을 때 */
+export function NotAdminCard() {
+  return (
+    <NotFoundCard
+      title="관리자만 볼 수 있어요"
+      description="이 화면은 강사잇다 운영자 전용입니다."
+      primary={{ href: "/", label: "홈으로" }}
+    />
   );
 }

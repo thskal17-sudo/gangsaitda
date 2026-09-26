@@ -60,6 +60,8 @@ npm run dev
 | `supabase/jobs-change-2.sql` | 지원 방법을 선택 사항으로 (jobs.sql 을 이미 실행한 경우) |
 | `app/admin/`, `lib/admin.ts`, `components/admin-shell.tsx` | 관리자 화면 (`/admin`, 관리자 명단에 있는 회원만) |
 | `supabase/admins.sql` | 관리자 명단 표와 '관리자인가?' 확인 함수 |
+| `app/admin/jobs/new/`, `lib/admin-job-schema.ts`, `lib/admin-job-actions.ts` | 관리자 · 공고 등록 화면과 저장 |
+| `supabase/admin-job-create.sql` | 관리자만 공고를 올릴 수 있는 함수 (제목·상세를 한 번에 저장) |
 | `supabase/admin-add.sql` | [운영자용] 회원을 관리자로 지정하기 |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |

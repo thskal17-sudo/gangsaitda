@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import AdminShell from "@/components/admin-shell";
+import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { DeadlineBadge } from "@/components/job-card";
-import NotFoundCard from "@/components/not-found-card";
-import { type AdminJob, getAdminStatus, getAllJobsForAdmin } from "@/lib/admin";
+import { type AdminJob, checkAdmin, getAllJobsForAdmin } from "@/lib/admin";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 
 // 관리자 화면은 검색 결과에 나오지 않게 한다.
@@ -49,17 +47,7 @@ export default async function AdminJobsPage({ searchParams }: PageProps<"/admin"
   await connection();
 
   // 로그인 안 했으면 로그인 화면으로, 관리자가 아니면 안내만 보여준다.
-  const status = await getAdminStatus();
-  if (status === "guest") redirect("/login?next=/admin");
-  if (status === "member") {
-    return (
-      <NotFoundCard
-        title="관리자만 볼 수 있어요"
-        description="이 화면은 강사잇다 운영자 전용입니다."
-        primary={{ href: "/", label: "홈으로" }}
-      />
-    );
-  }
+  if (!(await checkAdmin("/admin"))) return <NotAdminCard />;
 
   const params = await searchParams;
   const filter = toFilter(params.filter);
@@ -67,6 +55,8 @@ export default async function AdminJobsPage({ searchParams }: PageProps<"/admin"
 
   const today = todayInSeoul();
   const jobs = await getAllJobsForAdmin();
+  // 공고 등록 화면에서 막 저장하고 돌아온 경우 (?created=공고번호)
+  const created = jobs.find((job) => job.id === params.created);
   const shown = jobs.filter((job) => matchesFilter(job, filter, today) && matchesSearch(job, q));
 
   const stats = [
@@ -93,6 +83,15 @@ export default async function AdminJobsPage({ searchParams }: PageProps<"/admin"
     <AdminShell active="jobs">
       <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">공고 관리</h1>
       <p className="mt-1 text-sm text-muted">마감된 공고까지 모든 공고를 볼 수 있어요.</p>
+
+      {created && (
+        <p role="status" className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card bg-ok/10 px-5 py-4 text-[15px] text-ok">
+          <span className="min-w-0 font-semibold">&lsquo;{created.title}&rsquo; 공고를 올렸어요.</span>
+          <Link href={`/jobs/${created.id}`} className="font-semibold underline underline-offset-2">
+            사이트에서 보기
+          </Link>
+        </p>
+      )}
 
       <dl className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats.map((s) => (
