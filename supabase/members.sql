@@ -59,3 +59,6 @@ revoke execute on function public.handle_new_member() from public, anon, authent
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_member();
+
+-- Supabase에게 새 표·함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+notify pgrst, 'reload schema';

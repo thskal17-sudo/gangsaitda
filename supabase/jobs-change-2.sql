@@ -6,3 +6,6 @@ alter table public.job_details drop constraint if exists job_details_apply_requi
 
 comment on column public.job_details.apply_url is '지원서 링크 (없으면 비워 둠)';
 comment on column public.job_details.apply_email is '지원 이메일 (방문·우편 접수만 받으면 비워 둠)';
+
+-- Supabase에게 새 표·함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+notify pgrst, 'reload schema';
