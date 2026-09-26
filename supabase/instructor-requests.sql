@@ -12,7 +12,7 @@ create table public.instructor_requests (
   region            text not null check (char_length(btrim(region)) between 1 and 50),      -- 지역
   contact_name      text not null check (char_length(btrim(contact_name)) between 1 and 30), -- 담당자 이름
   contact_phone     text not null check (contact_phone ~ '^0\d{8,10}$'),                    -- 숫자만
-  contact_email     text check (contact_email is null or char_length(contact_email) <= 100),
+  contact_email     text not null check (char_length(contact_email) between 3 and 100 and contact_email like '%_@_%'),
   subject           text not null check (char_length(btrim(subject)) between 1 and 200),     -- 필요한 분야·과목
   schedule          text not null check (char_length(btrim(schedule)) between 1 and 500),    -- 희망 일정
   target            text check (target is null or char_length(target) <= 200),              -- 수업 대상

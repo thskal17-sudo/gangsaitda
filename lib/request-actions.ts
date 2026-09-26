@@ -25,7 +25,7 @@ export async function sendRequest(input: unknown): Promise<{ ok: true } | { erro
     region: v.region,
     contact_name: v.contactName,
     contact_phone: phoneDigits(v.contactPhone),
-    contact_email: blankToNull(v.contactEmail),
+    contact_email: v.contactEmail,
     subject: v.subject,
     schedule: v.schedule,
     target: blankToNull(v.target),
