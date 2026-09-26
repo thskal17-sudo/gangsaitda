@@ -9,9 +9,24 @@ import HeaderAuth from "@/components/header-auth";
 import TopNav from "@/components/top-nav";
 import { getCurrentMember } from "@/lib/member";
 
+const DESCRIPTION = "부산·울산·경남 학교·기관의 강사 공고를 한곳에서 확인하세요.";
+
+/*
+ * 검색·공유용 정보. 카톡·문자로 주소를 보내면 아래 제목·설명과 app/opengraph-image.png 가 미리보기로 뜬다.
+ * 사이트 주소(도메인)는 Vercel 이 알아서 채운다. 도메인을 사면 metadataBase 에 그 주소를 적는다.
+ */
 export const metadata: Metadata = {
-  title: { default: "강사잇다", template: "%s | 강사잇다" },
-  description: "강사와 기관을 연결하는 구인구직 플랫폼",
+  title: { default: "강사잇다 — 강사와 기관을 잇다", template: "%s | 강사잇다" },
+  description: DESCRIPTION,
+  applicationName: "강사잇다",
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: "강사잇다",
+    title: "강사잇다 — 강사와 기관을 잇다",
+    description: DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
