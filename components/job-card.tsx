@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { daysBetween, formatKoreanDate } from "@/lib/date";
-import type { Job } from "@/lib/jobs";
+import type { Job, JobTitle } from "@/lib/jobs";
 
 /** 마감까지 이 날 수 이하로 남으면 '마감임박'으로 표시한다. */
 const URGENT_DAYS = 3;
@@ -30,26 +30,54 @@ export function DeadlineBadge({ daysLeft }: { daysLeft: number }) {
   );
 }
 
-export default function JobCard({ job, today }: { job: Job; today: string }) {
+/** 공고 카드. 회원은 기관·지역·마감일까지, 비회원은 제목만 받으므로 제목만 보여준다. */
+export default function JobCard({ job, today }: { job: Job | JobTitle; today: string }) {
+  const summary = "deadline" in job ? job : null;
+
   return (
     <Link
       href={`/jobs/${job.id}`}
       className="group block h-full rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
     >
       <article className="flex h-full flex-col rounded-card border border-line bg-white p-4 transition-colors group-hover:border-brand/40">
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-[13px] font-medium text-muted">{job.organization}</p>
-          <DeadlineBadge daysLeft={daysBetween(today, job.deadline)} />
-        </div>
+        {summary && (
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-[13px] font-medium text-muted">{summary.organization}</p>
+            <DeadlineBadge daysLeft={daysBetween(today, summary.deadline)} />
+          </div>
+        )}
 
-        <h2 className="mt-1.5 line-clamp-2 text-base leading-snug font-semibold text-ink">
-          {job.title}
-        </h2>
+        <h2 className="line-clamp-2 text-base leading-snug font-semibold text-ink">{job.title}</h2>
 
-        <p className="nums mt-auto pt-2 text-[13px] text-muted">
-          {job.region} · {formatKoreanDate(job.deadline)} 마감
-        </p>
+        {summary ? (
+          <p className="nums mt-auto pt-2 text-[13px] text-muted">
+            {summary.region} · {formatKoreanDate(summary.deadline)} 마감
+          </p>
+        ) : (
+          <p className="mt-auto flex items-center gap-1.5 pt-2 text-[13px] text-muted">
+            <LockIcon />
+            기관·지역·마감일은 회원만 볼 수 있어요
+          </p>
+        )}
       </article>
     </Link>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5 shrink-0"
+      aria-hidden="true"
+    >
+      <rect x="4" y="10.5" width="16" height="10.5" rx="2.5" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    </svg>
   );
 }

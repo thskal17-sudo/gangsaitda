@@ -34,7 +34,7 @@ npm run dev
 | `components/job-card.tsx` | 공고 카드 한 장, 남은 날짜 배지 |
 | `components/job-detail.tsx` | 상세 화면 조각 (요약, 지원 버튼, 회원 전용 안내) |
 | `components/auth-form.tsx` | 가입·로그인 화면 조각 (입력칸, 버튼, 오류 안내) |
-| `lib/jobs.ts` | 공고 데이터 (지금은 샘플) |
+| `lib/jobs.ts` | 공고 데이터 (Supabase 에서 읽음) |
 | `lib/member.ts` | 회원인지 확인 (Supabase 로그인) |
 | `lib/auth-schema.ts` | 가입·로그인 입력 규칙 (화면과 서버가 함께 씀) |
 | `lib/auth-actions.ts` | 가입·로그인 처리 (서버) |
@@ -42,6 +42,9 @@ npm run dev
 | `lib/supabase/` | Supabase 연결 |
 | `proxy.ts` | 화면을 열 때마다 로그인 유지 기간을 연장 |
 | `supabase/members.sql` | 회원 정보 표를 만드는 SQL (Supabase SQL Editor 에 붙여넣음) |
+| `supabase/jobs.sql` | 공고 표 두 개(jobs, job_details)를 만드는 SQL |
+| `supabase/jobs-change-1.sql` | 공고 표에서 강사료·전화번호 칸 없애기 (옛 jobs.sql 을 실행한 경우만) |
+| `supabase/jobs-change-2.sql` | 지원 방법을 선택 사항으로 (jobs.sql 을 이미 실행한 경우) |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |
 

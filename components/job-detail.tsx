@@ -47,7 +47,7 @@ export function LineList({ text }: { text: string }) {
 
 type ApplyAction = { key: string; href: string; label: string; note: string; external?: boolean };
 
-/** 지원 방법 버튼들. 지원서 링크 → 이메일 → 전화 순서이고, 맨 앞의 것을 가장 눈에 띄게 한다. */
+/** 지원 방법 버튼들. 지원서 링크 → 이메일 순서이고, 맨 앞의 것을 가장 눈에 띄게 한다. */
 export function ApplyActions({ job }: { job: JobDetail }) {
   const actions: ApplyAction[] = [];
 
@@ -70,14 +70,6 @@ export function ApplyActions({ job }: { job: JobDetail }) {
       note: job.applyEmail,
     });
   }
-  if (job.applyPhone) {
-    actions.push({
-      key: "phone",
-      href: `tel:${job.applyPhone.replace(/[^0-9+]/g, "")}`,
-      label: "전화로 문의하기",
-      note: job.applyPhone,
-    });
-  }
 
   return (
     <div className="mt-5 border-t border-line pt-5">
@@ -85,7 +77,9 @@ export function ApplyActions({ job }: { job: JobDetail }) {
       {job.documents && <p className="mt-1.5 text-sm text-muted">제출 서류: {job.documents}</p>}
 
       {actions.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">지원 방법은 기관에 문의해 주세요.</p>
+        <p className="mt-3 rounded-control bg-bg px-4 py-3 text-sm text-ink">
+          방문·우편 접수 등 이메일로 받지 않는 공고입니다. 지원 방법은 위 <b>원문 공고</b>에서 확인해 주세요.
+        </p>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
           {actions.map((action, index) => (
@@ -107,6 +101,34 @@ export function ApplyActions({ job }: { job: JobDetail }) {
         </ul>
       )}
     </div>
+  );
+}
+
+/** 원문 공고 링크. 새 창으로 열린다. 운영자가 입력한 값이라도 http(s) 주소만 링크로 만든다. */
+export function SourceLink({ url }: { url?: string }) {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand underline-offset-2 hover:underline"
+    >
+      원문 공고 보기
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-3.5 w-3.5"
+        aria-hidden="true"
+      >
+        <path d="M7 17 17 7M9 7h8v8" />
+      </svg>
+    </a>
   );
 }
 
@@ -142,7 +164,7 @@ export function MembersOnlyNotice({ next }: { next: string }) {
       </span>
       <h2 className="mt-4 text-lg font-bold text-ink">회원만 볼 수 있는 내용입니다</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        강사료, 수업 일정, 수업 대상, 지원 자격, 지원 방법은 회원가입 후 볼 수 있습니다.
+        기관, 지역, 마감일, 수업 일정, 지원 방법, 원문 공고는 회원가입 후 볼 수 있습니다.
         <br />
         가입은 무료입니다.
       </p>

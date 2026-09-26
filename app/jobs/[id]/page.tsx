@@ -9,15 +9,16 @@ import {
   FactList,
   LineList,
   MembersOnlyNotice,
+  SourceLink,
   TextSection,
 } from "@/components/job-detail";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
-import { getJob, getJobDetail } from "@/lib/jobs";
+import { getJobDetail, getJobTitle } from "@/lib/jobs";
 import { getCurrentMember } from "@/lib/member";
 
 export async function generateMetadata({ params }: PageProps<"/jobs/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const job = await getJob(id, todayInSeoul());
+  const job = await getJobTitle(id);
   return { title: job ? job.title : "공고를 찾을 수 없습니다" };
 }
 
@@ -27,14 +28,14 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
   const { id } = await params;
   const today = todayInSeoul();
 
-  const job = await getJob(id, today);
+  // 회원이면 상세 전부, 비회원이면 제목만 꺼낸다.
+  // 비회원에게는 화면에서 가리는 게 아니라 데이터베이스가 아예 내주지 않는다.
+  const member = await getCurrentMember();
+  const detail = member ? await getJobDetail(id) : null;
+  const job = detail ?? (await getJobTitle(id));
   if (!job) notFound();
 
-  // 상세 내용은 회원일 때만 꺼낸다. 비회원에게는 화면에서 가리는 게 아니라 아예 보내지 않는다.
-  const member = await getCurrentMember();
-  const detail = member ? await getJobDetail(id, today) : null;
-
-  const daysLeft = daysBetween(today, job.deadline);
+  const daysLeft = detail ? daysBetween(today, detail.deadline) : null;
 
   return (
     <article>
@@ -58,46 +59,48 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
       </Link>
 
       <header className="mt-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-sm font-medium text-muted">{job.organization}</p>
-          <DeadlineBadge daysLeft={daysLeft} />
-        </div>
-        <h1 className="mt-1.5 text-[22px] leading-snug font-bold md:text-[28px]">{job.title}</h1>
+        {detail && daysLeft !== null && (
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-sm font-medium text-muted">{detail.organization}</p>
+            <DeadlineBadge daysLeft={daysLeft} />
+          </div>
+        )}
+        <h1 className="text-[22px] leading-snug font-bold md:text-[28px]">{job.title}</h1>
       </header>
 
-      {/* 휴대폰: 요약 → 본문 순서로 한 줄. PC: 왼쪽 본문, 오른쪽 요약(스크롤해도 따라옴). */}
-      <div className="mt-5 grid gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
-        <aside className="rounded-card border border-line bg-white p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
-          <FactList
-            facts={[
-              { label: "지역", value: job.region },
-              { label: "마감", value: formatKoreanDate(job.deadline) },
-              { label: "강사료", value: detail?.pay },
-              { label: "수업 일정", value: detail?.schedule },
-              { label: "수업 대상", value: detail?.target },
-              { label: "모집 인원", value: detail?.headcount ? `${detail.headcount}명` : undefined },
-            ]}
-          />
-          {detail && (daysLeft < 0 ? <ClosedNotice /> : <ApplyActions job={detail} />)}
-        </aside>
+      {detail && daysLeft !== null ? (
+        /* 휴대폰: 요약 → 본문 순서로 한 줄. PC: 왼쪽 본문, 오른쪽 요약(스크롤해도 따라옴). */
+        <div className="mt-5 grid gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
+          <aside className="rounded-card border border-line bg-white p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
+            <FactList
+              facts={[
+                { label: "지역", value: detail.region },
+                { label: "마감", value: formatKoreanDate(detail.deadline) },
+                { label: "수업 일정", value: detail.schedule },
+                { label: "수업 대상", value: detail.target },
+                { label: "모집 인원", value: detail.headcount ? `${detail.headcount}명` : undefined },
+              ]}
+            />
+            <SourceLink url={detail.sourceUrl} />
+            {daysLeft < 0 ? <ClosedNotice /> : <ApplyActions job={detail} />}
+          </aside>
 
-        <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
-          {detail ? (
-            <>
-              <TextSection title="상세 내용">
-                <p className="whitespace-pre-line">{detail.description}</p>
+          <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+            <TextSection title="상세 내용">
+              <p className="whitespace-pre-line">{detail.description}</p>
+            </TextSection>
+            {detail.qualifications && (
+              <TextSection title="지원 자격">
+                <LineList text={detail.qualifications} />
               </TextSection>
-              {detail.qualifications && (
-                <TextSection title="지원 자격">
-                  <LineList text={detail.qualifications} />
-                </TextSection>
-              )}
-            </>
-          ) : (
-            <MembersOnlyNotice next={`/jobs/${job.id}`} />
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mt-5 lg:mt-8">
+          <MembersOnlyNotice next={`/jobs/${job.id}`} />
+        </div>
+      )}
     </article>
   );
 }
