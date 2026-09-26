@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAdminStatus } from "@/lib/admin";
+import { getAdminStatus, getAllJobsForAdmin } from "@/lib/admin";
 import { type JobInput, jobSchema, newJobSchema } from "@/lib/admin-job-schema";
+import { MAX_ROWS, titleKey } from "@/lib/job-excel";
 import { createClient } from "@/lib/supabase/server";
 
 /*
@@ -53,6 +54,50 @@ export async function createJob(input: unknown): Promise<{ id: string } | { erro
 
   refreshSite();
   return { id: String(data) };
+}
+
+/** 엑셀로 여러 개 올리기의 줄별 결과 */
+export type BulkResult = { ok: true; id: string } | { ok: false; error: string };
+
+/**
+ * 엑셀로 공고 여러 개 올리기. 화면에서 확인을 통과한 줄만 넘어온다.
+ * 서버에서 한 번 더 확인하고, 이미 있는 제목은 건너뛴다 (버튼을 두 번 눌러도 중복되지 않게).
+ * 줄마다 따로 저장하므로 한 줄이 실패해도 나머지는 올라간다.
+ */
+export async function createJobsBulk(inputs: unknown[]): Promise<BulkResult[] | { error: string }> {
+  if ((await getAdminStatus()) !== "admin") return { error: NOT_ADMIN };
+  if (!Array.isArray(inputs) || inputs.length === 0 || inputs.length > MAX_ROWS) {
+    return { error: `한 번에 1~${MAX_ROWS}건까지 올릴 수 있습니다.` };
+  }
+
+  const existing = new Set((await getAllJobsForAdmin()).map((job) => titleKey(job.title)));
+  const supabase = await createClient();
+  const results: BulkResult[] = [];
+
+  for (const input of inputs) {
+    const parsed = newJobSchema.safeParse(input);
+    if (!parsed.success) {
+      results.push({ ok: false, error: parsed.error.issues[0].message });
+      continue;
+    }
+    const key = titleKey(parsed.data.title);
+    if (existing.has(key)) {
+      results.push({ ok: false, error: "같은 제목의 공고가 이미 있어요" });
+      continue;
+    }
+
+    const { data, error } = await supabase.rpc("admin_create_job", toRpcArgs(parsed.data));
+    if (error) {
+      console.error("[admin] 엑셀 공고 저장 실패", error.code, error.message);
+      results.push({ ok: false, error: "저장하지 못했어요" });
+      continue;
+    }
+    existing.add(key);
+    results.push({ ok: true, id: String(data) });
+  }
+
+  refreshSite();
+  return results;
 }
 
 export async function updateJob(id: string, input: unknown): Promise<{ id: string } | { error: string }> {
