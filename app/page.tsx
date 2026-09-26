@@ -44,13 +44,18 @@ export default async function HomePage() {
 
       {/* ② 오늘 올라온 공고 수 + 마감이 가까운 공고 */}
       <section>
-        <div className="rounded-card bg-white px-5 py-4">
+        {/* 누르면 오늘 올라온 공고만 모아 보여준다 */}
+        <Link
+          href="/jobs?view=today"
+          className="group flex items-center justify-between rounded-card bg-white px-5 py-4 transition-transform duration-150 active:scale-[0.98]"
+        >
           <p className="text-[15px] text-muted">
             오늘 올라온 공고{" "}
             <span className="nums text-[22px] font-extrabold tracking-tight text-brand">{todayCount}</span>
             <span className="font-semibold text-ink">건</span>
           </p>
-        </div>
+          <span className="text-sm font-semibold text-muted transition-colors group-hover:text-brand">보기 →</span>
+        </Link>
 
         <div className="mt-6 flex items-end justify-between">
           <h2 className="text-[20px] font-bold tracking-tight md:text-[24px]">마감이 가까운 공고</h2>

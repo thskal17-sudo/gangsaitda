@@ -99,6 +99,17 @@ export async function getTodayJobCount(today: string): Promise<number> {
   return data as number;
 }
 
+/**
+ * 오늘(한국 날짜) 올라온, 마감 전 공고의 번호·제목 — 마감 가까운 순. 누구나 볼 수 있다.
+ * 세는 기준은 getTodayJobCount 와 같다 (supabase/today-job-titles.sql).
+ */
+export async function getTodayJobTitles(today: string): Promise<JobTitle[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("today_job_titles", { today });
+  if (error) fail("오늘 올라온 공고", error);
+  return (data as TitleRow[]).map((row) => ({ id: String(row.id), title: row.title }));
+}
+
 /** 지원할 수 있는 공고의 번호·제목 — 비회원용. 마감이 지나지 않은 것만, 마감 가까운 순. */
 export async function getOpenJobTitles(today: string): Promise<JobTitle[]> {
   const supabase = await createClient();
