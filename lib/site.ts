@@ -2,8 +2,8 @@
  * 사이트 곳곳에 보여주는 운영 정보. 바뀌면 여기만 고친다.
  */
 
-/** 비밀번호를 잊은 회원이 연락할 곳 (사이트에 공개됨). 정해지기 전에는 null. */
-export const SUPPORT_CONTACT: string | null = null;
+/** 비밀번호를 잊은 회원이 연락할 곳 (사이트에 공개됨). 운영자 이메일과 같다 (임시). 정해지지 않았으면 null. */
+export const SUPPORT_CONTACT: string | null = "thskal17@gmail.com";
 
 /**
  * 운영자 정보. 사이트 맨 아래(푸터)에 공개된다.
@@ -24,4 +24,19 @@ export const OPERATOR = {
   jobInfoNumber: null as string | null,
   /** 이메일 (임시) */
   email: "thskal17@gmail.com",
+};
+
+/** 개인정보처리방침(/privacy)에 들어가는 값 */
+export const PRIVACY = {
+  /** 개인정보 보호책임자 (대표자가 맡음) */
+  officer: `${OPERATOR.representative} (대표자)`,
+  /** 보호책임자 연락처 */
+  officerEmail: OPERATOR.email,
+  /** 시행일 */
+  effectiveDate: "2026년 10월 1일",
+  /**
+   * 회원 정보가 저장되는 Supabase 데이터베이스의 위치 (Supabase → Project Settings → General → Region).
+   * 사이트 서버(Vercel)도 같은 곳에서 돈다 (vercel.json 의 regions).
+   */
+  databaseRegion: "대한민국 (서울)",
 };

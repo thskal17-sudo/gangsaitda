@@ -4,7 +4,6 @@ import { OPERATOR } from "@/lib/site";
 
 /**
  * 사이트 맨 아래. 운영자 정보(lib/site.ts 의 OPERATOR)와, 회원에게만 '회원 탈퇴' 링크를 보여준다.
- * (개인정보처리방침 링크도 여기에 붙일 예정)
  */
 export default function SiteFooter({ isMember }: { isMember: boolean }) {
   const o = OPERATOR;
@@ -35,6 +34,9 @@ export default function SiteFooter({ isMember }: { isMember: boolean }) {
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <span>© 강사잇다</span>
+        <Link href="/privacy" className="font-semibold text-ink hover:underline">
+          개인정보처리방침
+        </Link>
         {isMember && (
           <Link href="/account/delete" className="hover:text-ink hover:underline">
             회원 탈퇴
