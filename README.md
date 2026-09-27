@@ -72,6 +72,9 @@ npm run dev
 | `supabase/admin-members.sql` | 관리자만 모든 회원 정보를 읽게 하는 규칙 |
 | `app/account/delete/`, `components/site-footer.tsx` | 회원 탈퇴 화면, 사이트 맨 아래(회원에게만 '회원 탈퇴' 링크) |
 | `supabase/delete-account.sql` | 로그인한 회원이 자기 계정만 지우는 함수 |
+| `supabase/setup-all.sql` | 새 Supabase 프로젝트에 전체 표·규칙·함수를 한 번에 설치 |
+| `supabase/move-1-export.sql`, `supabase/move-2-import.sql` | 옛 프로젝트 → 새 프로젝트로 공고·의뢰 옮기기 |
+| `vercel.json` | 사이트 서버 위치: 서울(icn1) |
 | `supabase/admin-add.sql` | [운영자용] 회원을 관리자로 지정하기 |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
 | `docs/SPEC.md` | 기획 문서 |

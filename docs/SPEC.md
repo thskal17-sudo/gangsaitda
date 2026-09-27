@@ -179,7 +179,13 @@
 
 ### 준비할 것 (Supabase)
 
-- Supabase 프로젝트 `gangsaitda`, 지역 Seoul. **Authentication → Email → Confirm email 끔.**
+- Supabase 프로젝트: 지역 **Seoul (Northeast Asia)**. **Authentication → Email → Confirm email 끔.**
+  - 처음 만든 프로젝트는 지역이 **싱가포르**여서(2026-09 확인), 회원 정보를 한국에 두기 위해 서울 프로젝트로 옮깁니다.
+    - 새 프로젝트 설치: `supabase/setup-all.sql` 하나 (전체 표·규칙·함수)
+    - 공고·의뢰 옮기기: 옛 프로젝트에서 `supabase/move-1-export.sql` → 새 프로젝트에서 `supabase/move-2-import.sql`
+    - 회원은 옮기지 않음 (운영자·시험 계정뿐이라 새로 가입). 관리자는 새로 가입한 뒤 `admin-add.sql`로 다시 지정.
+    - 옛 싱가포르 프로젝트는 며칠 문제없이 쓴 뒤 지웁니다.
+- 사이트 서버(Vercel 함수)도 **서울(icn1)** 에서 돌게 합니다 (`vercel.json`). 데이터베이스와 가까워 빠르고, 회원 정보 처리도 국내에서 합니다.
 - 회원 정보 표: `supabase/members.sql`을 SQL Editor에서 실행 (**완료**).
 - **SQL 실행 규칙**: 저장소의 SQL 파일은 끝에 `notify pgrst, 'reload schema';`가 들어 있습니다.
   새 표·함수를 만든 뒤 사이트에서 `PGRST205 … schema cache` 같은 오류가 나면, SQL Editor에서 이 한 줄만 다시 실행합니다.
