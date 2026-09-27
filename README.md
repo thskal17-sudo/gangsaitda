@@ -74,6 +74,7 @@ npm run dev
 | `supabase/delete-account.sql` | 로그인한 회원이 자기 계정만 지우는 함수 |
 | `supabase/setup-all.sql` | 새 Supabase 프로젝트에 전체 표·규칙·함수를 한 번에 설치 |
 | `supabase/move-1-export.sql`, `supabase/move-2-import.sql` | 옛 프로젝트 → 새 프로젝트로 공고·의뢰 옮기기 |
+| `supabase/move-3-members-export.sql`, `supabase/move-4-members-import.sql` | 옛 프로젝트 → 새 프로젝트로 회원 계정(비밀번호 포함)·관리자 명단 옮기기 |
 | `vercel.json` | 사이트 서버 위치: 서울(icn1) |
 | `supabase/admin-add.sql` | [운영자용] 회원을 관리자로 지정하기 |
 | `lib/date.ts` | 날짜 계산 (한국 시간 기준) |
