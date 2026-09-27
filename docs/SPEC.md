@@ -183,7 +183,7 @@
   - 처음 만든 프로젝트는 지역이 **싱가포르**여서(2026-09 확인), 회원 정보를 한국에 두기 위해 서울 프로젝트로 옮깁니다.
     - 새 프로젝트 설치: `supabase/setup-all.sql` 하나 (전체 표·규칙·함수)
     - 공고·의뢰 옮기기: 옛 프로젝트에서 `supabase/move-1-export.sql` → 새 프로젝트에서 `supabase/move-2-import.sql`
-    - 회원(운영자·시험 계정)도 비밀번호째 옮김: 옛 프로젝트에서 `supabase/move-3-members-export.sql` → 새 프로젝트에서 `supabase/move-4-members-import.sql` (관리자 명단 포함)
+    - 회원(운영자·시험 계정)도 비밀번호째 옮김 (새 프로젝트에 이미 다시 가입한 이메일은 건너뛰고 새 비밀번호 유지, 관리자는 이메일로 다시 연결): 옛 프로젝트에서 `supabase/move-3-members-export.sql` → 새 프로젝트에서 `supabase/move-4-members-import.sql` (관리자 명단 포함)
     - 옛 싱가포르 프로젝트는 며칠 문제없이 쓴 뒤 지웁니다.
 - 사이트 서버(Vercel 함수)도 **서울(icn1)** 에서 돌게 합니다 (`vercel.json`). 데이터베이스와 가까워 빠르고, 회원 정보 처리도 국내에서 합니다.
 - 회원 정보 표: `supabase/members.sql`을 SQL Editor에서 실행 (**완료**).
