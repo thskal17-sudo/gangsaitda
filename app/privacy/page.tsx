@@ -71,19 +71,22 @@ export default function PrivacyPage() {
           />
         </Section>
 
-        <Section n={6} title="국외 이전">
-          <p>위 업체는 해외 회사로, 이용자의 개인정보가 다음과 같이 국외에서 저장·처리됩니다.</p>
+        <Section n={6} title="저장 위치와 국외 이전">
+          <p>
+            회원 정보와 강사섭외 의뢰 내용은 <b>{p.databaseRegion}</b>에 있는 서버에 저장되고, 웹사이트 서버도 같은 곳에서 처리합니다.
+            다만 두 업체는 미국 회사이므로, 업체의 서비스 운영·보안·장애 대응 과정에서 개인정보가 국외에서 처리될 수 있습니다.
+          </p>
           <Table
-            head={["이전받는 자", "국가", "항목", "시기·방법"]}
+            head={["업체 (소재국)", "저장·처리 위치", "항목", "시기·방법"]}
             rows={[
-              [<LinkText key="s" href="https://supabase.com/privacy">Supabase, Inc.</LinkText>, p.databaseRegion, "회원가입·의뢰 항목 전부", "가입·의뢰 시 네트워크로 전송"],
-              [<LinkText key="v" href="https://vercel.com/legal/privacy-policy">Vercel, Inc.</LinkText>, "미국 등", "서비스 이용 중 전달되는 정보, 접속 기록", "서비스 이용 시 네트워크로 전송"],
+              [<LinkText key="s" href="https://supabase.com/privacy">Supabase, Inc. (미국)</LinkText>, p.databaseRegion, "회원가입·의뢰 항목 전부", "가입·의뢰 시 네트워크로 전송"],
+              [<LinkText key="v" href="https://vercel.com/legal/privacy-policy">Vercel, Inc. (미국)</LinkText>, `${p.databaseRegion}. 접속 기록 일부는 해외 서버`, "서비스 이용 중 전달되는 정보, 접속 기록", "서비스 이용 시 네트워크로 전송"],
             ]}
           />
           <Bullets
             items={[
               "이용 목적과 보유 기간은 위 1·2번과 같습니다. 업체 연락처는 업체 이름을 누르면 나오는 각 회사의 개인정보처리방침에서 확인할 수 있습니다.",
-              "국외 이전을 원하지 않으면 회원가입·의뢰를 하지 않거나 회원 탈퇴를 할 수 있습니다. 이 경우 회원 전용 서비스를 이용할 수 없습니다.",
+              "국외 처리를 원하지 않으면 회원가입·의뢰를 하지 않거나 회원 탈퇴를 할 수 있습니다. 이 경우 회원 전용 서비스를 이용할 수 없습니다.",
             ]}
           />
         </Section>

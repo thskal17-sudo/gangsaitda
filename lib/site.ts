@@ -36,7 +36,7 @@ export const PRIVACY = {
   effectiveDate: "2026년 10월 1일",
   /**
    * 회원 정보가 저장되는 Supabase 데이터베이스의 위치 (Supabase → Project Settings → General → Region).
-   * 예: "일본 (도쿄)", "대한민국 (서울)"
+   * 사이트 서버(Vercel)도 같은 곳에서 돈다 (vercel.json 의 regions).
    */
-  databaseRegion: "확인 필요",
+  databaseRegion: "대한민국 (서울)",
 };
