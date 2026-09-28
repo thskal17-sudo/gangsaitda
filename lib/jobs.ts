@@ -99,6 +99,14 @@ export async function getTodayJobCount(today: string): Promise<number> {
   return data as number;
 }
 
+/** 오늘(한국 날짜)이 마감일인 공고의 수. 누구나 볼 수 있다 (홈 화면 주황 상자, supabase/today-deadline-count.sql). */
+export async function getTodayDeadlineCount(today: string): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("today_deadline_count", { today });
+  if (error) fail("오늘 마감 공고 수", error);
+  return data as number;
+}
+
 /**
  * 오늘(한국 날짜) 올라온, 마감 전 공고의 번호·제목 — 마감 가까운 순. 누구나 볼 수 있다.
  * 세는 기준은 getTodayJobCount 와 같다 (supabase/today-job-titles.sql).

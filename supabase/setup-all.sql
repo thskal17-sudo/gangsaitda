@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -749,6 +749,36 @@ revoke execute on function public.delete_my_account() from public, anon;
 grant execute on function public.delete_my_account() to authenticated;
 
 -- Supabase에게 새 함수가 생겼다고 알리기 (이게 없으면 schema cache 오류가 날 수 있음)
+notify pgrst, 'reload schema';
+
+-- ============================================================
+-- today-deadline-count.sql
+-- ============================================================
+
+-- 강사잇다 · 오늘 마감인 공고 수 (홈 화면 주황 상자)
+-- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
+--
+-- 한국 날짜로 오늘이 마감일인 공고의 **개수만** 돌려줍니다 (숨긴 공고는 빼고).
+-- 비회원도 부를 수 있지만 공고 내용(기관·지역·마감일)은 전혀 내주지 않습니다.
+
+create or replace function public.today_deadline_count(today date)
+returns integer
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select count(*)::integer
+  from public.jobs j
+  join public.job_details d on d.job_id = j.id
+  where d.deadline = today_deadline_count.today
+    and j.hidden_at is null;
+$$;
+
+revoke execute on function public.today_deadline_count(date) from public;
+grant execute on function public.today_deadline_count(date) to anon, authenticated;
+
+-- Supabase에게 새 함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
 notify pgrst, 'reload schema';
 
 commit;

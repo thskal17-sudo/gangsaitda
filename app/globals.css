@@ -41,3 +41,8 @@ body {
 .nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* 홈(app/page.tsx 의 data-home)은 흰 바탕 위에 옅은 회색 상자를 두는 모양이라 바탕을 흰색으로 바꾼다. */
+body:has([data-home]) {
+  background: #ffffff;
+}

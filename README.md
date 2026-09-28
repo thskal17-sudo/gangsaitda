@@ -53,7 +53,9 @@ npm run dev
 | `lib/site.ts` | 운영 정보 (문의처 등) |
 | `supabase/instructor-requests.sql` | 강사섭외 의뢰 표 (보내기만 되고 사이트에서는 못 읽음) |
 | `supabase/instructor-requests-change-1.sql` | 의뢰 표에서 담당자 이메일을 필수로 (위 파일을 이미 실행한 경우) |
-| `supabase/today-job-count.sql` | 오늘 올라온 공고 수 함수 (홈) |
+| `supabase/today-deadline-count.sql` | 오늘 마감인 공고 수 함수 (홈 주황 상자) |
+| `supabase/today-job-count.sql` | 오늘 올라온 공고 수 함수 |
+| `lib/courses.ts` | 홈 '교육과정' 카드 목록 (이름·이미지·링크) |
 | `supabase/today-job-titles.sql` | 오늘 올라온 공고 목록 함수 (`/jobs?view=today`) |
 | `supabase/jobs.sql` | 공고 표 두 개(jobs, job_details)를 만드는 SQL |
 | `supabase/jobs-change-1.sql` | 공고 표에서 강사료·전화번호 칸 없애기 (옛 jobs.sql 을 실행한 경우만) |
