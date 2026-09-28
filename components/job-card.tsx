@@ -3,7 +3,7 @@ import { daysBetween, formatKoreanDate } from "@/lib/date";
 import type { Job, JobTitle } from "@/lib/jobs";
 
 /** 마감까지 이 날 수 이하로 남으면 '마감임박'으로 표시한다. */
-const URGENT_DAYS = 3;
+export const URGENT_DAYS = 3;
 
 /** 남은 날짜 배지. 목록 카드와 상세 화면이 함께 쓴다. */
 export function DeadlineBadge({ daysLeft }: { daysLeft: number }) {
