@@ -80,7 +80,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       {/* ③ 교육과정 */}
       <section aria-labelledby="courses-title" className="mt-8 md:mt-12">
-        <SectionHead id="courses-title" title="교육과정" href="/certificates" />
+        <SectionHead id="courses-title" title="강사 경력에 더하는 교육과정" href="/certificates" />
         {/* 휴대폰: 옆으로 밀어 보는 한 줄 / PC: 3칸 */}
         <ul className="-mr-4 mt-3.5 flex snap-x gap-3 overflow-x-auto pr-4 pb-1 md:mr-0 md:mt-5 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:p-0">
           {COURSES.map((course, i) => (
