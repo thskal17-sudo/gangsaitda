@@ -113,6 +113,9 @@ export default function ProfileForm({ profile }: { profile: Profile | null }) {
               <Chip key={region} type="checkbox" value={region} label={region} {...register("regions")} />
             ))}
           </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+            경기권: 서울·경기·인천 · 충청권: 대전·세종·충북·충남 · 전라권: 광주·전북·전남 · 경상권: 부산·울산·대구·경남·경북
+          </p>
           {errors.regions && <p className="mt-1.5 text-sm text-warn">{errors.regions.message}</p>}
         </fieldset>
       </Section>

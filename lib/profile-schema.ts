@@ -5,7 +5,11 @@ import { z } from "zod";
  * 데이터베이스 규칙(supabase/instructor-profiles.sql)과 길이·지역이 같다.
  */
 
-export const PROFILE_REGIONS = ["부산", "울산", "경남"] as const;
+/**
+ * 활동 가능 지역 (권역). 여러 개 고를 수 있다. 데이터베이스 규칙(supabase/instructor-profiles.sql)과 같아야 한다.
+ * 경기권 = 서울·경기·인천, 경상권 = 부산·울산·경남·대구·경북, 전라권 = 광주·전북·전남, 충청권 = 대전·세종·충북·충남
+ */
+export const PROFILE_REGIONS = ["전국구", "경기권", "강원권", "충청권", "전라권", "경상권", "제주권"] as const;
 
 /** 올릴 수 있는 파일: PDF, 파워포인트, 한글, 워드. 10MB 까지 */
 export const PROFILE_FILE_EXTENSIONS = ["pdf", "ppt", "pptx", "hwp", "hwpx", "doc", "docx"] as const;

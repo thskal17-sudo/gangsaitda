@@ -11,8 +11,7 @@ create table if not exists public.instructor_profiles (
   member_id     uuid primary key references public.members (id) on delete cascade,
   consent_at    timestamptz not null default now(),   -- 기관 전달에 동의한 시각
   fields        text not null check (char_length(fields) between 1 and 100),  -- 강의 분야
-  regions       text[] not null
-                check (cardinality(regions) between 1 and 3 and regions <@ array['부산', '울산', '경남']),
+  regions       text[] not null,                     -- 활동 가능 지역 (아래 규칙 참고)
   method        text not null check (method in ('form', 'file')),
   career        text check (career is null or char_length(career) <= 2000),
   certificates  text check (certificates is null or char_length(certificates) <= 1000),
@@ -26,6 +25,12 @@ create table if not exists public.instructor_profiles (
     or (method = 'file' and file_path is not null and file_path like member_id::text || '/%')
   )
 );
+
+-- 활동 가능 지역: 권역 단위 (lib/profile-schema.ts 의 PROFILE_REGIONS 와 같아야 한다). 여러 번 실행해도 새 규칙으로 바뀐다.
+alter table public.instructor_profiles drop constraint if exists instructor_profiles_regions_check;
+alter table public.instructor_profiles add constraint instructor_profiles_regions_check
+  check (cardinality(regions) between 1 and 7
+         and regions <@ array['전국구', '경기권', '강원권', '충청권', '전라권', '경상권', '제주권']);
 
 comment on table public.instructor_profiles is
   '강사 프로필. 기관 전달에 동의한 회원만. 운영자가 의뢰 기관에 골라 전달한다. 연락처는 섭외 확정 뒤에 알린다.';
