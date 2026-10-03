@@ -5,6 +5,20 @@ import { z } from "zod";
  * 데이터베이스 규칙(supabase/instructor-profiles.sql)과 길이·지역이 같다.
  */
 
+/** 강의 분야. 여러 개 고를 수 있다. 데이터베이스 규칙(supabase/instructor-profiles.sql)과 같아야 한다. */
+export const PROFILE_FIELDS = [
+  "진로·창업",
+  "코딩·AI",
+  "방과후(예체능)",
+  "방과후(교과)",
+  "독서·논술",
+  "리더십·소통",
+  "직무·CS",
+  "인문·교양",
+  "힐링·건강",
+  "기타",
+] as const;
+
 /**
  * 활동 가능 지역 (권역). 여러 개 고를 수 있다. 데이터베이스 규칙(supabase/instructor-profiles.sql)과 같아야 한다.
  * 경기권 = 서울·경기·인천, 경상권 = 부산·울산·경남·대구·경북, 전라권 = 광주·전북·전남, 충청권 = 대전·세종·충북·충남
@@ -26,7 +40,7 @@ const optionalText = (max: number, label: string) =>
 
 export const profileSchema = z
   .object({
-    fields: z.string().trim().min(1, "강의 분야를 입력해 주세요.").max(100, "강의 분야는 100자까지 입력할 수 있습니다."),
+    fields: z.array(z.enum(PROFILE_FIELDS)).min(1, "강의 분야를 하나 이상 골라 주세요."),
     regions: z.array(z.enum(PROFILE_REGIONS)).min(1, "활동 가능 지역을 하나 이상 골라 주세요."),
     method: z.enum(["form", "file"]),
     career: optionalText(2000, "강의 경력"),

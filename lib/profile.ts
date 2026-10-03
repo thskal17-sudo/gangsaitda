@@ -9,7 +9,7 @@ export const PROFILE_BUCKET = "instructor-profiles";
 
 export type Profile = {
   memberId: string;
-  fields: string;
+  fields: string[];
   regions: string[];
   method: "form" | "file";
   career: string;
@@ -22,7 +22,7 @@ export type Profile = {
 
 type Row = {
   member_id: string;
-  fields: string;
+  fields: string[];
   regions: string[];
   method: "form" | "file";
   career: string | null;
@@ -36,7 +36,7 @@ type Row = {
 function toProfile(row: Row): Profile {
   return {
     memberId: row.member_id,
-    fields: row.fields,
+    fields: Array.isArray(row.fields) ? row.fields : [],
     regions: row.regions,
     method: row.method,
     career: row.career ?? "",

@@ -3,12 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type ReactNode, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { Field, FormError, SubmitButton, TextAreaField } from "@/components/auth-form";
+import { FormError, SubmitButton, TextAreaField } from "@/components/auth-form";
 import PrivacyConsent, { PROFILE_SHARE_TERMS, PROFILE_TERMS } from "@/components/privacy-consent";
 import type { Profile } from "@/lib/profile";
 import { deleteProfile, prepareProfileUpload, saveProfile } from "@/lib/profile-actions";
 import {
   PROFILE_FILE_EXTENSIONS,
+  PROFILE_FIELDS,
   PROFILE_FILE_MAX_BYTES,
   PROFILE_REGIONS,
   type ProfileInput,
@@ -33,7 +34,7 @@ export default function ProfileForm({ profile }: { profile: Profile | null }) {
   } = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fields: profile?.fields ?? "",
+      fields: (profile?.fields ?? []) as ProfileInput["fields"],
       regions: (profile?.regions ?? []) as ProfileInput["regions"],
       method: profile?.method ?? "form",
       career: profile?.career ?? "",
@@ -99,13 +100,15 @@ export default function ProfileForm({ profile }: { profile: Profile | null }) {
       )}
 
       <Section title="기본 정보">
-        <Field
-          id="fields"
-          label="강의 분야"
-          placeholder="예) 코딩·AI, 진로·창업, 방과후 미술"
-          error={errors.fields?.message}
-          {...register("fields")}
-        />
+        <fieldset>
+          <legend className="text-sm font-semibold text-ink">강의 분야 (여러 개 고를 수 있어요)</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {PROFILE_FIELDS.map((field) => (
+              <Chip key={field} type="checkbox" value={field} label={field} {...register("fields")} />
+            ))}
+          </div>
+          {errors.fields && <p className="mt-1.5 text-sm text-warn">{errors.fields.message}</p>}
+        </fieldset>
         <fieldset>
           <legend className="text-sm font-semibold text-ink">활동 가능 지역 (여러 개 고를 수 있어요)</legend>
           <div className="mt-2 flex flex-wrap gap-2">
