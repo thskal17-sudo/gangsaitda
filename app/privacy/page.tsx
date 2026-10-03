@@ -67,6 +67,7 @@ export default function PrivacyPage() {
             rows={[
               ["Supabase, Inc.", "회원 계정·로그인 관리, 회원 정보와 의뢰 내용 저장"],
               ["Vercel, Inc.", "웹사이트 운영(호스팅), 접속 기록 처리"],
+              ["Plus Five Five, Inc. (Resend)", "비밀번호 재설정 등 안내 메일 발송"],
             ]}
           />
         </Section>
@@ -74,13 +75,14 @@ export default function PrivacyPage() {
         <Section n={6} title="저장 위치와 국외 이전">
           <p>
             회원 정보와 강사섭외 의뢰 내용은 <b>{p.databaseRegion}</b>에 있는 서버에 저장되고, 웹사이트 서버도 같은 곳에서 처리합니다.
-            다만 두 업체는 미국 회사이므로, 업체의 서비스 운영·보안·장애 대응 과정에서 개인정보가 국외에서 처리될 수 있습니다.
+            다만 아래 업체는 모두 미국 회사이므로, 업체의 서비스 운영·보안·장애 대응 과정에서 개인정보가 국외에서 처리될 수 있습니다.
           </p>
           <Table
             head={["업체 (소재국)", "저장·처리 위치", "항목", "시기·방법"]}
             rows={[
               [<LinkText key="s" href="https://supabase.com/privacy">Supabase, Inc. (미국)</LinkText>, p.databaseRegion, "회원가입·의뢰 항목 전부", "가입·의뢰 시 네트워크로 전송"],
               [<LinkText key="v" href="https://vercel.com/legal/privacy-policy">Vercel, Inc. (미국)</LinkText>, `${p.databaseRegion}. 접속 기록 일부는 해외 서버`, "서비스 이용 중 전달되는 정보, 접속 기록", "서비스 이용 시 네트워크로 전송"],
+              [<LinkText key="r" href="https://resend.com/legal/privacy-policy">Plus Five Five, Inc. (Resend, 미국)</LinkText>, "일본(도쿄)에서 발송. 발송 기록은 미국 서버에 30일 보관 뒤 삭제", "이메일 주소, 메일 내용", "메일을 보낼 때 네트워크로 전송"],
             ]}
           />
           <Bullets

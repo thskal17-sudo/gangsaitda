@@ -2,16 +2,21 @@
 
 import type { AuthError } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   type AuthResult,
   deleteAccountSchema,
   findEmailSchema,
   loginSchema,
+  newPasswordSchema,
   phoneDigits,
+  resetRequestSchema,
   signupSchema,
 } from "@/lib/auth-schema";
+import { NEW_PASSWORD_PATH, RECOVERY_COOKIE, type RecoveryToken } from "@/lib/recovery";
 import { safeNext } from "@/lib/safe-next";
+import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
 /*
@@ -122,6 +127,86 @@ export async function findEmail(input: unknown): Promise<{ emails: string[] } | 
     return { error: "지금은 이메일을 찾을 수 없습니다. 잠시 뒤에 다시 시도해 주세요." };
   }
   return { emails: data as string[] };
+}
+
+/**
+ * 비밀번호 찾기: 재설정 메일 보내기. 메일은 Supabase 가 Resend 를 통해 보낸다.
+ * 가입하지 않은 이메일이어도 Supabase 가 똑같이 '성공'을 돌려준다. 그래서 화면도 늘 같은 안내를 보여주고,
+ * 남이 어떤 이메일이 가입돼 있는지 알아낼 수 없다.
+ * 메일 속 링크 모양은 Supabase 의 메일 문구(supabase/email-templates/reset-password.html)가 정한다.
+ */
+export async function requestPasswordReset(input: unknown): Promise<{ sent: true } | { error: string }> {
+  const parsed = resetRequestSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    // 메일 문구를 바꾸기 전(Supabase 기본 문구)에도 같은 화면으로 오게 한다.
+    redirectTo: `${SITE_URL}${NEW_PASSWORD_PATH}`,
+  });
+  if (error) {
+    if (error.code === "over_email_send_rate_limit") {
+      return { error: "방금 메일을 보냈습니다. 1분쯤 기다린 뒤 다시 요청해 주세요." };
+    }
+    return { error: commonErrorMessage(error, "메일을 보내지 못했습니다.") };
+  }
+  return { sent: true };
+}
+
+/**
+ * 새 비밀번호 저장. 메일 링크의 값으로 본인 확인 → 비밀번호 바꾸기 → 그대로 로그인된 상태가 된다.
+ * 본인 확인을 화면을 열 때가 아니라 '저장'을 누를 때 하는 이유: 일부 메일 서비스가 보안 검사로 링크를
+ * 미리 열어 보는데, 열자마자 확인하면 그 검사가 한 번뿐인 링크를 써 버린다.
+ */
+export async function setNewPassword(input: unknown, token: RecoveryToken): Promise<{ done: true } | { error: string }> {
+  const parsed = newPasswordSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const cookieStore = await cookies();
+  const expired = { error: "링크가 만료되었거나 이미 사용되었습니다. 비밀번호 찾기에서 메일을 다시 받아 주세요." };
+
+  let userId: string | undefined;
+  const tokenHash = typeof token?.tokenHash === "string" ? token.tokenHash : undefined;
+  const code = typeof token?.code === "string" ? token.code : undefined;
+  if (tokenHash) {
+    const { data } = await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash });
+    userId = data.user?.id;
+  } else if (code) {
+    const { data } = await supabase.auth.exchangeCodeForSession(code);
+    userId = data.user?.id;
+  }
+
+  if (userId) {
+    cookieStore.set(RECOVERY_COOKIE, userId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: NEW_PASSWORD_PATH,
+      maxAge: 15 * 60,
+    });
+  } else {
+    // 링크는 이미 쓰였지만, 방금 이 브라우저에서 확인을 마친 그 회원이면 계속 진행한다.
+    const { data: claims } = await supabase.auth.getClaims();
+    const current = claims?.claims.sub;
+    if (!current || cookieStore.get(RECOVERY_COOKIE)?.value !== current) return expired;
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) {
+    switch (error.code) {
+      case "same_password":
+        return { error: "지금 쓰는 비밀번호와 다른 비밀번호를 입력해 주세요." };
+      case "weak_password":
+        return { error: "비밀번호가 너무 쉽습니다. 영문·숫자를 섞어 더 길게 만들어 주세요." };
+      default:
+        return { error: commonErrorMessage(error, "비밀번호를 바꾸지 못했습니다.") };
+    }
+  }
+
+  cookieStore.delete({ name: RECOVERY_COOKIE, path: NEW_PASSWORD_PATH });
+  refreshAllScreens();
+  return { done: true };
 }
 
 function signupErrorMessage(error: AuthError): string {

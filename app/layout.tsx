@@ -9,15 +9,16 @@ import HeaderAuth from "@/components/header-auth";
 import SiteFooter from "@/components/site-footer";
 import TopNav from "@/components/top-nav";
 import { getCurrentMember } from "@/lib/member";
+import { SITE_URL } from "@/lib/site";
 
 const DESCRIPTION = "부산·울산·경남 학교·기관의 강사 공고를 한곳에서 확인하세요.";
 
 /*
  * 검색·공유용 정보. 카톡·문자로 주소를 보내면 아래 제목·설명과 app/opengraph-image.png 가 미리보기로 뜬다.
- * 미리보기 그림 주소는 metadataBase(대표 주소) 기준으로 만든다. gangsaitda.com 은 www 로 넘어가므로 www 주소를 쓴다.
+ * 미리보기 그림 주소는 metadataBase(대표 주소, lib/site.ts 의 SITE_URL) 기준으로 만든다.
  */
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.gangsaitda.com"),
+  metadataBase: new URL(SITE_URL),
   title: { default: "강사잇다 — 강사와 기관을 잇다", template: "%s | 강사잇다" },
   description: DESCRIPTION,
   applicationName: "강사잇다",
