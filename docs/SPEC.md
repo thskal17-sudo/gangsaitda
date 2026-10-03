@@ -197,8 +197,9 @@
 - Vercel 배포 (**완료**): GitHub 저장소 연결, 환경변수 두 개(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) 입력.
   main 에 합치면 자동으로 다시 올라가고, PR 마다 미리보기 주소가 생깁니다.
   환경변수를 바꾸면 Deployments → Redeploy 를 해야 반영됩니다.
-- 나중에 도메인을 사면 Vercel Settings → Domains 에서 연결합니다. 메일 기능을 붙일 때
-  Supabase Authentication → URL Configuration 에 그 주소를 적습니다.
+- 도메인: **www.gangsaitda.com** (가비아에서 구입, 가비아 DNS 에 A·CNAME 레코드로 Vercel 연결).
+  `gangsaitda.com` 으로 들어오면 `www.gangsaitda.com` 으로 넘어갑니다. 메일 기능을 붙일 때
+  Supabase Authentication → URL Configuration 에 이 주소를 적습니다.
 - 작업 공간 설정
   - Network access: `*.supabase.co` 허용
   - 환경변수: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
@@ -266,7 +267,7 @@
 - **아이콘**: 로고의 빨간 "잇"을 흰 바탕 가운데에 둔 그림 (`app/icon.png`, `app/apple-icon.png`, `app/favicon.ico`)
 - **공유 미리보기**(카톡·문자·SNS): `app/opengraph-image.png` (로고 + "강사와 기관을 잇다" + 부산·울산·경남 안내)
   - 제목 "강사잇다 — 강사와 기관을 잇다", 설명 "부산·울산·경남 학교·기관의 강사 공고를 한곳에서 확인하세요." (`app/layout.tsx`)
-  - 사이트 주소는 Vercel 이 알아서 채웁니다. 도메인을 사면 `metadataBase`에 그 주소를 적습니다.
+  - 대표 주소는 `app/layout.tsx` 의 `metadataBase` (`https://www.gangsaitda.com`).
 
 ---
 
