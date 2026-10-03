@@ -27,7 +27,7 @@ npm run dev
 | `app/signup/` | 회원가입 화면 |
 | `app/login/` | 로그인 화면 |
 | `app/certificates/` | 자격증 (준비 중) |
-| `app/request/` | 강사섭외 의뢰서 (학교·기관이 로그인 없이 보냄) |
+| `app/request/` | 강사섭외 의뢰서 (학교·기관이 회원가입 후 보냄) |
 | `app/find-email/` | 이메일(아이디) 찾기 화면 |
 | `app/find-password/` | 비밀번호 찾기 안내 (지금은 운영자 문의) |
 | `app/layout.tsx` | 모든 화면을 감싸는 틀 (위쪽 띠, 본문 폭, 휴대폰/PC 구분) |
@@ -53,6 +53,7 @@ npm run dev
 | `lib/site.ts` | 운영 정보 (문의처 등) |
 | `supabase/instructor-requests.sql` | 강사섭외 의뢰 표 (보내기만 되고 사이트에서는 못 읽음) |
 | `supabase/instructor-requests-change-1.sql` | 의뢰 표에서 담당자 이메일을 필수로 (위 파일을 이미 실행한 경우) |
+| `supabase/instructor-requests-change-2.sql` | 의뢰는 회원만 보내게 (위 파일들을 이미 실행한 경우) |
 | `supabase/today-deadline-count.sql` | 오늘 마감인 공고 수 함수 (홈 주황 상자) |
 | `supabase/today-job-count.sql` | 오늘 올라온 공고 수 함수 |
 | `lib/courses.ts` | 홈 '교육과정' 카드 목록 (이름·이미지·링크) |

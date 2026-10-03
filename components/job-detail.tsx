@@ -141,8 +141,21 @@ export function ClosedNotice() {
   );
 }
 
-/** 비회원에게 상세 내용 대신 보여주는 안내. 가입·로그인 뒤 이 공고로 돌아오게 한다. */
-export function MembersOnlyNotice({ next }: { next: string }) {
+/**
+ * 비회원에게 회원 전용 내용 대신 보여주는 안내. 가입·로그인 뒤 next 화면으로 돌아오게 한다.
+ * 기본 문구는 공고 상세용이고, 강사섭외 화면처럼 다른 곳에서는 문구를 바꿔 쓴다.
+ */
+export function MembersOnlyNotice({
+  next,
+  title = "회원만 볼 수 있는 내용입니다",
+  description = "기관, 지역, 마감일, 수업 일정, 지원 방법, 원문 공고는 회원가입 후 볼 수 있습니다.",
+  cta = "무료 회원가입하고 자세히 보기",
+}: {
+  next: string;
+  title?: string;
+  description?: string;
+  cta?: string;
+}) {
   const query = `?next=${encodeURIComponent(next)}`;
 
   return (
@@ -162,9 +175,9 @@ export function MembersOnlyNotice({ next }: { next: string }) {
           <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
         </svg>
       </span>
-      <h2 className="mt-4 text-lg font-bold text-ink">회원만 볼 수 있는 내용입니다</h2>
+      <h2 className="mt-4 text-lg font-bold text-ink">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        기관, 지역, 마감일, 수업 일정, 지원 방법, 원문 공고는 회원가입 후 볼 수 있습니다.
+        {description}
         <br />
         가입은 무료입니다.
       </p>
@@ -172,7 +185,7 @@ export function MembersOnlyNotice({ next }: { next: string }) {
         href={`/signup${query}`}
         className="mx-auto mt-6 flex h-14 w-full max-w-xs items-center justify-center rounded-control bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand/90"
       >
-        무료 회원가입하고 자세히 보기
+        {cta}
       </Link>
       <p className="mt-3 text-sm text-muted">
         이미 회원이세요?{" "}
