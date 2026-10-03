@@ -200,7 +200,14 @@
 - **SQL 실행 규칙**: 저장소의 SQL 파일은 끝에 `notify pgrst, 'reload schema';`가 들어 있습니다.
   새 표·함수를 만든 뒤 사이트에서 `PGRST205 … schema cache` 같은 오류가 나면, SQL Editor에서 이 한 줄만 다시 실행합니다.
   그래도 안 되면 Table Editor에 그 표가 실제로 있는지 확인합니다 (SQL이 실행되지 않았을 수 있음).
-- Vercel 배포 (**완료**): GitHub 저장소 연결, 환경변수 두 개(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) 입력.
+- **Cloudflare 로 옮기는 중 (2026-10)**: Vercel 무료 플랜은 상업용 불가라, Cloudflare Workers(Workers Paid 월 5달러)로 옮깁니다.
+  - 변환 도구 `@opennextjs/cloudflare` (설정: `wrangler.jsonc`, `open-next.config.ts`). 시험 빌드에서 전 화면·로그인·비밀번호 재설정·엑셀 올리기 확인.
+  - 직접 확인: `npm run cf:preview` (Cloudflare 와 같은 방식으로 내 컴퓨터에서 띄움)
+  - Cloudflare Workers Builds 가 GitHub main 을 보고 자동으로 다시 올림. 빌드 명령 `npx opennextjs-cloudflare build`, 배포 명령 `npx opennextjs-cloudflare deploy`.
+    Supabase 환경변수 두 개는 **Build variables** 에 넣습니다 (`NEXT_PUBLIC_` 값은 빌드할 때 코드에 박힘).
+  - 도메인 DNS 는 Cloudflare 로 옮김 (가비아 네임서버 변경). Resend 용 기록(`send`, `rsend`, `resend._domainkey`, `_dmarc`)은 **DNS only(회색 구름)** 여야 합니다.
+  - 옮기기가 끝나면 Vercel 프로젝트·`vercel.json` 을 정리합니다.
+- Vercel 배포 (**완료**, 옮기기 전까지 사용): GitHub 저장소 연결, 환경변수 두 개(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) 입력.
   main 에 합치면 자동으로 다시 올라가고, PR 마다 미리보기 주소가 생깁니다.
   환경변수를 바꾸면 Deployments → Redeploy 를 해야 반영됩니다.
 - 도메인: **www.gangsaitda.com** (가비아에서 구입, 가비아 DNS 에 A·CNAME 레코드로 Vercel 연결).

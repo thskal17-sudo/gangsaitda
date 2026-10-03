@@ -1,0 +1,22 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	"name": "gangsaitda",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "gangsaitda"
+		}
+	],
+	"images": {
+		"binding": "IMAGES"
+	},
+	// 서울 데이터베이스(Supabase)와 가까운 곳에서 돌도록
+	"placement": { "mode": "smart" }
+}
