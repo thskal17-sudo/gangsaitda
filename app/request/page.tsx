@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
+import { MembersOnlyNotice } from "@/components/job-detail";
+import { getCurrentMember } from "@/lib/member";
 import RequestForm from "./request-form";
 
 export const metadata: Metadata = { title: "강사섭외" };
 
-/** 강사섭외 의뢰서. 학교·기관 담당자가 로그인 없이 보낸다. */
-export default function RequestPage() {
+/**
+ * 강사섭외 의뢰서. 학교·기관 담당자가 **회원가입(강사와 같은 가입) 후** 보낸다.
+ * 비회원에게는 의뢰서 대신 가입·로그인 안내를 보여주고, 가입·로그인하면 이 화면으로 돌아온다.
+ * 회사소개서 PDF 는 비회원도 내려받을 수 있다.
+ */
+export default async function RequestPage() {
+  const member = await getCurrentMember();
+
   return (
     <section className="mx-auto w-full max-w-[560px]">
       <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">강사섭외</h1>
@@ -29,7 +37,16 @@ export default function RequestPage() {
         <span className="shrink-0 text-sm font-semibold text-brand group-hover:underline">내려받기</span>
       </a>
       <div className="mt-5">
-        <RequestForm />
+        {member ? (
+          <RequestForm />
+        ) : (
+          <MembersOnlyNotice
+            next="/request"
+            title="의뢰서는 회원만 쓸 수 있어요"
+            description="가입하거나 로그인하면 의뢰서를 바로 쓸 수 있습니다."
+            cta="무료 회원가입하고 의뢰하기"
+          />
+        )}
       </div>
     </section>
   );

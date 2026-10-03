@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -779,6 +779,28 @@ revoke execute on function public.today_deadline_count(date) from public;
 grant execute on function public.today_deadline_count(date) to anon, authenticated;
 
 -- Supabase에게 새 함수가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)
+notify pgrst, 'reload schema';
+
+-- ============================================================
+-- instructor-requests-change-2.sql
+-- ============================================================
+
+-- 강사잇다 · 강사섭외 의뢰 표 고치기 ② 회원만 의뢰를 보낸다
+-- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
+--
+-- 지금까지는 로그인하지 않은 사람(anon)도 의뢰를 보낼 수 있었습니다.
+-- 이제는 로그인한 회원(authenticated)만 보낼 수 있습니다. 화면에서 막는 것과 별개로 데이터베이스에서도 막습니다.
+
+drop policy if exists "누구나 강사섭외 의뢰를 보낸다" on public.instructor_requests;
+drop policy if exists "회원만 강사섭외 의뢰를 보낸다" on public.instructor_requests;
+create policy "회원만 강사섭외 의뢰를 보낸다"
+  on public.instructor_requests for insert
+  to authenticated
+  with check (status = '접수');
+
+revoke insert on public.instructor_requests from anon;
+
+-- Supabase에게 바뀐 규칙을 알리기
 notify pgrst, 'reload schema';
 
 commit;

@@ -1,17 +1,22 @@
 "use server";
 
 import { phoneDigits } from "@/lib/auth-schema";
+import { getCurrentMember } from "@/lib/member";
 import { requestSchema } from "@/lib/request-schema";
 import { createClient } from "@/lib/supabase/server";
 
 /*
- * 강사섭외 의뢰 보내기. 로그인 없이 누구나 보낼 수 있고, 데이터베이스에는 '추가'만 된다.
- * (보낸 의뢰는 사이트에서 다시 읽을 수 없다. 운영자가 Supabase Table Editor 에서 본다.)
+ * 강사섭외 의뢰 보내기. 로그인한 회원만 보낼 수 있다 (데이터베이스도 회원만 받는다:
+ * supabase/instructor-requests-change-2.sql). 보낸 의뢰는 관리자 화면(/admin/requests)에서만 본다.
  */
 export async function sendRequest(input: unknown): Promise<{ ok: true } | { error: string }> {
   const parsed = requestSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const v = parsed.data;
+
+  if (!(await getCurrentMember())) {
+    return { error: "로그인이 풀렸습니다. 다시 로그인한 뒤 보내 주세요." };
+  }
 
   // 숨은 칸이 채워져 있으면 사람이 아니라 자동 프로그램이다. 저장하지 않고 성공한 척한다.
   if (v.website) return { ok: true };
