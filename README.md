@@ -54,6 +54,8 @@ npm run dev
 | `supabase/instructor-requests.sql` | 강사섭외 의뢰 표 (보내기만 되고 사이트에서는 못 읽음) |
 | `supabase/instructor-requests-change-1.sql` | 의뢰 표에서 담당자 이메일을 필수로 (위 파일을 이미 실행한 경우) |
 | `supabase/instructor-requests-change-2.sql` | 의뢰는 회원만 보내게 (위 파일들을 이미 실행한 경우) |
+| `supabase/instructor-profiles.sql` | 강사 프로필 표와 파일 저장소 |
+| `app/account/profile/` | 내 프로필 (기관 전달에 동의한 강사만) |
 | `supabase/today-deadline-count.sql` | 오늘 마감인 공고 수 함수 (홈 주황 상자) |
 | `supabase/today-job-count.sql` | 오늘 올라온 공고 수 함수 |
 | `lib/courses.ts` | 홈 '교육과정' 카드 목록 (이름·이미지·링크) |
