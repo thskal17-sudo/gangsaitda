@@ -66,9 +66,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </div>
       </section>
 
-      {/* ② 바로가기: 강사 등록(비회원에게만) + 강사섭외. PC 에서는 나란히 */}
-      <div className={`mt-5 grid grid-cols-1 gap-3 md:mt-12 md:gap-6 ${member ? "" : "md:grid-cols-2"}`}>
-        {!member && (
+      {/* ② 바로가기: 비회원은 강사 가입, 회원은 내 프로필 + 강사섭외. PC 에서는 나란히 */}
+      <div className="mt-5 grid grid-cols-1 gap-3 md:mt-12 md:grid-cols-2 md:gap-6">
+        {member ? (
+          <ShortcutBox
+            href="/account/profile"
+            title="섭외 받을 프로필을 내 보세요"
+            description="기관 의뢰가 오면 운영자가 골라 전달해 드려요"
+            highlight
+          />
+        ) : (
           <ShortcutBox
             href="/signup"
             title="강사로 활동하고 계신가요?"

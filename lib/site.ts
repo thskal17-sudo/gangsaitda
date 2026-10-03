@@ -36,7 +36,7 @@ export const PRIVACY = {
   /** 보호책임자 연락처 */
   officerEmail: OPERATOR.email,
   /** 시행일 */
-  effectiveDate: "2026년 10월 3일",
+  effectiveDate: "2026년 10월 4일",
   /**
    * 회원 정보가 저장되는 Supabase 데이터베이스의 위치 (Supabase → Project Settings → General → Region).
    * 사이트 서버(Vercel)도 같은 곳에서 돈다 (vercel.json 의 regions).

@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -801,6 +801,102 @@ create policy "회원만 강사섭외 의뢰를 보낸다"
 revoke insert on public.instructor_requests from anon;
 
 -- Supabase에게 바뀐 규칙을 알리기
+notify pgrst, 'reload schema';
+
+-- ============================================================
+-- instructor-profiles.sql
+-- ============================================================
+
+-- 강사잇다 · 강사 프로필 (기관 의뢰가 오면 운영자가 골라 전달)
+-- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
+--
+-- - 전달에 동의한 회원만 프로필을 낸다. 회원 한 명당 한 줄.
+-- - 내는 방법은 둘 중 하나: 강사잇다 양식으로 작성(method = 'form') 또는 파일 올리기(method = 'file').
+-- - 파일은 공개되지 않는 저장소(instructor-profiles)에 '회원번호/파일' 로 둔다. 본인과 관리자만 읽는다.
+-- - 회원 탈퇴하면 프로필 줄은 함께 지워진다 (파일은 사이트가 탈퇴할 때 지운다).
+
+-- 1) 표 ------------------------------------------------------------------
+create table if not exists public.instructor_profiles (
+  member_id     uuid primary key references public.members (id) on delete cascade,
+  consent_at    timestamptz not null default now(),   -- 기관 전달에 동의한 시각
+  fields        text not null check (char_length(fields) between 1 and 100),  -- 강의 분야
+  regions       text[] not null
+                check (cardinality(regions) between 1 and 3 and regions <@ array['부산', '울산', '경남']),
+  method        text not null check (method in ('form', 'file')),
+  career        text check (career is null or char_length(career) <= 2000),
+  certificates  text check (certificates is null or char_length(certificates) <= 1000),
+  intro         text check (intro is null or char_length(intro) <= 500),
+  file_path     text,
+  file_name     text check (file_name is null or char_length(file_name) <= 200),
+  updated_at    timestamptz not null default now(),
+  -- 양식이면 경력이, 파일이면 자기 폴더 안의 파일이 있어야 한다
+  constraint instructor_profiles_content check (
+    (method = 'form' and career is not null and char_length(trim(career)) > 0)
+    or (method = 'file' and file_path is not null and file_path like member_id::text || '/%')
+  )
+);
+
+comment on table public.instructor_profiles is
+  '강사 프로필. 기관 전달에 동의한 회원만. 운영자가 의뢰 기관에 골라 전달한다. 연락처는 섭외 확정 뒤에 알린다.';
+
+-- 2) 누가 무엇을 할 수 있나 ------------------------------------------------
+alter table public.instructor_profiles enable row level security;
+
+drop policy if exists "회원은 자기 프로필을 읽는다" on public.instructor_profiles;
+create policy "회원은 자기 프로필을 읽는다"
+  on public.instructor_profiles for select to authenticated
+  using ((select auth.uid()) = member_id);
+
+drop policy if exists "관리자는 모든 프로필을 읽는다" on public.instructor_profiles;
+create policy "관리자는 모든 프로필을 읽는다"
+  on public.instructor_profiles for select to authenticated
+  using ((select public.is_admin()));
+
+drop policy if exists "회원은 자기 프로필을 낸다" on public.instructor_profiles;
+create policy "회원은 자기 프로필을 낸다"
+  on public.instructor_profiles for insert to authenticated
+  with check ((select auth.uid()) = member_id);
+
+drop policy if exists "회원은 자기 프로필을 고친다" on public.instructor_profiles;
+create policy "회원은 자기 프로필을 고친다"
+  on public.instructor_profiles for update to authenticated
+  using ((select auth.uid()) = member_id)
+  with check ((select auth.uid()) = member_id);
+
+drop policy if exists "회원은 자기 프로필을 지운다" on public.instructor_profiles;
+create policy "회원은 자기 프로필을 지운다"
+  on public.instructor_profiles for delete to authenticated
+  using ((select auth.uid()) = member_id);
+
+revoke all on public.instructor_profiles from anon, authenticated;
+grant select, insert, update, delete on public.instructor_profiles to authenticated;
+
+-- 3) 파일 저장소 (공개 안 함, 한 파일 10MB 까지) ------------------------------
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('instructor-profiles', 'instructor-profiles', false, 10485760)
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit;
+
+drop policy if exists "강사는 자기 프로필 파일을 올린다" on storage.objects;
+create policy "강사는 자기 프로필 파일을 올린다"
+  on storage.objects for insert to authenticated
+  with check (bucket_id = 'instructor-profiles' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "강사는 자기 프로필 파일을 읽는다" on storage.objects;
+create policy "강사는 자기 프로필 파일을 읽는다"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'instructor-profiles' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "강사는 자기 프로필 파일을 지운다" on storage.objects;
+create policy "강사는 자기 프로필 파일을 지운다"
+  on storage.objects for delete to authenticated
+  using (bucket_id = 'instructor-profiles' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "관리자는 프로필 파일을 읽는다" on storage.objects;
+create policy "관리자는 프로필 파일을 읽는다"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'instructor-profiles' and (select public.is_admin()));
+
+-- Supabase에게 새 표·규칙이 생겼다고 알리기
 notify pgrst, 'reload schema';
 
 commit;
