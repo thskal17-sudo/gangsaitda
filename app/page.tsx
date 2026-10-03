@@ -3,7 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { URGENT_DAYS } from "@/components/job-card";
-import { COURSES, COURSE_PROVIDER, type Course } from "@/lib/courses";
+import { AD_INQUIRY_HREF, COURSES, type Course } from "@/lib/courses";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
 import { getCurrentMember } from "@/lib/member";
@@ -147,8 +147,12 @@ const TONE_CLASS: Record<Course["tone"], string> = {
 };
 
 function CourseCard({ course }: { course: Course }) {
+  // 과정 이름이 없으면 광고 모집 자리: 누르면 운영 이메일로 광고 문의
+  const isAdSlot = !course.name;
+  const href = isAdSlot ? AD_INQUIRY_HREF : (course.href ?? "/certificates");
+
   return (
-    <Link href={course.href} className="group flex flex-col gap-2.5 md:gap-3.5">
+    <a href={href} className="group flex flex-col gap-2.5 md:gap-3.5">
       <div
         className={`relative flex h-[140px] flex-col items-center justify-center gap-2 overflow-hidden rounded-[14px] md:h-[210px] md:rounded-[16px] ${TONE_CLASS[course.tone]}`}
       >
@@ -163,17 +167,17 @@ function CourseCard({ course }: { course: Course }) {
         ) : (
           <>
             <MedalIcon />
-            <span className="text-[12px] font-bold md:text-[13px]">과정 대표 이미지</span>
+            <span className="text-[12px] font-bold md:text-[13px]">{isAdSlot ? "이 자리에 과정을 소개하세요" : "과정 대표 이미지"}</span>
           </>
         )}
       </div>
-      <p
-        className={`truncate text-[16px] leading-snug font-bold md:text-[19px] ${course.name ? "text-ink group-hover:text-brand" : "text-muted"}`}
-      >
-        {course.name || "과정 이름 준비 중"}
+      <p className="truncate text-[16px] leading-snug font-bold text-ink group-hover:text-brand md:text-[19px]">
+        {isAdSlot ? "교육 광고 모집합니다" : course.name}
       </p>
-      <p className="-mt-1.5 text-[12px] font-medium text-brand md:-mt-2 md:text-[14px]">{COURSE_PROVIDER}</p>
-    </Link>
+      <p className="-mt-1.5 text-[12px] font-medium text-brand md:-mt-2 md:text-[14px]">
+        {isAdSlot ? "광고 문의하기 →" : course.provider}
+      </p>
+    </a>
   );
 }
 
