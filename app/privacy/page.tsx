@@ -67,6 +67,7 @@ export default function PrivacyPage() {
             rows={[
               ["Supabase, Inc.", "회원 계정·로그인 관리, 회원 정보와 의뢰 내용 저장"],
               ["Vercel, Inc.", "웹사이트 운영(호스팅), 접속 기록 처리"],
+              ["Cloudflare, Inc.", "웹사이트 운영(호스팅)·도메인 연결, 접속 기록 처리"],
               ["Plus Five Five, Inc. (Resend)", "비밀번호 재설정 등 안내 메일 발송"],
             ]}
           />
@@ -82,6 +83,7 @@ export default function PrivacyPage() {
             rows={[
               [<LinkText key="s" href="https://supabase.com/privacy">Supabase, Inc. (미국)</LinkText>, p.databaseRegion, "회원가입·의뢰 항목 전부", "가입·의뢰 시 네트워크로 전송"],
               [<LinkText key="v" href="https://vercel.com/legal/privacy-policy">Vercel, Inc. (미국)</LinkText>, `${p.databaseRegion}. 접속 기록 일부는 해외 서버`, "서비스 이용 중 전달되는 정보, 접속 기록", "서비스 이용 시 네트워크로 전송"],
+              [<LinkText key="c" href="https://www.cloudflare.com/privacypolicy/">Cloudflare, Inc. (미국)</LinkText>, "이용자와 가까운 Cloudflare 서버 (대한민국 등). 접속 기록 일부는 해외 서버", "서비스 이용 중 전달되는 정보, 접속 기록", "서비스 이용 시 네트워크로 전송"],
               [<LinkText key="r" href="https://resend.com/legal/privacy-policy">Plus Five Five, Inc. (Resend, 미국)</LinkText>, "일본(도쿄)에서 발송. 발송 기록은 미국 서버에 30일 보관 뒤 삭제", "이메일 주소, 메일 내용", "메일을 보낼 때 네트워크로 전송"],
             ]}
           />
