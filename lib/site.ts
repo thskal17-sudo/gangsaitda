@@ -2,8 +2,11 @@
  * 사이트 곳곳에 보여주는 운영 정보. 바뀌면 여기만 고친다.
  */
 
-/** 비밀번호를 잊은 회원이 연락할 곳 (사이트에 공개됨). 운영자 이메일과 같다 (임시). 정해지지 않았으면 null. */
-export const SUPPORT_CONTACT: string | null = "thskal17@gmail.com";
+/**
+ * 사이트 대표 주소. 공유 미리보기(app/layout.tsx)와 비밀번호 재설정 메일 링크가 이 주소를 쓴다.
+ * gangsaitda.com 으로 들어오면 Vercel 이 www 로 넘긴다. Supabase → Authentication → URL Configuration 의 Site URL 과 같아야 한다.
+ */
+export const SITE_URL = "https://www.gangsaitda.com";
 
 /**
  * 운영자 정보. 사이트 맨 아래(푸터)에 공개된다.
@@ -33,7 +36,7 @@ export const PRIVACY = {
   /** 보호책임자 연락처 */
   officerEmail: OPERATOR.email,
   /** 시행일 */
-  effectiveDate: "2026년 10월 1일",
+  effectiveDate: "2026년 10월 3일",
   /**
    * 회원 정보가 저장되는 Supabase 데이터베이스의 위치 (Supabase → Project Settings → General → Region).
    * 사이트 서버(Vercel)도 같은 곳에서 돈다 (vercel.json 의 regions).
