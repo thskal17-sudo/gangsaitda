@@ -66,17 +66,18 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </div>
       </section>
 
-      {/* ② 강사섭외 바로가기 */}
-      <Link
-        href="/request"
-        className="group mt-5 flex items-center justify-between gap-4 rounded-card border border-line px-5 py-[18px] transition-colors hover:border-brand md:mt-12 md:px-8 md:py-7"
-      >
-        <div>
-          <p className="text-[16px] font-bold tracking-tight md:text-[20px]">강사가 필요하신가요?</p>
-          <p className="mt-0.5 text-[12px] text-muted md:mt-1.5 md:text-[15px]">학교·기관 강사섭외 의뢰하기</p>
-        </div>
-        <Arrow />
-      </Link>
+      {/* ② 바로가기: 강사 등록(비회원에게만) + 강사섭외. PC 에서는 나란히 */}
+      <div className={`mt-5 grid grid-cols-1 gap-3 md:mt-12 md:gap-6 ${member ? "" : "md:grid-cols-2"}`}>
+        {!member && (
+          <ShortcutBox
+            href="/signup"
+            title="강사로 활동하고 계신가요?"
+            description="무료 가입하면 기관·마감일·지원 방법까지 볼 수 있어요"
+            highlight
+          />
+        )}
+        <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
+      </div>
 
       {/* ③ 교육과정 */}
       <section aria-labelledby="courses-title" className="mt-8 md:mt-12">
@@ -123,6 +124,34 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </div>
       </section>
     </div>
+  );
+}
+
+/** 홈 바로가기 상자. highlight 는 옅은 파란 바탕(강사 등록), 아니면 흰 바탕에 테두리(강사섭외). */
+function ShortcutBox({
+  href,
+  title,
+  description,
+  highlight,
+}: {
+  href: string;
+  title: string;
+  description: string;
+  highlight?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`group flex items-center justify-between gap-4 rounded-card px-5 py-[18px] transition-colors md:px-8 md:py-7 ${
+        highlight ? "border border-transparent bg-brand/8 hover:border-brand" : "border border-line hover:border-brand"
+      }`}
+    >
+      <div>
+        <p className={`text-[16px] font-bold tracking-tight md:text-[20px] ${highlight ? "text-brand" : ""}`}>{title}</p>
+        <p className="mt-0.5 text-[12px] text-muted md:mt-1.5 md:text-[15px]">{description}</p>
+      </div>
+      <Arrow />
+    </Link>
   );
 }
 
