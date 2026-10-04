@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, last-job-update.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -919,6 +919,30 @@ create policy "관리자는 프로필 파일을 읽는다"
   using (bucket_id = 'instructor-profiles' and (select public.is_admin()));
 
 -- Supabase에게 새 표·규칙이 생겼다고 알리기
+notify pgrst, 'reload schema';
+
+-- ============================================================
+-- last-job-update.sql
+-- ============================================================
+
+-- 강사잇다 · 마지막으로 공고를 올린 시각 (홈 화면 "오늘 오전 9:12 업데이트")
+-- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
+--
+-- 숨기지 않은 공고 중 가장 최근에 올린 시각 하나만 돌려줍니다. 공고 내용은 내주지 않습니다.
+
+create or replace function public.last_job_update()
+returns timestamptz
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select max(created_at) from public.jobs where hidden_at is null;
+$$;
+
+revoke execute on function public.last_job_update() from public;
+grant execute on function public.last_job_update() to anon, authenticated;
+
 notify pgrst, 'reload schema';
 
 commit;

@@ -108,6 +108,20 @@ export async function getTodayDeadlineCount(today: string): Promise<number> {
 }
 
 /**
+ * 마지막으로 공고를 올린 시각 (홈 화면 '업데이트' 표시용). 누구나 볼 수 있다 (supabase/last-job-update.sql).
+ * 함수가 아직 없거나 실패해도 홈이 멈추지 않게 null 을 돌려준다 (그러면 표시하지 않음).
+ */
+export async function getLastJobUpdate(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("last_job_update");
+  if (error) {
+    console.error("[jobs] 마지막 업데이트 시각을 불러오지 못했습니다", error.message);
+    return null;
+  }
+  return typeof data === "string" ? data : null;
+}
+
+/**
  * 오늘(한국 날짜) 올라온, 마감 전 공고의 번호·제목 — 마감 가까운 순. 누구나 볼 수 있다.
  * 세는 기준은 getTodayJobCount 와 같다 (supabase/today-job-titles.sql).
  */

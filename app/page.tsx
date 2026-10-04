@@ -4,8 +4,16 @@ import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { URGENT_DAYS } from "@/components/job-card";
 import { AD_INQUIRY_HREF, COURSES, type Course } from "@/lib/courses";
-import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
-import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
+import { daysBetween, formatKoreanDate, formatKoreanTime, seoulDateOf, todayInSeoul } from "@/lib/date";
+import {
+  getLastJobUpdate,
+  getOpenJobTitles,
+  getOpenJobs,
+  getTodayDeadlineCount,
+  getTodayJobCount,
+  type Job,
+  type JobTitle,
+} from "@/lib/jobs";
 import { getCurrentMember } from "@/lib/member";
 
 /** 홈 공고 표에 보여줄 개수 (마감 가까운 순) */
@@ -18,10 +26,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   // 공고 탭과 같은 규칙: 회원은 기관·지역·마감일까지, 비회원은 제목만 받는다.
   const member = await getCurrentMember();
-  const [openJobs, todayDeadlineCount] = await Promise.all([
+  const [openJobs, todayDeadlineCount, todayNewCount, lastUpdate] = await Promise.all([
     member ? getOpenJobs(today) : getOpenJobTitles(today),
     getTodayDeadlineCount(today),
+    getTodayJobCount(today),
+    getLastJobUpdate(),
   ]);
+  // 교육과정 칸은 광고(과정)가 하나라도 들어왔을 때만 보인다. 없으면 맨 아래 한 줄 문의만.
+  const hasCourses = COURSES.some((c) => c.name);
   const homeJobs = openJobs.slice(0, HOME_JOB_COUNT);
   // 회원 탈퇴를 마치고 홈으로 온 경우 (?deleted=1)
   const justDeleted = !member && (await searchParams).deleted === "1";
@@ -44,8 +56,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             강사 공고 <span className="nums text-brand">{openJobs.length}</span>건
           </h1>
           <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
-            부산·울산·경남 학교·기관의 강사 공고를 마감일 순으로 모았어요.
+            부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
+            <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
           </p>
+          {lastUpdate && <UpdatedLine lastUpdate={lastUpdate} today={today} todayNewCount={todayNewCount} />}
           <div className="mt-8 hidden gap-3 md:flex">
             <ButtonLink href="/jobs" primary>
               전체 공고 보기
@@ -86,7 +100,23 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
       </div>
 
-      {/* ③ 교육과정 */}
+      {/* ③ 운영자 소개. 현장 사진이 생기면 함께 넣는다 */}
+      <section className="mt-8 rounded-card bg-bg p-5 md:mt-12 md:p-8">
+        <p className="text-[13px] font-semibold text-brand">강사잇다를 만든 사람들</p>
+        <p className="mt-2 text-[17px] leading-relaxed font-medium text-ink md:max-w-[760px] md:text-[19px]">
+          &ldquo;부산에서 학교 진로캠프를 운영하며 좋은 강사님을 찾는 게 늘 가장 어려웠어요. 그래서 공고는 강사님께, 강사님은 학교에 더 쉽게
+          닿도록 매일 직접 정리하고 있습니다.&rdquo;
+        </p>
+        <p className="mt-3 text-[14px] text-muted">한국엑스퍼트교육원 대표 박서현</p>
+        <p className="nums mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-ink">
+          <span><b>500명</b> 강사풀</span>
+          <span><b>1,000명+</b> 전국 강사방</span>
+          <span><b>부울경</b> 학교·기관 공고 매일</span>
+        </p>
+      </section>
+
+      {/* ④ 교육과정: 광고(과정)가 하나라도 들어왔을 때만 */}
+      {hasCourses && (
       <section aria-labelledby="courses-title" className="mt-8 md:mt-12">
         <SectionHead id="courses-title" title="강사 경력에 더하는 교육과정" href="/certificates" />
         {/* 휴대폰: 옆으로 밀어 보는 한 줄 / PC: 3칸 */}
@@ -98,8 +128,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           ))}
         </ul>
       </section>
+      )}
 
-      {/* ④ 공고 표 (마감 가까운 순) */}
+      {/* ⑤ 공고 표 (마감 가까운 순) */}
       <section aria-label="마감이 가까운 공고" className="mt-9 md:mt-16">
         <JobTableHead isMember={member !== null} />
         {homeJobs.length === 0 ? (
@@ -130,6 +161,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           {!member && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
         </div>
       </section>
+      {!hasCourses && (
+        <p className="mt-10 text-center text-[13px] text-muted">
+          교육 과정을 강사님들께 소개하고 싶으신가요?{" "}
+          <a href={AD_INQUIRY_HREF} className="font-semibold text-ink underline underline-offset-2">
+            교육 광고 문의
+          </a>
+        </p>
+      )}
     </div>
   );
 }
@@ -159,6 +198,19 @@ function ShortcutBox({
       </div>
       <Arrow />
     </Link>
+  );
+}
+
+/** "오늘 오전 9:12 업데이트 · 새 공고 12건" — 마지막으로 공고를 올린 시각. 오늘이 아니면 날짜로 */
+function UpdatedLine({ lastUpdate, today, todayNewCount }: { lastUpdate: string; today: string; todayNewCount: number }) {
+  const day = seoulDateOf(lastUpdate);
+  const when = day === today ? `오늘 ${formatKoreanTime(lastUpdate)}` : formatKoreanDate(day);
+  return (
+    <p className="nums mt-3 flex items-center gap-2 text-[13px] text-muted md:text-[14px]">
+      <span className={`h-2 w-2 rounded-full ${day === today ? "bg-ok" : "bg-line"}`} aria-hidden="true" />
+      {when} 업데이트
+      {todayNewCount > 0 && <> · 새 공고 {todayNewCount}건</>}
+    </p>
   );
 }
 

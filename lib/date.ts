@@ -37,3 +37,11 @@ export function formatKoreanDate(date: string): string {
 export function seoulDateOf(timestamp: string): string {
   return new Date(Date.parse(timestamp) + KST_OFFSET_MS).toISOString().slice(0, 10);
 }
+
+/** 데이터베이스의 시각을 한국 시각으로. 예: "오전 9:12", "오후 2:05" */
+export function formatKoreanTime(timestamp: string): string {
+  const d = new Date(Date.parse(timestamp) + KST_OFFSET_MS);
+  const h = d.getUTCHours();
+  const m = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${h < 12 ? "오전" : "오후"} ${h % 12 === 0 ? 12 : h % 12}:${m}`;
+}

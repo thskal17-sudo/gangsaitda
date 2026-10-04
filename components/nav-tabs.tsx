@@ -20,16 +20,6 @@ export const TABS = [
     ),
   },
   {
-    href: "/certificates",
-    label: "자격증",
-    icon: (
-      <>
-        <circle cx="12" cy="9" r="5.5" />
-        <path d="m8.5 13.3-1.5 7.7 5-2.5 5 2.5-1.5-7.7" />
-      </>
-    ),
-  },
-  {
     href: "/request",
     label: "강사섭외",
     icon: (

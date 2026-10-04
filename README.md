@@ -57,6 +57,7 @@ npm run dev
 | `supabase/instructor-profiles.sql` | 강사 프로필 표와 파일 저장소 |
 | `app/account/profile/` | 내 프로필 (기관 전달에 동의한 강사만) |
 | `supabase/today-deadline-count.sql` | 오늘 마감인 공고 수 함수 (홈 주황 상자) |
+| `supabase/last-job-update.sql` | 마지막으로 공고를 올린 시각 함수 (홈 "업데이트" 표시) |
 | `supabase/today-job-count.sql` | 오늘 올라온 공고 수 함수 |
 | `lib/courses.ts` | 홈 '교육과정' 카드 목록 (이름·이미지·링크) |
 | `supabase/today-job-titles.sql` | 오늘 올라온 공고 목록 함수 (`/jobs?view=today`) |
