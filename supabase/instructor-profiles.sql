@@ -10,7 +10,7 @@
 create table if not exists public.instructor_profiles (
   member_id     uuid primary key references public.members (id) on delete cascade,
   consent_at    timestamptz not null default now(),   -- 기관 전달에 동의한 시각
-  fields        text not null check (char_length(fields) between 1 and 100),  -- 강의 분야
+  fields        text[] not null,                     -- 강의 분야 (아래 규칙 참고)
   regions       text[] not null,                     -- 활동 가능 지역 (아래 규칙 참고)
   method        text not null check (method in ('form', 'file')),
   career        text check (career is null or char_length(career) <= 2000),
@@ -25,6 +25,23 @@ create table if not exists public.instructor_profiles (
     or (method = 'file' and file_path is not null and file_path like member_id::text || '/%')
   )
 );
+
+-- 강의 분야: 정해진 목록에서 고른다 (lib/profile-schema.ts 의 PROFILE_FIELDS 와 같아야 한다).
+-- 예전 판(글자로 적는 칸)을 이미 실행했다면 목록 방식으로 바꾼다. 그때 적어 둔 시험 값은 '기타'가 된다.
+do $conv$
+begin
+  if (select data_type from information_schema.columns
+      where table_schema = 'public' and table_name = 'instructor_profiles' and column_name = 'fields') = 'text' then
+    alter table public.instructor_profiles drop constraint if exists instructor_profiles_fields_check;
+    alter table public.instructor_profiles alter column fields type text[] using array['기타'];
+  end if;
+end
+$conv$;
+alter table public.instructor_profiles drop constraint if exists instructor_profiles_fields_check;
+alter table public.instructor_profiles add constraint instructor_profiles_fields_check
+  check (cardinality(fields) between 1 and 10
+         and fields <@ array['진로·창업', '코딩·AI', '방과후(예체능)', '방과후(교과)', '독서·논술',
+                             '리더십·소통', '직무·CS', '인문·교양', '힐링·건강', '기타']);
 
 -- 활동 가능 지역: 권역 단위 (lib/profile-schema.ts 의 PROFILE_REGIONS 와 같아야 한다). 여러 번 실행해도 새 규칙으로 바뀐다.
 alter table public.instructor_profiles drop constraint if exists instructor_profiles_regions_check;
