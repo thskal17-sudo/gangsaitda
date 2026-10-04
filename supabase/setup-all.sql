@@ -837,7 +837,7 @@ create table if not exists public.instructor_profiles (
 
 -- 강의 분야: 정해진 목록에서 고른다 (lib/profile-schema.ts 의 PROFILE_FIELDS 와 같아야 한다).
 -- 예전 판(글자로 적는 칸)을 이미 실행했다면 목록 방식으로 바꾼다. 그때 적어 둔 시험 값은 '기타'가 된다.
-do $$
+do $conv$
 begin
   if (select data_type from information_schema.columns
       where table_schema = 'public' and table_name = 'instructor_profiles' and column_name = 'fields') = 'text' then
@@ -845,7 +845,7 @@ begin
     alter table public.instructor_profiles alter column fields type text[] using array['기타'];
   end if;
 end
-$$;
+$conv$;
 alter table public.instructor_profiles drop constraint if exists instructor_profiles_fields_check;
 alter table public.instructor_profiles add constraint instructor_profiles_fields_check
   check (cardinality(fields) between 1 and 10
