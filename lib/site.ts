@@ -22,7 +22,7 @@ export const OPERATOR = {
   /** 사업자등록번호 */
   businessNumber: "169-10-02403",
   /** 통신판매업 신고번호 (예: 제 2026-부산북구-0000 호) */
-  mailOrderNumber: null as string | null,
+  mailOrderNumber: "제 2026-부산북구-0455호" as string | null,
   /** 직업정보제공사업 신고번호 (예: 부산북부 제2026-0호) */
   jobInfoNumber: null as string | null,
   /** 이메일 (임시) */
