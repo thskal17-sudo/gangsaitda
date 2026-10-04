@@ -24,7 +24,7 @@ export const OPERATOR = {
   /** 통신판매업 신고번호 (예: 제 2026-부산북구-0000 호) */
   mailOrderNumber: null as string | null,
   /** 직업정보제공사업 신고번호 (예: 부산북부 제2026-0호) */
-  jobInfoNumber: null as string | null,
+  jobInfoNumber: "J1302020260003 (부산북부지청)" as string | null,
   /** 이메일 (임시) */
   email: "thskal17@gmail.com",
 };
