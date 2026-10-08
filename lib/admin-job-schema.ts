@@ -43,6 +43,26 @@ export const jobSchema = z.object({
 
 export type JobInput = z.infer<typeof jobSchema>;
 
+/** 입력값을 데이터베이스 함수(admin_create_job, import_job)의 칸 이름으로 바꾼다. 빈칸은 '없음(null)'으로. */
+export function toRpcArgs(v: JobInput) {
+  const blankToNull = (value: string) => (value === "" ? null : value);
+  return {
+    p_title: v.title,
+    p_organization: v.organization,
+    p_region: v.region,
+    p_deadline: v.deadline,
+    p_schedule: v.schedule,
+    p_description: v.description,
+    p_target: blankToNull(v.target),
+    p_headcount: v.headcount === "" ? null : Number(v.headcount),
+    p_qualifications: blankToNull(v.qualifications),
+    p_documents: blankToNull(v.documents),
+    p_source_url: blankToNull(v.sourceUrl),
+    p_apply_url: blankToNull(v.applyUrl),
+    p_apply_email: blankToNull(v.applyEmail),
+  };
+}
+
 /**
  * 새 공고는 마감일이 오늘 이후여야 한다.
  * (고칠 때는 이미 마감된 공고의 다른 칸도 고칠 수 있게 이 확인을 하지 않는다.)
