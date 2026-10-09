@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminStatus, getAllJobsForAdmin } from "@/lib/admin";
-import { type JobInput, jobSchema, newJobSchema } from "@/lib/admin-job-schema";
+import { jobSchema, newJobSchema, toRpcArgs } from "@/lib/admin-job-schema";
 import { MAX_ROWS, titleKey } from "@/lib/job-excel";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,26 +13,6 @@ import { createClient } from "@/lib/supabase/server";
  */
 
 const NOT_ADMIN = "관리자만 할 수 있습니다. 다시 로그인해 주세요.";
-
-/** 입력값을 데이터베이스 함수의 칸 이름으로 바꾼다. 빈칸은 '없음(null)'으로. */
-function toRpcArgs(v: JobInput) {
-  const blankToNull = (value: string) => (value === "" ? null : value);
-  return {
-    p_title: v.title,
-    p_organization: v.organization,
-    p_region: v.region,
-    p_deadline: v.deadline,
-    p_schedule: v.schedule,
-    p_description: v.description,
-    p_target: blankToNull(v.target),
-    p_headcount: v.headcount === "" ? null : Number(v.headcount),
-    p_qualifications: blankToNull(v.qualifications),
-    p_documents: blankToNull(v.documents),
-    p_source_url: blankToNull(v.sourceUrl),
-    p_apply_url: blankToNull(v.applyUrl),
-    p_apply_email: blankToNull(v.applyEmail),
-  };
-}
 
 /** 새 공고·바뀐 공고가 홈·공고 목록·관리자 목록에 바로 반영되게 한다. */
 function refreshSite() {

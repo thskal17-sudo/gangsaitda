@@ -211,6 +211,8 @@
 - Vercel 배포 (**완료**, 옮기기 전까지 사용): GitHub 저장소 연결, 환경변수 두 개(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) 입력.
   main 에 합치면 자동으로 다시 올라가고, PR 마다 미리보기 주소가 생깁니다.
   환경변수를 바꾸면 Deployments → Redeploy 를 해야 반영됩니다.
+  - 공고 자동 등록(4-3 의 4-1)에 쓰는 서버 전용 환경변수 두 개: `SUPABASE_SECRET_KEY`(Supabase → Project Settings → API Keys → Secret keys),
+    `JOB_IMPORT_TOKEN`(직접 정한 20자 이상의 긴 비밀번호, 수집 저장소 Secrets 에도 같은 값). 둘 다 `NEXT_PUBLIC_` 없이, Production 에만.
 - 도메인: **www.gangsaitda.com** (가비아에서 구입, 가비아 DNS 에 A·CNAME 레코드로 Vercel 연결).
   `gangsaitda.com` 으로 들어오면 `www.gangsaitda.com` 으로 넘어갑니다. 메일 기능을 붙일 때
   Supabase Authentication → URL Configuration 에 이 주소를 적습니다.
@@ -335,6 +337,17 @@
        - 규칙은 공고 등록과 같습니다 (필수 칸, 마감일은 오늘 이후, 링크는 https://).
      - "N건 올리기"를 누르면 통과한 줄만 올라갑니다. 한 번에 200줄까지. 한 줄이 실패해도 나머지는 올라갑니다.
      - 파일은 브라우저에서만 읽고, 확인을 통과한 줄의 내용만 서버로 보냅니다. 서버에서도 규칙·중복을 다시 확인합니다.
+  4-1. 수집 프로그램이 공고를 바로 넣기 ✅ (`/api/jobs/import`, 사이트에 화면은 없음)
+     - 매일 새벽 수집 프로그램(GitHub `ulsan-shcool-public-company` 저장소의 '오늘의 브리핑')이 부울경 강사잇다 양식 엑셀을 만든 뒤,
+       같은 줄들을 이 '받는 문'으로 보냅니다. 엑셀을 내려받아 관리자 화면에 올리는 일이 없어집니다.
+     - 규칙은 엑셀 올리기(4번)와 **완전히 같습니다**: 같은 제목은 건너뜀(매일 같은 공고가 다시 와도 한 번만), '처리' 칸이 제외·보류면 건너뜀,
+       필수 칸·마감일·링크 확인. 마감일을 못 찾은 '보류' 공고는 지금처럼 메일에서 보고 직접 올립니다.
+     - 비밀 열쇠 `JOB_IMPORT_TOKEN`(20자 이상)이 맞을 때만 받습니다. 같은 값을 Vercel 환경 변수와 수집 저장소 Secrets 두 곳에 둡니다.
+       열쇠가 없으면 받는 문은 닫혀 있습니다(503).
+     - 기본은 **바로 공개**. `JOB_IMPORT_REVIEW=1`을 두면 '숨김' 상태로 들어와 관리자 목록 "숨김"에서 확인한 뒤 "다시 올리기"로 공개합니다.
+     - 데이터베이스: `supabase/job-import.sql` (관리자 확인 없이 제목·상세를 한 번에 저장하는 함수. 사이트 서버(service_role)만 부를 수 있음)
+     - 사이트 서버는 Supabase **secret 키**(`SUPABASE_SECRET_KEY`, Vercel 환경 변수)로 이 함수를 부릅니다. 이 키는 브라우저로 가지 않고,
+       이 기능 말고 다른 곳에서는 쓰지 않습니다 (`lib/supabase/service.ts`).
   5. 회원 목록 ✅ (`/admin/members`) — 보기만 합니다 (고치기·탈퇴 처리 없음).
      - 최근에 가입한 순. 숫자 요약(전체 회원·오늘 가입·최근 7일 가입), 이름·이메일·연락처 검색.
      - 가입일·이름·이메일·연락처·등급. 이메일·연락처를 누르면 메일·전화가 열립니다.

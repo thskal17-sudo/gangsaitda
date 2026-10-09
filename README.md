@@ -73,6 +73,8 @@ npm run dev
 | `supabase/admin-requests.sql` | 관리자만 의뢰를 읽고 상태를 바꾸게 하는 규칙·함수 |
 | `app/admin/jobs/upload/`, `components/admin-excel-upload.tsx`, `lib/job-excel.ts` | 관리자 · 엑셀로 공고 여러 개 올리기 (미리보기 → 올리기) |
 | `public/gangsaitda-job-template.xlsx` | 엑셀 올리기 양식 (공고·예시·안내 시트) |
+| `app/api/jobs/import/route.ts`, `lib/job-import.ts`, `lib/supabase/service.ts` | 수집 프로그램이 공고를 바로 넣는 '받는 문' (비밀 열쇠 확인, 엑셀 올리기와 같은 규칙) |
+| `supabase/job-import.sql` | 사이트 서버만 부를 수 있는 공고 저장 함수 (관리자 로그인 없이) |
 | `app/admin/members/`, `lib/admin-members.ts` | 관리자 · 회원 목록 (보기만) |
 | `supabase/admin-members.sql` | 관리자만 모든 회원 정보를 읽게 하는 규칙 |
 | `app/account/delete/`, `components/site-footer.tsx` | 회원 탈퇴 화면, 사이트 맨 아래(회원에게만 '회원 탈퇴' 링크) |
