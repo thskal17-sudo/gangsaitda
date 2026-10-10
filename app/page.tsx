@@ -36,7 +36,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {/* ① 첫인사: 지원할 수 있는 공고 수 + 오늘 마감 */}
+      {/* ① 첫인사 — 시안 비교용: HOME_HERO=A(주황 바탕) / B(로고 글씨 제목) / 그 밖(지금 모양) */}
+      {process.env.HOME_HERO === "A" ? (
+        <HeroA openCount={openJobs.length} todayDeadlineCount={todayDeadlineCount} isMember={member !== null} />
+      ) : process.env.HOME_HERO === "B" ? (
+        <HeroB openCount={openJobs.length} todayDeadlineCount={todayDeadlineCount} isMember={member !== null} />
+      ) : (
       <section className="flex flex-col gap-5 pt-2 md:grid md:grid-cols-12 md:items-end md:gap-6 md:pt-6">
         <div className="md:col-span-7">
           <h1 className="text-[30px] leading-[1.3] font-black tracking-tight md:text-[52px] md:leading-[1.2]">
@@ -72,6 +77,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </p>
         </div>
       </section>
+      )}
 
       {/* ② 바로가기: 비회원은 강사 가입, 회원은 내 프로필 + 강사섭외. PC 에서는 나란히 */}
       <div className="mt-5 grid grid-cols-1 gap-3 md:mt-12 md:grid-cols-2 md:gap-6">
@@ -138,6 +144,91 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </div>
       </section>
     </div>
+  );
+}
+
+
+type HeroProps = { openCount: number; todayDeadlineCount: number; isMember: boolean };
+
+/** 시안 A: 첫 화면 한 블록을 시그니처 주황으로 꽉 채운다. 흰 글씨·흰 카드. */
+function HeroA({ openCount, todayDeadlineCount, isMember }: HeroProps) {
+  return (
+    <section className="-mx-4 -mt-5 bg-brand px-5 pt-8 pb-9 text-white md:mx-0 md:mt-0 md:rounded-[32px] md:px-12 md:pt-14 md:pb-14">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-12 md:items-center md:gap-8">
+        <div className="md:col-span-7">
+          <p className="text-[13px] font-semibold tracking-wide text-white/80 md:text-[15px]">부산·울산·경남 강사 공고를 매일 아침 한곳에</p>
+          <h1 className="mt-2 text-[32px] leading-[1.25] font-black tracking-tight md:mt-3 md:text-[56px] md:leading-[1.15]">
+            오늘 지원할 수 있는
+            <br />
+            강사 공고 <span className="nums">{openCount}</span>건
+          </h1>
+          <p className="mt-5 inline-flex items-center gap-2 rounded-badge bg-white/18 py-2 pr-4 pl-3 text-[13px] font-semibold md:mt-7 md:text-[15px]">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-white" />
+            <span className="nums font-black">{INSTRUCTOR_COUNT_LABEL}</span> 강사님들이 강사잇다와 함께 하고 있습니다.
+          </p>
+          <div className="mt-7 flex gap-3 md:mt-9">
+            <Link href="/jobs" className="flex h-13 flex-1 items-center justify-center rounded-control bg-white px-6 text-[16px] font-bold text-brand transition-colors hover:bg-white/90 md:h-14 md:flex-none md:px-8 md:text-[17px]">
+              전체 공고 보기
+            </Link>
+            {!isMember && (
+              <Link href="/signup" className="flex h-13 flex-1 items-center justify-center rounded-control border border-white/60 px-6 text-[16px] font-bold text-white transition-colors hover:bg-white/10 md:h-14 md:flex-none md:px-8 md:text-[17px]">
+                무료 회원가입
+              </Link>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between rounded-card bg-white px-5 py-4 text-ink md:col-span-5 md:rounded-[24px] md:p-8">
+          <div className="flex flex-col gap-0.5 md:gap-1.5">
+            <p className="text-[15px] font-bold text-accent md:text-[16px]">오늘 마감</p>
+            <p className="text-[12px] text-muted md:text-[15px]">오늘 자정이 지나면 목록에서 사라져요</p>
+          </div>
+          <p className="nums shrink-0 text-[40px] leading-none font-black tracking-tight text-accent md:text-[64px]">
+            {todayDeadlineCount}
+            <span className="ml-1 text-[18px] md:text-[22px]">건</span>
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** 시안 B: 흰 바탕에 로고 글꼴(고운바탕)로 큰 한 문장, 아래 숫자 세 칸. */
+function HeroB({ openCount, todayDeadlineCount, isMember }: HeroProps) {
+  const tiles = [
+    { label: "지원할 수 있는 공고", value: openCount, unit: "건", tone: "text-brand" },
+    { label: "오늘 마감", value: todayDeadlineCount, unit: "건", tone: "text-accent" },
+    { label: "함께하는 강사님", value: INSTRUCTOR_COUNT_LABEL, unit: "", tone: "text-ink" },
+  ];
+  return (
+    <section className="pt-3 md:pt-8">
+      <h1
+        style={{ fontFamily: "var(--font-logo)" }}
+        className="text-[38px] leading-[1.25] font-bold tracking-tight md:text-[68px] md:leading-[1.15]"
+      >
+        강사와 기관을 <span className="text-brand">잇</span>다.
+      </h1>
+      <p className="mt-4 text-[15px] leading-relaxed text-muted md:mt-6 md:text-[18px]">
+        부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
+        <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
+      </p>
+      <ul className="mt-6 grid grid-cols-3 gap-2 md:mt-10 md:gap-5">
+        {tiles.map((t) => (
+          <li key={t.label} className="rounded-card bg-bg px-3 py-4 md:px-7 md:py-7">
+            <p className="text-[11px] font-semibold text-muted md:text-[14px]">{t.label}</p>
+            <p className={`nums mt-1 text-[26px] leading-none font-black tracking-tight md:mt-2 md:text-[44px] ${t.tone}`}>
+              {t.value}
+              {t.unit && <span className="ml-0.5 text-[13px] md:text-[18px]">{t.unit}</span>}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6 flex gap-3 md:mt-9">
+        <ButtonLink href="/jobs" primary>
+          전체 공고 보기
+        </ButtonLink>
+        {!isMember && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
+      </div>
+    </section>
   );
 }
 
