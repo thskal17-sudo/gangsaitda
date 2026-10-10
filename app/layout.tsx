@@ -30,6 +30,14 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
   },
   twitter: { card: "summary_large_image" },
+  /*
+   * 검색엔진 소유 확인용 꼬리표. 구글 서치 콘솔·네이버 서치어드바이저가 준 코드를
+   * Vercel 환경 변수(GOOGLE_SITE_VERIFICATION, NAVER_SITE_VERIFICATION)에 넣으면 <head> 에 들어간다.
+   */
+  verification: {
+    ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+    ...(process.env.NAVER_SITE_VERIFICATION ? { other: { "naver-site-verification": process.env.NAVER_SITE_VERIFICATION } } : {}),
+  },
 };
 
 export const viewport: Viewport = {

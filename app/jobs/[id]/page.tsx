@@ -19,7 +19,10 @@ import { getCurrentMember } from "@/lib/member";
 export async function generateMetadata({ params }: PageProps<"/jobs/[id]">): Promise<Metadata> {
   const { id } = await params;
   const job = await getJobTitle(id);
-  return { title: job ? job.title : "공고를 찾을 수 없습니다" };
+  // 검색 결과에 보이는 설명. 공고 내용은 회원만 보므로 제목과 안내 문구만 쓴다.
+  return job
+    ? { title: job.title, description: `${job.title} — 부산·울산·경남 강사 공고를 매일 모아 보여주는 강사잇다. 기관·마감일·지원 방법은 무료 회원가입 후 확인.` }
+    : { title: "공고를 찾을 수 없습니다", robots: { index: false } };
 }
 
 export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">) {
