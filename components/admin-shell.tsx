@@ -9,6 +9,7 @@ const MENU = [
   { key: "requests", label: "강사섭외 의뢰", href: "/admin/requests" },
   { key: "members", label: "회원", href: "/admin/members" },
   { key: "profiles", label: "강사 프로필", href: "/admin/profiles" },
+  { key: "kakao", label: "카톡 알림", href: "/admin/kakao" },
 ] as const;
 
 export type AdminMenuKey = (typeof MENU)[number]["key"];
