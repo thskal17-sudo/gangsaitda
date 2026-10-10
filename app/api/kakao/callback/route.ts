@@ -25,8 +25,10 @@ export async function GET(request: Request) {
   try {
     await connectKakao(code);
   } catch (err) {
-    console.error("[kakao] 연결 실패", err instanceof Error ? err.message : err);
-    return back("failed=connect");
+    const why = err instanceof Error ? err.message : String(err);
+    console.error("[kakao] 연결 실패", why);
+    // 이유를 화면에 보여준다 (카카오 오류 코드 등). 열쇠 값은 들어 있지 않다.
+    return back(`failed=connect&why=${encodeURIComponent(why.slice(0, 160))}`);
   }
   return back("connected=1");
 }

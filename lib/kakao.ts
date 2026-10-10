@@ -79,7 +79,8 @@ async function postToken(body: Record<string, string>): Promise<TokenResponse> {
   });
   const data = (await res.json()) as TokenResponse;
   if (!res.ok || !data.access_token) {
-    throw new Error(`카카오 토큰 오류: ${data.error ?? res.status} ${data.error_description ?? ""}`.trim());
+    const code = (data as { error_code?: string }).error_code ?? "";
+    throw new Error(`카카오 토큰 오류 ${code} ${data.error ?? res.status}: ${data.error_description ?? ""}`.replace(/\s+/g, " ").trim());
   }
   return data;
 }
