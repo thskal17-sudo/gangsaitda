@@ -42,40 +42,38 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {/* ① 첫인사: 지원가능한 공고 수 + 오늘 마감. 숫자 N 은 로고 "잇"의 빨강 */}
-      <section className="flex flex-col gap-5 pt-2 md:grid md:grid-cols-12 md:items-end md:gap-6 md:pt-6">
-        <div className="md:col-span-7">
-          <h1 className="text-[30px] leading-[1.3] font-black tracking-tight md:text-[52px] md:leading-[1.2]">
-            오늘 지원가능한
-            <br />
-            강사공고 <span className="nums text-logo-red">{openJobs.length}</span>건
-          </h1>
-          <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
-            부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
-            <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
-          </p>
-          {/* 함께하는 강사 수 (lib/site.ts 의 INSTRUCTOR_COUNT_LABEL) */}
-          <p className="mt-4 inline-flex items-center gap-2 rounded-badge bg-brand/10 py-1.5 pr-4 pl-3 text-[13px] font-semibold text-ink md:mt-6 md:text-[15px]">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand" />
-            <span className="nums font-black text-brand">{INSTRUCTOR_COUNT_LABEL}</span> 강사님들이 강사잇다와 함께 하고 있습니다.
-          </p>
-          <div className="mt-8 hidden gap-3 md:flex">
-            <ButtonLink href="/jobs" primary>
-              전체 공고 보기
-            </ButtonLink>
-            {!member && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between rounded-card bg-accent/10 px-5 py-4 md:col-span-5 md:rounded-[24px] md:p-8">
-          <div className="flex flex-col gap-0.5 md:gap-1.5">
-            <p className="text-[15px] font-bold text-warn md:text-[16px]">오늘 마감</p>
-            <p className="text-[12px] text-muted md:text-[15px]">오늘 자정이 지나면 목록에서 사라져요</p>
-          </div>
-          <p className="nums shrink-0 text-[40px] leading-none font-black tracking-tight text-accent md:text-[64px]">
-            {todayDeadlineCount}
-            <span className="ml-1 text-[18px] md:text-[22px]">건</span>
-          </p>
+      {/* ① 첫인사: 제목 + 숫자 세 칸(지원가능한 공고 · 오늘 마감 · 함께하는 강사님). 제목의 N 은 로고 "잇"의 빨강 */}
+      <section className="pt-2 md:pt-6">
+        <h1 className="text-[30px] leading-[1.3] font-black tracking-tight md:text-[52px] md:leading-[1.2]">
+          오늘 지원가능한
+          <br />
+          강사공고 <span className="nums text-logo-red">{openJobs.length}</span>건
+        </h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
+          부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
+          <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
+        </p>
+        <ul className="mt-5 grid grid-cols-3 gap-2 md:mt-8 md:gap-5">
+          {[
+            { label: "지원가능한 공고", value: openJobs.length, unit: "건", tone: "text-brand" },
+            { label: "오늘 마감", value: todayDeadlineCount, unit: "건", tone: "text-accent" },
+            // 함께하는 강사 수는 lib/site.ts 의 INSTRUCTOR_COUNT_LABEL
+            { label: "함께하는 강사님", value: INSTRUCTOR_COUNT_LABEL, unit: "", tone: "text-ink" },
+          ].map((t) => (
+            <li key={t.label} className="rounded-card bg-bg px-3 py-4 md:px-7 md:py-7">
+              <p className="text-[11px] font-semibold text-muted md:text-[14px]">{t.label}</p>
+              <p className={`nums mt-1 text-[26px] leading-none font-black tracking-tight md:mt-2 md:text-[44px] ${t.tone}`}>
+                {t.value}
+                {t.unit && <span className="ml-0.5 text-[13px] md:text-[18px]">{t.unit}</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-5 flex gap-3 md:mt-8">
+          <ButtonLink href="/jobs" primary>
+            전체 공고 보기
+          </ButtonLink>
+          {!member && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
         </div>
       </section>
 
