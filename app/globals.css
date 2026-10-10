@@ -2,8 +2,9 @@
 
 /* 디자인 토큰 — CLAUDE.md 의 값과 1:1로 맞춘다. 값을 바꿀 때는 여기만 고친다. */
 :root {
-  --brand: #ff764c; /* 시그니처 주황 — 주요 색, 버튼·강조 (로고의 "잇"과 같은 색) */
-  --accent: #ff3131; /* 로고 "잇"의 빨강 — 공고 수 숫자, 오늘 마감·마감임박 */
+  --brand: #2f6bf0; /* 파랑 — 주요 색, 버튼·강조 */
+  --accent: #e8593f; /* 주황 — 포인트, 마감임박·배지 */
+  --logo-red: #ff3131; /* 로고 "잇"의 빨강 — 홈 제목의 공고 수 숫자에만 */
   --ink: #191f28; /* 본문 텍스트 */
   --muted: #6b7684; /* 보조 텍스트 */
   --line: #e5e8eb; /* 선·구분선 */
@@ -15,6 +16,7 @@
 @theme inline {
   --color-brand: var(--brand);
   --color-accent: var(--accent);
+  --color-logo-red: var(--logo-red);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);

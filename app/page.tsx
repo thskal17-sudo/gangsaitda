@@ -42,17 +42,42 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {/* ① 첫인사: 휴대폰은 주황 첫 화면(HeroMobile), PC 는 그라데이션 바탕 + 오늘 마감 카드(HeroDesktop) */}
-      <div className="md:hidden">
-        <HeroMobile openCount={openJobs.length} todayDeadlineCount={todayDeadlineCount} isMember={member !== null} />
-      </div>
-      <HeroDesktop
-        openCount={openJobs.length}
-        todayDeadlineCount={todayDeadlineCount}
-        isMember={member !== null}
-        jobs={openJobs.slice(0, 3)}
-        today={today}
-      />
+      {/* ① 첫인사: 지원가능한 공고 수 + 오늘 마감. 숫자 N 은 로고 "잇"의 빨강 */}
+      <section className="flex flex-col gap-5 pt-2 md:grid md:grid-cols-12 md:items-end md:gap-6 md:pt-6">
+        <div className="md:col-span-7">
+          <h1 className="text-[30px] leading-[1.3] font-black tracking-tight md:text-[52px] md:leading-[1.2]">
+            오늘 지원가능한
+            <br />
+            강사공고 <span className="nums text-logo-red">{openJobs.length}</span>건
+          </h1>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
+            부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
+            <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
+          </p>
+          {/* 함께하는 강사 수 (lib/site.ts 의 INSTRUCTOR_COUNT_LABEL) */}
+          <p className="mt-4 inline-flex items-center gap-2 rounded-badge bg-brand/10 py-1.5 pr-4 pl-3 text-[13px] font-semibold text-ink md:mt-6 md:text-[15px]">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand" />
+            <span className="nums font-black text-brand">{INSTRUCTOR_COUNT_LABEL}</span> 강사님들이 강사잇다와 함께 하고 있습니다.
+          </p>
+          <div className="mt-8 hidden gap-3 md:flex">
+            <ButtonLink href="/jobs" primary>
+              전체 공고 보기
+            </ButtonLink>
+            {!member && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-card bg-accent/10 px-5 py-4 md:col-span-5 md:rounded-[24px] md:p-8">
+          <div className="flex flex-col gap-0.5 md:gap-1.5">
+            <p className="text-[15px] font-bold text-warn md:text-[16px]">오늘 마감</p>
+            <p className="text-[12px] text-muted md:text-[15px]">오늘 자정이 지나면 목록에서 사라져요</p>
+          </div>
+          <p className="nums shrink-0 text-[40px] leading-none font-black tracking-tight text-accent md:text-[64px]">
+            {todayDeadlineCount}
+            <span className="ml-1 text-[18px] md:text-[22px]">건</span>
+          </p>
+        </div>
+      </section>
 
       {/* ② 바로가기: 비회원은 강사 가입, 회원은 내 프로필 + 강사섭외. PC 에서는 나란히 */}
       <div className="mt-5 grid grid-cols-1 gap-3 md:mt-12 md:grid-cols-2 md:gap-6">
@@ -74,23 +99,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
       </div>
 
-      {/* ③ 교육과정. 소개할 과정이 아직 없으면 PC 에서는 한 줄로 접는다 (휴대폰은 옆으로 미는 광고 자리) */}
-      {!COURSES.some((c) => c.name) && (
-        <a
-          href={AD_INQUIRY_HREF}
-          className="mt-14 hidden items-center justify-between rounded-card border border-line px-7 py-5 text-[15px] transition-colors hover:border-brand md:flex"
-        >
-          <span>
-            <span className="font-bold">강사 경력에 더하는 교육과정</span>
-            <span className="ml-3 text-muted">과정을 소개할 기관을 찾습니다 — 교육 광고 모집</span>
-          </span>
-          <span className="font-bold text-brand">광고 문의하기 →</span>
-        </a>
-      )}
-      <section
-        aria-labelledby="courses-title"
-        className={`mt-8 md:mt-12 ${COURSES.some((c) => c.name) ? "" : "md:hidden"}`}
-      >
+      {/* ③ 교육과정 */}
+      <section aria-labelledby="courses-title" className="mt-8 md:mt-12">
         <SectionHead id="courses-title" title="강사 경력에 더하는 교육과정" href="/certificates" />
         {/* 휴대폰: 옆으로 밀어 보는 한 줄 / PC: 3칸 */}
         <ul className="-mr-4 mt-3.5 flex snap-x gap-3 overflow-x-auto pr-4 pb-1 md:mr-0 md:mt-5 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:p-0">
@@ -145,150 +155,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 }
 
 
-type HeroProps = { openCount: number; todayDeadlineCount: number; isMember: boolean };
-
-/** 휴대폰 첫 화면: 한 블록을 시그니처 주황으로 꽉 채운다. 흰 글씨·흰 카드. */
-function HeroMobile({ openCount, todayDeadlineCount, isMember }: HeroProps) {
-  return (
-    <section className="-mx-4 -mt-5 bg-brand px-5 pt-8 pb-9 text-white md:mx-0 md:mt-0 md:rounded-[32px] md:px-12 md:pt-14 md:pb-14">
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-12 md:items-center md:gap-8">
-        <div className="md:col-span-7">
-          <p className="text-[13px] font-semibold tracking-wide text-white/80 md:text-[15px]">부산·울산·경남 강사 공고를 매일 아침 한곳에</p>
-          <h1 className="mt-2 text-[32px] leading-[1.25] font-black tracking-tight md:mt-3 md:text-[56px] md:leading-[1.15]">
-            오늘 지원가능한
-            <br />
-            강사공고{" "}
-            <span className="nums inline-block rounded-[12px] bg-white px-2.5 pt-0.5 pb-1 leading-none text-accent">{openCount}</span>건
-          </h1>
-          <p className="mt-5 inline-flex items-center gap-2 rounded-badge bg-white/18 py-2 pr-4 pl-3 text-[13px] font-semibold md:mt-7 md:text-[15px]">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-white" />
-            <span className="nums font-black">{INSTRUCTOR_COUNT_LABEL}</span> 강사님들이 강사잇다와 함께 하고 있습니다.
-          </p>
-          <div className="mt-7 flex gap-3 md:mt-9">
-            <Link href="/jobs" className="flex h-13 flex-1 items-center justify-center rounded-control bg-white px-6 text-[16px] font-bold text-brand transition-colors hover:bg-white/90 md:h-14 md:flex-none md:px-8 md:text-[17px]">
-              전체 공고 보기
-            </Link>
-            {!isMember && (
-              <Link href="/signup" className="flex h-13 flex-1 items-center justify-center rounded-control border border-white/60 px-6 text-[16px] font-bold text-white transition-colors hover:bg-white/10 md:h-14 md:flex-none md:px-8 md:text-[17px]">
-                무료 회원가입
-              </Link>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center justify-between rounded-card bg-white px-5 py-4 text-ink md:col-span-5 md:rounded-[24px] md:p-8">
-          <div className="flex flex-col gap-0.5 md:gap-1.5">
-            <p className="text-[15px] font-bold text-accent md:text-[16px]">오늘 마감</p>
-            <p className="text-[12px] text-muted md:text-[15px]">오늘 자정이 지나면 목록에서 사라져요</p>
-          </div>
-          <p className="nums shrink-0 text-[40px] leading-none font-black tracking-tight text-accent md:text-[64px]">
-            {todayDeadlineCount}
-            <span className="ml-1 text-[18px] md:text-[22px]">건</span>
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** PC 첫 화면: 연한 주황 그라데이션 바탕, 큰 제목, 오른쪽에 오늘 마감·마감 임박 공고 카드. */
-function HeroDesktop({
-  openCount,
-  todayDeadlineCount,
-  isMember,
-  jobs,
-  today,
-}: HeroProps & { jobs: (Job | JobTitle)[]; today: string }) {
-  return (
-    <section className="relative hidden md:block md:pt-10 md:pb-12">
-      {/* 화면 가로 끝까지 깔리는 바탕 */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-[-2.5rem] left-1/2 -z-10 w-screen -translate-x-1/2 bg-[linear-gradient(180deg,#FFF1EB_0%,#FFF8F5_55%,#FFFFFF_100%)]"
-      />
-      <div className="grid grid-cols-12 items-center gap-12">
-        <div className="col-span-7">
-          <p className="inline-flex items-center gap-2 text-[14px] font-semibold text-brand">
-            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-brand" />
-            부산·울산·경남 강사 공고 · 매일 아침 업데이트
-          </p>
-          <h1 className="mt-5 text-[64px] leading-[1.1] font-black tracking-[-0.03em]">
-            오늘 지원가능한
-            <br />
-            강사공고 <span className="nums text-accent">{openCount}</span>건
-          </h1>
-          <p className="mt-6 max-w-[520px] text-[18px] leading-relaxed text-muted">
-            교육청, 구·군청, 시설공단, 대학 평생교육원 공고를 매일 아침 직접 확인해서 올려요. 기관·마감일·지원 방법까지 한곳에서.
-          </p>
-          <div className="mt-9 flex items-center gap-3">
-            <Link
-              href="/jobs"
-              className="flex h-14 items-center rounded-control bg-brand px-8 text-[17px] font-bold text-white shadow-[0_12px_30px_-12px_rgba(255,118,76,0.7)] transition-colors hover:bg-brand/90"
-            >
-              전체 공고 보기
-            </Link>
-            {!isMember && (
-              <Link href="/signup" className="flex h-14 items-center rounded-control px-6 text-[17px] font-bold text-ink transition-colors hover:bg-white">
-                무료 회원가입 →
-              </Link>
-            )}
-          </div>
-          <p className="mt-10 flex items-center gap-3 text-[15px] text-muted">
-            <span className="flex -space-x-2" aria-hidden="true">
-              {["#FFB49B", "#FF9A7A", "#FF764C", "#D9442A"].map((c) => (
-                <span key={c} className="h-7 w-7 rounded-full border-2 border-white" style={{ background: c }} />
-              ))}
-            </span>
-            <span>
-              <span className="nums font-black text-ink">{INSTRUCTOR_COUNT_LABEL}</span> 강사님들이 강사잇다와 함께 하고 있습니다.
-            </span>
-          </p>
-        </div>
-
-        <div className="col-span-5">
-          <div className="rounded-[24px] bg-white p-7 shadow-[0_30px_80px_-30px_rgba(25,31,40,0.25)] ring-1 ring-black/[0.04]">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-[14px] font-bold text-accent">오늘 마감</p>
-                <p className="mt-1 text-[13px] text-muted">자정이 지나면 목록에서 사라져요</p>
-              </div>
-              <p className="nums text-[56px] leading-none font-black tracking-tight text-accent">
-                {todayDeadlineCount}
-                <span className="ml-1 text-[20px]">건</span>
-              </p>
-            </div>
-            <ul className="mt-6 divide-y divide-line border-t border-line">
-              {jobs.map((job) => {
-                const summary = "deadline" in job ? job : null;
-                const d = summary ? daysBetween(today, summary.deadline) : null;
-                return (
-                  <li key={job.id}>
-                    <Link href={`/jobs/${job.id}`} className="group flex items-center gap-4 py-3.5">
-                      <span
-                        className={`nums shrink-0 rounded-badge px-2.5 py-1 text-[12px] font-bold ${
-                          d === 0 ? "bg-accent/10 text-accent" : d !== null && d <= URGENT_DAYS ? "bg-brand/10 text-brand" : "bg-bg text-muted"
-                        }`}
-                      >
-                        {d === null ? "마감 순" : d === 0 ? "오늘" : `D-${d}`}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[15px] font-bold group-hover:text-brand">{job.title}</span>
-                        {summary && <span className="block truncate text-[12px] text-muted">{summary.organization} · {summary.region}</span>}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-            <Link href="/jobs" className="mt-4 block text-[14px] font-bold text-brand hover:underline">
-              마감 가까운 순으로 모두 보기 →
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /** 홈 바로가기 상자. highlight 는 옅은 파란 바탕(강사 등록), 아니면 흰 바탕에 테두리(강사섭외). */
 function ShortcutBox({
   href,
@@ -333,7 +199,7 @@ function SectionHead({ id, title, href }: { id: string; title: string; href: str
 /** 과정 이미지가 없을 때 쓰는 상자 색 */
 const TONE_CLASS: Record<Course["tone"], string> = {
   brand: "bg-brand/10 text-brand",
-  accent: "bg-bg text-[#4E5968]",
+  accent: "bg-accent/10 text-accent",
   ok: "bg-ok/10 text-ok",
 };
 
@@ -374,7 +240,7 @@ function CourseCard({ course }: { course: Course }) {
 
 /** 공고 표 머리줄. PC 회원은 칸 이름 네 개, 그 밖에는 '마감일 순' 한 줄. */
 function JobTableHead({ isMember }: { isMember: boolean }) {
-  const base = "border-b border-line pb-2.5 text-[13px] font-bold text-muted md:py-3.5 md:text-[13px]";
+  const base = "border-b-2 border-ink pb-2.5 text-[13px] font-bold text-[#4E5968] md:py-3.5 md:text-[14px]";
 
   if (!isMember) {
     return (

@@ -44,9 +44,11 @@ export default function TopNav({ isMember }: { isMember: boolean }) {
   );
 }
 
-/* 지금 보는 메뉴는 굵은 검정 글씨, 나머지는 회색 (알약 배경 없이 담백하게) */
+/* 하단 탭과 같은 표시 방식: 지금 보는 메뉴는 연파랑 알약 + 굵은 파란 글씨 */
 function itemClass(isActive: boolean) {
-  return `flex h-10 items-center px-3.5 text-[15px] transition-colors ${isActive ? "font-bold text-ink" : "font-medium text-muted hover:text-ink"}`;
+  return `flex h-10 items-center rounded-badge px-4 text-[15px] transition-colors ${
+    isActive ? "bg-brand/12 font-bold text-brand" : "font-medium text-muted hover:text-ink"
+  }`;
 }
 
 function LogoutButton() {
