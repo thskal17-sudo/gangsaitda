@@ -17,7 +17,10 @@ const NOTICES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "failed=key": { tone: "warn", text: "REST API 키(KAKAO_REST_API_KEY)가 Vercel 환경 변수에 없어요." },
   "failed=state": { tone: "warn", text: "연결 확인값이 맞지 않아요. '카카오 연결'을 다시 눌러 주세요." },
   "failed=denied": { tone: "warn", text: "카카오 화면에서 동의를 취소했어요. 다시 시도하면서 '카카오톡 메시지 전송'에 동의해 주세요." },
-  "failed=connect": { tone: "warn", text: "카카오에서 열쇠를 받지 못했어요. 카카오 개발자 앱의 Redirect URI 와 REST API 키를 확인해 주세요." },
+  "failed=connect": {
+    tone: "warn",
+    text: "카카오에서 열쇠를 받지 못했어요. KOE010 이면 카카오 로그인 → 보안의 Client Secret 을 '사용 안함'으로 하거나 그 값을 Vercel 환경 변수 KAKAO_CLIENT_SECRET 에 넣어 주세요.",
+  },
   "failed=send": { tone: "warn", text: "메시지를 보내지 못했어요. 아래 '마지막 오류'를 확인해 주세요." },
   "failed=disconnect": { tone: "warn", text: "연결을 끊지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
 };
@@ -30,6 +33,8 @@ export default async function AdminKakaoPage({ searchParams }: PageProps<"/admin
   const params = await searchParams;
   const noticeKey = params.connected ? "connected" : params.sent ? "sent" : params.disconnected ? "disconnected" : params.failed ? `failed=${params.failed}` : null;
   const notice = noticeKey ? NOTICES[noticeKey] : null;
+  // 연결 실패 이유 (callback 이 붙여 보냄). 글자만 보여주고 링크·코드로 해석하지 않는다.
+  const why = typeof params.why === "string" ? params.why.slice(0, 160) : "";
 
   const status = await getKakaoStatus();
   const ready = status.keyConfigured && status.storageReady;
@@ -66,6 +71,7 @@ export default async function AdminKakaoPage({ searchParams }: PageProps<"/admin
           className={`mt-5 rounded-card px-5 py-4 text-[15px] ${notice.tone === "ok" ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}
         >
           {notice.text}
+          {why && <span className="mt-1 block text-[13px] opacity-80">이유: {why}</span>}
         </p>
       )}
 
