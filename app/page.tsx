@@ -58,9 +58,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       <section className="flex flex-col gap-5 pt-2 md:grid md:grid-cols-12 md:items-end md:gap-6 md:pt-6">
         <div className="md:col-span-7">
           <h1 className="text-[30px] leading-[1.3] font-black tracking-tight md:text-[52px] md:leading-[1.2]">
-            오늘 지원할 수 있는
+            오늘 지원가능한
             <br />
-            강사 공고 <span className="nums text-brand">{openJobs.length}</span>건
+            강사공고 <span className="nums text-brand">{openJobs.length}</span>건
           </h1>
           <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
             부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
@@ -186,9 +186,9 @@ function HeroA({ openCount, todayDeadlineCount, isMember }: HeroProps) {
         <div className="md:col-span-7">
           <p className="text-[13px] font-semibold tracking-wide text-white/80 md:text-[15px]">부산·울산·경남 강사 공고를 매일 아침 한곳에</p>
           <h1 className="mt-2 text-[32px] leading-[1.25] font-black tracking-tight md:mt-3 md:text-[56px] md:leading-[1.15]">
-            오늘 지원할 수 있는
+            오늘 지원가능한
             <br />
-            강사 공고 <span className="nums">{openCount}</span>건
+            강사공고 <span className="nums">{openCount}</span>건
           </h1>
           <p className="mt-5 inline-flex items-center gap-2 rounded-badge bg-white/18 py-2 pr-4 pl-3 text-[13px] font-semibold md:mt-7 md:text-[15px]">
             <span aria-hidden="true" className="h-2 w-2 rounded-full bg-white" />
@@ -223,7 +223,7 @@ function HeroA({ openCount, todayDeadlineCount, isMember }: HeroProps) {
 /** 시안 B: 흰 바탕에 로고 글꼴(고운바탕)로 큰 한 문장, 아래 숫자 세 칸. */
 function HeroB({ openCount, todayDeadlineCount, isMember }: HeroProps) {
   const tiles = [
-    { label: "지원할 수 있는 공고", value: openCount, unit: "건", tone: "text-brand" },
+    { label: "지원가능한 공고", value: openCount, unit: "건", tone: "text-brand" },
     { label: "오늘 마감", value: todayDeadlineCount, unit: "건", tone: "text-accent" },
     { label: "함께하는 강사님", value: INSTRUCTOR_COUNT_LABEL, unit: "", tone: "text-ink" },
   ];
@@ -283,9 +283,9 @@ function HeroD({
             부산·울산·경남 강사 공고 · 매일 아침 업데이트
           </p>
           <h1 className="mt-5 text-[64px] leading-[1.1] font-black tracking-[-0.03em]">
-            오늘 지원할 수 있는
+            오늘 지원가능한
             <br />
-            강사 공고 <span className="nums text-brand">{openCount}</span>건
+            강사공고 <span className="nums text-brand">{openCount}</span>건
           </h1>
           <p className="mt-6 max-w-[520px] text-[18px] leading-relaxed text-muted">
             교육청, 구·군청, 시설공단, 대학 평생교육원 공고를 매일 아침 직접 확인해서 올려요. 기관·마감일·지원 방법까지 한곳에서.
