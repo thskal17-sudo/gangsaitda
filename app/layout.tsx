@@ -1,17 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import Image from "next/image";
+import { Gowun_Batang } from "next/font/google";
 import Link from "next/link";
 // 글꼴: Pretendard (무료, 상업적 이용 가능). 화면에 나온 글자에 필요한 조각만 받는다.
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
 import HeaderAuth from "@/components/header-auth";
+import Logo from "@/components/logo";
 import SiteFooter from "@/components/site-footer";
 import TopNav from "@/components/top-nav";
 import { getCurrentMember } from "@/lib/member";
 import { SITE_URL } from "@/lib/site";
 
 const DESCRIPTION = "부산·울산·경남 학교·기관의 강사 공고를 한곳에서 확인하세요.";
+
+/** 로고 글꼴: 고운바탕 굵은체 (SIL 오픈 폰트 라이선스, 무료·상업적 이용 가능). 빌드할 때 받아 사이트에서 직접 내보낸다. */
+const gowunBatang = Gowun_Batang({ weight: "700", subsets: ["latin"], variable: "--font-gowun-batang", display: "swap" });
 
 /*
  * 검색·공유용 정보. 카톡·문자로 주소를 보내면 아래 제목·설명과 app/opengraph-image.png 가 미리보기로 뜬다.
@@ -48,21 +52,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const member = await getCurrentMember();
 
   return (
-    <html lang="ko" className="antialiased">
+    <html lang="ko" className={`antialiased ${gowunBatang.variable}`}>
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink">
         <header className="sticky top-0 z-10 mx-auto w-full max-w-[430px] shrink-0 bg-white/90 backdrop-blur md:max-w-none">
           <div className="mx-auto flex h-14 items-center justify-between px-4 md:h-16 md:max-w-[1080px] md:px-8">
-            {/* 로고 그림 (public/logo.png, 배경 투명). 글자 대신 그림이라 로고 모양이 그대로 나온다. */}
+            {/* 로고 글자 (components/logo.tsx): 고운바탕 굵은체, "잇"만 주황 */}
             <Link href="/" aria-label="강사잇다 홈" className="flex items-center">
-              <Image
-                src="/logo.png"
-                alt="강사잇다"
-                width={833}
-                height={205}
-                loading="eager"
-                fetchPriority="high"
-                className="h-[22px] w-auto md:h-[26px]"
-              />
+              <Logo className="text-[24px] md:text-[28px]" />
             </Link>
             <div className="flex items-center gap-2 md:gap-4">
               <TopNav isMember={member !== null} />

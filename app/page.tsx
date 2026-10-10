@@ -7,6 +7,7 @@ import { AD_INQUIRY_HREF, COURSES, type Course } from "@/lib/courses";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
 import { getCurrentMember } from "@/lib/member";
+import { INSTRUCTOR_COUNT_LABEL } from "@/lib/site";
 
 /** 홈 공고 표에 보여줄 개수 (마감 가까운 순) */
 const HOME_JOB_COUNT = 7;
@@ -46,6 +47,11 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
             부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
             <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
+          </p>
+          {/* 함께하는 강사 수 (lib/site.ts 의 INSTRUCTOR_COUNT_LABEL) */}
+          <p className="mt-4 inline-flex items-center gap-2 rounded-badge bg-brand/10 py-1.5 pr-4 pl-3 text-[13px] font-semibold text-ink md:mt-6 md:text-[15px]">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand" />
+            <span className="nums font-black text-brand">{INSTRUCTOR_COUNT_LABEL}</span> 강사님들이 강사잇다와 함께 하고 있습니다.
           </p>
           <div className="mt-8 hidden gap-3 md:flex">
             <ButtonLink href="/jobs" primary>
@@ -179,7 +185,7 @@ function SectionHead({ id, title, href }: { id: string; title: string; href: str
 /** 과정 이미지가 없을 때 쓰는 상자 색 */
 const TONE_CLASS: Record<Course["tone"], string> = {
   brand: "bg-brand/10 text-brand",
-  accent: "bg-accent/10 text-accent",
+  accent: "bg-bg text-[#4E5968]",
   ok: "bg-ok/10 text-ok",
 };
 
