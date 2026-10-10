@@ -157,7 +157,8 @@ function HeroMobile({ openCount, todayDeadlineCount, isMember }: HeroProps) {
           <h1 className="mt-2 text-[32px] leading-[1.25] font-black tracking-tight md:mt-3 md:text-[56px] md:leading-[1.15]">
             오늘 지원가능한
             <br />
-            강사공고 <span className="nums">{openCount}</span>건
+            강사공고{" "}
+            <span className="nums inline-block rounded-[12px] bg-white px-2.5 pt-0.5 pb-1 leading-none text-brand">{openCount}</span>건
           </h1>
           <p className="mt-5 inline-flex items-center gap-2 rounded-badge bg-white/18 py-2 pr-4 pl-3 text-[13px] font-semibold md:mt-7 md:text-[15px]">
             <span aria-hidden="true" className="h-2 w-2 rounded-full bg-white" />
