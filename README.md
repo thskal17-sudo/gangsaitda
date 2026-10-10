@@ -77,7 +77,6 @@ npm run dev
 | `supabase/job-import.sql` | 사이트 서버만 부를 수 있는 공고 저장 함수 (관리자 로그인 없이) |
 | `components/region-tabs.tsx`, `lib/regions.ts` | 지역 탭 (전체·부산·울산·경남). 권역 목록은 `lib/regions.ts` 한 곳 |
 | `supabase/job-region-group.sql` | 비회원용 목록 함수에 권역 칸 추가 (지역 탭이 비회원에게도 동작) |
-| `components/logo.tsx` | 글자 로고 (고운바탕, "잇"만 주황) |
 | `app/admin/members/`, `lib/admin-members.ts` | 관리자 · 회원 목록 (보기만) |
 | `supabase/admin-members.sql` | 관리자만 모든 회원 정보를 읽게 하는 규칙 |
 | `app/account/delete/`, `components/site-footer.tsx` | 회원 탈퇴 화면, 사이트 맨 아래(회원에게만 '회원 탈퇴' 링크) |

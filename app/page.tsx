@@ -158,7 +158,7 @@ function HeroMobile({ openCount, todayDeadlineCount, isMember }: HeroProps) {
             오늘 지원가능한
             <br />
             강사공고{" "}
-            <span className="nums inline-block rounded-[12px] bg-white px-2.5 pt-0.5 pb-1 leading-none text-brand">{openCount}</span>건
+            <span className="nums inline-block rounded-[12px] bg-white px-2.5 pt-0.5 pb-1 leading-none text-accent">{openCount}</span>건
           </h1>
           <p className="mt-5 inline-flex items-center gap-2 rounded-badge bg-white/18 py-2 pr-4 pl-3 text-[13px] font-semibold md:mt-7 md:text-[15px]">
             <span aria-hidden="true" className="h-2 w-2 rounded-full bg-white" />
@@ -214,7 +214,7 @@ function HeroDesktop({
           <h1 className="mt-5 text-[64px] leading-[1.1] font-black tracking-[-0.03em]">
             오늘 지원가능한
             <br />
-            강사공고 <span className="nums text-brand">{openCount}</span>건
+            강사공고 <span className="nums text-accent">{openCount}</span>건
           </h1>
           <p className="mt-6 max-w-[520px] text-[18px] leading-relaxed text-muted">
             교육청, 구·군청, 시설공단, 대학 평생교육원 공고를 매일 아침 직접 확인해서 올려요. 기관·마감일·지원 방법까지 한곳에서.
