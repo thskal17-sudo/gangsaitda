@@ -60,7 +60,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             // 함께하는 강사 수는 lib/site.ts 의 INSTRUCTOR_COUNT_LABEL
             { label: "함께하는 강사님", value: INSTRUCTOR_COUNT_LABEL, unit: "", tone: "text-ink" },
           ].map((t) => (
-            <li key={t.label} className="rounded-card bg-box px-3 py-4 md:px-7 md:py-7">
+            <li key={t.label} className="rounded-card border border-black/[0.06] bg-box px-3 py-4 md:px-7 md:py-7">
               <p className="text-[11px] font-semibold text-muted md:text-[14px]">{t.label}</p>
               <p className={`nums mt-1 text-[26px] leading-none font-black tracking-tight md:mt-2 md:text-[44px] ${t.tone}`}>
                 {t.value}
