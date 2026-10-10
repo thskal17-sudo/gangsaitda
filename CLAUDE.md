@@ -37,8 +37,8 @@
 (토스의 로고·전용 글꼴·똑같은 파랑은 쓰지 않습니다.)
 
 ```
---brand:  #2F6BF0   파랑 (주요 색, 버튼·강조)
---accent: #E8593F   주황 (포인트, 마감임박·배지)
+--brand:  #FF764C   시그니처 주황 (주요 색, 버튼·강조. 로고의 "잇"과 같은 색)
+--accent: #D9442A   진한 주황빨강 (오늘 마감·마감임박)
 --ink:    #191F28   본문 텍스트
 --muted:  #6B7684   보조 텍스트
 --line:   #E5E8EB   선·구분선
@@ -47,8 +47,9 @@
 --warn:   #C43F26   주의 (미제출, 낮은 지표)
 ```
 
-- 로고: `public/logo.png` (배경 투명). 로고 색 **남색 #1800AD + "잇"만 빨강 #FF3131** 은 로고에만 씁니다.
-- 글꼴: `Pretendard` (npm `pretendard`, 무료·상업적 이용 가능). 토스 전용 글꼴(Toss Product Sans)은 쓸 수 없습니다.
+- 로고: 글자 `강사잇다` (`components/logo.tsx`). **고운바탕 굵은체**(Gowun Batang 700, 글자 테두리로 조금 더 굵게), "잇"만 시그니처 주황. 그림 로고(`public/logo.png`)는 더 쓰지 않습니다.
+- 글꼴: 본문 `Pretendard` (npm `pretendard`, 무료·상업적 이용 가능), 로고 `Gowun Batang` (Google Fonts, next/font). 토스 전용 글꼴(Toss Product Sans)은 쓸 수 없습니다.
+- 홈 첫 화면에 함께하는 강사 수(`lib/site.ts` 의 `INSTRUCTOR_COUNT_LABEL`, 예: "200+")를 보여 줍니다.
 - 모서리: 카드 20px, 버튼·입력 14px, 배지 999px
 - 카드는 테두리 없이 흰색, 주요 버튼·입력칸 높이 56px, 입력칸은 옅은 회색 바탕
 - 숫자가 나열되는 곳은 `tabular-nums`
