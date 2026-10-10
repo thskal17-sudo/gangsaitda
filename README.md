@@ -79,6 +79,7 @@ npm run dev
 | `supabase/job-region-group.sql` | 비회원용 목록 함수에 권역 칸 추가 (지역 탭이 비회원에게도 동작) |
 | `app/admin/kakao/`, `app/api/kakao/`, `lib/kakao.ts`, `lib/kakao-actions.ts`, `components/kakao-buttons.tsx` | 관리자 · 카톡 알림 (운영자 카카오 계정 연결, 강사섭외 의뢰가 오면 '나와의 채팅'으로 알림) |
 | `supabase/kakao-notify.sql` | 카톡 연결 정보(토큰) 표. 사이트 서버만 읽고 씀 |
+| `app/robots.ts`, `app/sitemap.ts` | 검색엔진 안내문(robots.txt)과 사이트맵(sitemap.xml). 관리자·내 계정·api 는 검색 제외 |
 | `app/admin/members/`, `lib/admin-members.ts` | 관리자 · 회원 목록 (보기만) |
 | `supabase/admin-members.sql` | 관리자만 모든 회원 정보를 읽게 하는 규칙 |
 | `app/account/delete/`, `components/site-footer.tsx` | 회원 탈퇴 화면, 사이트 맨 아래(회원에게만 '회원 탈퇴' 링크) |
