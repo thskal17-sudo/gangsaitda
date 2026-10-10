@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql, job-region-group.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -992,6 +992,37 @@ revoke execute on function public.import_job(text, text, text, date, text, text,
   from public, anon, authenticated;
 grant execute on function public.import_job(text, text, text, date, text, text, text, integer, text, text, text, text, text, boolean)
   to service_role;
+
+-- ============================================================
+-- job-region-group.sql
+-- ============================================================
+
+-- 강사잇다 · 비회원용 공고 목록 함수에 '권역' 한 칸 더하기 (지역 탭용)
+-- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
+--
+-- 지금까지 비회원은 '번호·제목'만 받았습니다. 지역 탭(전체·부산·울산·경남)이 비회원에게도 동작하려면
+-- 권역(지역 칸의 첫 단어: "부산 북구" → "부산")까지는 알려줘야 합니다. 구·군·기관·마감일은 여전히 내주지 않습니다.
+--
+-- 돌려주는 칸이 하나 늘어나므로 함수를 지우고 다시 만듭니다 (create or replace 로는 칸을 못 바꿈).
+
+drop function if exists public.open_job_titles(date);
+
+create function public.open_job_titles(today date)
+returns table (id bigint, title text, region_group text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select j.id, j.title, split_part(btrim(d.region), ' ', 1) as region_group
+  from public.jobs j
+  join public.job_details d on d.job_id = j.id
+  where d.deadline >= today and j.hidden_at is null
+  order by d.deadline, j.id;
+$$;
+
+revoke execute on function public.open_job_titles(date) from public;
+grant execute on function public.open_job_titles(date) to anon, authenticated;
 
 -- Supabase에게 새 표·규칙이 생겼다고 알리기
 notify pgrst, 'reload schema';
