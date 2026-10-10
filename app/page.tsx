@@ -194,11 +194,11 @@ function SectionHead({ id, title, href }: { id: string; title: string; href: str
   );
 }
 
-/** 과정 이미지가 없을 때 쓰는 상자 색 */
+/** 과정 이미지가 없을 때 쓰는 상자: 바탕은 투명(옅은 테두리만), 글자·아이콘 색만 다르다 */
 const TONE_CLASS: Record<Course["tone"], string> = {
-  brand: "bg-brand/10 text-brand",
-  accent: "bg-accent/10 text-accent",
-  ok: "bg-ok/10 text-ok",
+  brand: "border border-black/[0.06] text-brand",
+  accent: "border border-black/[0.06] text-accent",
+  ok: "border border-black/[0.06] text-ok",
 };
 
 function CourseCard({ course }: { course: Course }) {
