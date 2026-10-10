@@ -60,7 +60,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             // 함께하는 강사 수는 lib/site.ts 의 INSTRUCTOR_COUNT_LABEL
             { label: "함께하는 강사님", value: INSTRUCTOR_COUNT_LABEL, unit: "", tone: "text-ink" },
           ].map((t) => (
-            <li key={t.label} className="rounded-card bg-bg px-3 py-4 md:px-7 md:py-7">
+            <li key={t.label} className="rounded-card bg-box px-3 py-4 md:px-7 md:py-7">
               <p className="text-[11px] font-semibold text-muted md:text-[14px]">{t.label}</p>
               <p className={`nums mt-1 text-[26px] leading-none font-black tracking-tight md:mt-2 md:text-[44px] ${t.tone}`}>
                 {t.value}
@@ -153,7 +153,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 }
 
 
-/** 홈 바로가기 상자. highlight 는 옅은 파란 바탕(강사 등록), 아니면 흰 바탕에 테두리(강사섭외). */
+/** 홈 바로가기 상자. 둘 다 베이지 바탕. highlight(강사 등록)는 제목을 남색으로. */
 function ShortcutBox({
   href,
   title,
@@ -169,7 +169,7 @@ function ShortcutBox({
     <Link
       href={href}
       className={`group flex items-center justify-between gap-4 rounded-card px-5 py-[18px] transition-colors md:px-8 md:py-7 ${
-        highlight ? "border border-transparent bg-brand/8 hover:border-brand" : "border border-line hover:border-brand"
+        highlight ? "border border-transparent bg-box hover:border-brand" : "border border-transparent bg-box hover:border-brand"
       }`}
     >
       <div>
@@ -196,9 +196,9 @@ function SectionHead({ id, title, href }: { id: string; title: string; href: str
 
 /** 과정 이미지가 없을 때 쓰는 상자 색 */
 const TONE_CLASS: Record<Course["tone"], string> = {
-  brand: "bg-brand/10 text-brand",
-  accent: "bg-accent/10 text-accent",
-  ok: "bg-ok/10 text-ok",
+  brand: "bg-box text-brand",
+  accent: "bg-box text-accent",
+  ok: "bg-box text-ok",
 };
 
 function CourseCard({ course }: { course: Course }) {

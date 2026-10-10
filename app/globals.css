@@ -5,6 +5,7 @@
   --brand: #1800ad; /* 남색 — 주요 색, 버튼·강조 (로고 "강사"와 같은 색) */
   --accent: #e8593f; /* 주황 — 포인트, 마감임박·배지 */
   --logo-red: #ff3131; /* 로고 "잇"의 빨강 — 홈 제목의 공고 수 숫자에만 */
+  --box: #f5efe6; /* 베이지 — 홈의 상자(숫자 칸·바로가기·교육과정 자리) */
   --ink: #191f28; /* 본문 텍스트 */
   --muted: #6b7684; /* 보조 텍스트 */
   --line: #e5e8eb; /* 선·구분선 */
@@ -17,6 +18,7 @@
   --color-brand: var(--brand);
   --color-accent: var(--accent);
   --color-logo-red: var(--logo-red);
+  --color-box: var(--box);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
