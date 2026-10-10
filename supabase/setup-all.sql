@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql, job-region-group.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql, job-region-group.sql, kakao-notify.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -1023,6 +1023,34 @@ $$;
 
 revoke execute on function public.open_job_titles(date) from public;
 grant execute on function public.open_job_titles(date) to anon, authenticated;
+
+-- ============================================================
+-- kakao-notify.sql
+-- ============================================================
+
+-- 강사잇다 · 카톡 알림 연결 정보 (강사섭외 의뢰가 오면 운영자 카톡 '나와의 채팅'으로 알림)
+-- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
+--
+-- 운영자가 관리자 화면(/admin/kakao)에서 '카카오 연결'을 누르면 카카오가 준 열쇠(토큰)를 이 표에 한 줄로 보관합니다.
+-- 사이트 서버(service_role)만 읽고 씁니다. 회원·비회원·관리자 화면 모두 이 표를 직접 읽을 수 없습니다.
+
+create table if not exists public.kakao_tokens (
+  id                  integer primary key default 1 check (id = 1),  -- 항상 한 줄
+  access_token        text not null,
+  access_expires_at   timestamptz not null,      -- 보통 6시간 뒤
+  refresh_token       text not null,
+  refresh_expires_at  timestamptz not null,      -- 보통 2달 뒤. 지나면 관리자 화면에서 다시 연결
+  connected_at        timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  last_error          text                       -- 마지막으로 보내기 실패한 이유 (관리자 화면에 보여줌)
+);
+
+comment on table public.kakao_tokens is '카톡 알림(나에게 보내기) 연결 정보. 사이트 서버만 읽고 쓴다.';
+
+alter table public.kakao_tokens enable row level security;
+revoke all on public.kakao_tokens from public, anon, authenticated;
+grant all on public.kakao_tokens to service_role;
+-- 읽기 규칙(policy)을 하나도 만들지 않으므로 service_role 말고는 아무도 못 읽는다.
 
 -- Supabase에게 새 표·규칙이 생겼다고 알리기
 notify pgrst, 'reload schema';
