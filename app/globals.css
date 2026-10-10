@@ -39,11 +39,6 @@ body {
   word-break: keep-all;
 }
 
-/* 글꼴 비교용: HOME_FONT=wanted 이면 본문 글꼴을 Wanted Sans 로 */
-html.font-wanted {
-  --font-sans: "Wanted Sans Variable", "Wanted Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
 /* 로고 글자(components/logo.tsx). 고운바탕 굵은체보다 조금 더 두껍게 보이도록 글자 테두리를 살짝 더한다. */
 .logo-text {
   font-family: var(--font-logo);

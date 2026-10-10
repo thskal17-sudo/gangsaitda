@@ -7,7 +7,9 @@ import { AD_INQUIRY_HREF, COURSES, type Course } from "@/lib/courses";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
 import { getCurrentMember } from "@/lib/member";
+import { countByRegion, parseRegionParam, regionGroupOfJob } from "@/lib/regions";
 import { INSTRUCTOR_COUNT_LABEL } from "@/lib/site";
+import RegionTabs from "@/components/region-tabs";
 
 /** 홈 공고 표에 보여줄 개수 (마감 가까운 순) */
 const HOME_JOB_COUNT = 7;
@@ -23,9 +25,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     member ? getOpenJobs(today) : getOpenJobTitles(today),
     getTodayDeadlineCount(today),
   ]);
-  const homeJobs = openJobs.slice(0, HOME_JOB_COUNT);
+  const params = await searchParams;
+  // 지역 탭 (?region=부산): 표만 그 권역으로 줄인다. 위쪽 숫자(지원가능한 공고 N건)는 전체 기준.
+  const region = parseRegionParam(params.region);
+  const regionJobs = region ? openJobs.filter((job) => regionGroupOfJob(job) === region) : openJobs;
+  const homeJobs = regionJobs.slice(0, HOME_JOB_COUNT);
   // 회원 탈퇴를 마치고 홈으로 온 경우 (?deleted=1)
-  const justDeleted = !member && (await searchParams).deleted === "1";
+  const justDeleted = !member && params.deleted === "1";
 
   return (
     // data-home: 홈에서만 바탕을 흰색으로 바꾼다 (app/globals.css)
@@ -36,61 +42,17 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {/* ① 첫인사 — 시안 비교용: HOME_HERO=A(주황 바탕) / B(로고 글씨 제목) / 그 밖(지금 모양) */}
-      {process.env.HOME_HERO === "D" ? (
-        <>
-          <div className="md:hidden">
-            <HeroA openCount={openJobs.length} todayDeadlineCount={todayDeadlineCount} isMember={member !== null} />
-          </div>
-          <HeroD
-            openCount={openJobs.length}
-            todayDeadlineCount={todayDeadlineCount}
-            isMember={member !== null}
-            jobs={homeJobs.slice(0, 3)}
-            today={today}
-          />
-        </>
-      ) : process.env.HOME_HERO === "A" ? (
-        <HeroA openCount={openJobs.length} todayDeadlineCount={todayDeadlineCount} isMember={member !== null} />
-      ) : process.env.HOME_HERO === "B" ? (
-        <HeroB openCount={openJobs.length} todayDeadlineCount={todayDeadlineCount} isMember={member !== null} />
-      ) : (
-      <section className="flex flex-col gap-5 pt-2 md:grid md:grid-cols-12 md:items-end md:gap-6 md:pt-6">
-        <div className="md:col-span-7">
-          <h1 className="text-[30px] leading-[1.3] font-black tracking-tight md:text-[52px] md:leading-[1.2]">
-            오늘 지원가능한
-            <br />
-            강사공고 <span className="nums text-brand">{openJobs.length}</span>건
-          </h1>
-          <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
-            부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
-            <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
-          </p>
-          {/* 함께하는 강사 수 (lib/site.ts 의 INSTRUCTOR_COUNT_LABEL) */}
-          <p className="mt-4 inline-flex items-center gap-2 rounded-badge bg-brand/10 py-1.5 pr-4 pl-3 text-[13px] font-semibold text-ink md:mt-6 md:text-[15px]">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand" />
-            <span className="nums font-black text-brand">{INSTRUCTOR_COUNT_LABEL}</span> 강사님들이 강사잇다와 함께 하고 있습니다.
-          </p>
-          <div className="mt-8 hidden gap-3 md:flex">
-            <ButtonLink href="/jobs" primary>
-              전체 공고 보기
-            </ButtonLink>
-            {!member && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between rounded-card bg-accent/10 px-5 py-4 md:col-span-5 md:rounded-[24px] md:p-8">
-          <div className="flex flex-col gap-0.5 md:gap-1.5">
-            <p className="text-[15px] font-bold text-warn md:text-[16px]">오늘 마감</p>
-            <p className="text-[12px] text-muted md:text-[15px]">오늘 자정이 지나면 목록에서 사라져요</p>
-          </div>
-          <p className="nums shrink-0 text-[40px] leading-none font-black tracking-tight text-accent md:text-[64px]">
-            {todayDeadlineCount}
-            <span className="ml-1 text-[18px] md:text-[22px]">건</span>
-          </p>
-        </div>
-      </section>
-      )}
+      {/* ① 첫인사: 휴대폰은 주황 첫 화면(HeroMobile), PC 는 그라데이션 바탕 + 오늘 마감 카드(HeroDesktop) */}
+      <div className="md:hidden">
+        <HeroMobile openCount={openJobs.length} todayDeadlineCount={todayDeadlineCount} isMember={member !== null} />
+      </div>
+      <HeroDesktop
+        openCount={openJobs.length}
+        todayDeadlineCount={todayDeadlineCount}
+        isMember={member !== null}
+        jobs={openJobs.slice(0, 3)}
+        today={today}
+      />
 
       {/* ② 바로가기: 비회원은 강사 가입, 회원은 내 프로필 + 강사섭외. PC 에서는 나란히 */}
       <div className="mt-5 grid grid-cols-1 gap-3 md:mt-12 md:grid-cols-2 md:gap-6">
@@ -112,8 +74,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
       </div>
 
-      {/* ③ 교육과정. 시안 D: 소개할 과정이 아직 없으면 PC 에서는 한 줄로 접는다 */}
-      {process.env.HOME_HERO === "D" && !COURSES.some((c) => c.name) && (
+      {/* ③ 교육과정. 소개할 과정이 아직 없으면 PC 에서는 한 줄로 접는다 (휴대폰은 옆으로 미는 광고 자리) */}
+      {!COURSES.some((c) => c.name) && (
         <a
           href={AD_INQUIRY_HREF}
           className="mt-14 hidden items-center justify-between rounded-card border border-line px-7 py-5 text-[15px] transition-colors hover:border-brand md:flex"
@@ -127,7 +89,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       )}
       <section
         aria-labelledby="courses-title"
-        className={`mt-8 md:mt-12 ${process.env.HOME_HERO === "D" && !COURSES.some((c) => c.name) ? "md:hidden" : ""}`}
+        className={`mt-8 md:mt-12 ${COURSES.some((c) => c.name) ? "" : "md:hidden"}`}
       >
         <SectionHead id="courses-title" title="강사 경력에 더하는 교육과정" href="/certificates" />
         {/* 휴대폰: 옆으로 밀어 보는 한 줄 / PC: 3칸 */}
@@ -142,9 +104,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       {/* ④ 공고 표 (마감 가까운 순) */}
       <section aria-label="마감이 가까운 공고" className="mt-9 md:mt-16">
+        <div className="mb-4 md:mb-6">
+          <RegionTabs active={region} counts={countByRegion(openJobs)} total={openJobs.length} basePath="/" />
+        </div>
         <JobTableHead isMember={member !== null} />
         {homeJobs.length === 0 ? (
-          <p className="border-b border-line py-8 text-center text-sm text-muted">지금은 지원할 수 있는 공고가 없습니다.</p>
+          <p className="border-b border-line py-8 text-center text-sm text-muted">
+            {region ? `지금 ${region} 지역에는 지원할 수 있는 공고가 없습니다.` : "지금은 지원할 수 있는 공고가 없습니다."}
+          </p>
         ) : (
           <ul>
             {homeJobs.map((job) => (
@@ -158,15 +125,17 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         {/* PC: 가운데 둥근 버튼 / 휴대폰: 꽉 찬 버튼 두 개 */}
         <div className="mt-7 hidden justify-center md:flex">
           <Link
-            href="/jobs"
+            href={region ? `/jobs?region=${region}` : "/jobs"}
             className="nums flex h-[52px] items-center rounded-badge bg-bg px-7 text-[16px] font-bold transition-colors hover:bg-line"
           >
-            공고 {openJobs.length}건 모두 보기 →
+            {region ? `${region} ` : ""}공고 {regionJobs.length}건 모두 보기 →
           </Link>
         </div>
         <div className="mt-5 flex flex-col gap-2 md:hidden">
-          <ButtonLink href="/jobs" primary>
-            <span className="nums">공고 {openJobs.length}건 모두 보기</span>
+          <ButtonLink href={region ? `/jobs?region=${region}` : "/jobs"} primary>
+            <span className="nums">
+              {region ? `${region} ` : ""}공고 {regionJobs.length}건 모두 보기
+            </span>
           </ButtonLink>
           {!member && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
         </div>
@@ -178,8 +147,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
 type HeroProps = { openCount: number; todayDeadlineCount: number; isMember: boolean };
 
-/** 시안 A: 첫 화면 한 블록을 시그니처 주황으로 꽉 채운다. 흰 글씨·흰 카드. */
-function HeroA({ openCount, todayDeadlineCount, isMember }: HeroProps) {
+/** 휴대폰 첫 화면: 한 블록을 시그니처 주황으로 꽉 채운다. 흰 글씨·흰 카드. */
+function HeroMobile({ openCount, todayDeadlineCount, isMember }: HeroProps) {
   return (
     <section className="-mx-4 -mt-5 bg-brand px-5 pt-8 pb-9 text-white md:mx-0 md:mt-0 md:rounded-[32px] md:px-12 md:pt-14 md:pb-14">
       <div className="flex flex-col gap-6 md:grid md:grid-cols-12 md:items-center md:gap-8">
@@ -220,49 +189,8 @@ function HeroA({ openCount, todayDeadlineCount, isMember }: HeroProps) {
   );
 }
 
-/** 시안 B: 흰 바탕에 로고 글꼴(고운바탕)로 큰 한 문장, 아래 숫자 세 칸. */
-function HeroB({ openCount, todayDeadlineCount, isMember }: HeroProps) {
-  const tiles = [
-    { label: "지원가능한 공고", value: openCount, unit: "건", tone: "text-brand" },
-    { label: "오늘 마감", value: todayDeadlineCount, unit: "건", tone: "text-accent" },
-    { label: "함께하는 강사님", value: INSTRUCTOR_COUNT_LABEL, unit: "", tone: "text-ink" },
-  ];
-  return (
-    <section className="pt-3 md:pt-8">
-      <h1
-        style={{ fontFamily: "var(--font-logo)" }}
-        className="text-[38px] leading-[1.25] font-bold tracking-tight md:text-[68px] md:leading-[1.15]"
-      >
-        강사와 기관을 <span className="text-brand">잇</span>다.
-      </h1>
-      <p className="mt-4 text-[15px] leading-relaxed text-muted md:mt-6 md:text-[18px]">
-        부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
-        <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
-      </p>
-      <ul className="mt-6 grid grid-cols-3 gap-2 md:mt-10 md:gap-5">
-        {tiles.map((t) => (
-          <li key={t.label} className="rounded-card bg-bg px-3 py-4 md:px-7 md:py-7">
-            <p className="text-[11px] font-semibold text-muted md:text-[14px]">{t.label}</p>
-            <p className={`nums mt-1 text-[26px] leading-none font-black tracking-tight md:mt-2 md:text-[44px] ${t.tone}`}>
-              {t.value}
-              {t.unit && <span className="ml-0.5 text-[13px] md:text-[18px]">{t.unit}</span>}
-            </p>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-6 flex gap-3 md:mt-9">
-        <ButtonLink href="/jobs" primary>
-          전체 공고 보기
-        </ButtonLink>
-        {!isMember && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
-      </div>
-    </section>
-  );
-}
-
-
-/** 시안 D (PC 전용, 휴대폰은 시안 A): 연한 주황 그라데이션 바탕, 큰 제목, 오른쪽에 오늘 마감·마감 임박 카드. */
-function HeroD({
+/** PC 첫 화면: 연한 주황 그라데이션 바탕, 큰 제목, 오른쪽에 오늘 마감·마감 임박 공고 카드. */
+function HeroDesktop({
   openCount,
   todayDeadlineCount,
   isMember,
@@ -445,10 +373,7 @@ function CourseCard({ course }: { course: Course }) {
 
 /** 공고 표 머리줄. PC 회원은 칸 이름 네 개, 그 밖에는 '마감일 순' 한 줄. */
 function JobTableHead({ isMember }: { isMember: boolean }) {
-  const base =
-    process.env.HOME_HERO === "D"
-      ? "border-b border-line pb-2.5 text-[13px] font-bold text-muted md:py-3.5 md:text-[13px]"
-      : "border-b-2 border-ink pb-2.5 text-[13px] font-bold text-[#4E5968] md:py-3.5 md:text-[14px]";
+  const base = "border-b border-line pb-2.5 text-[13px] font-bold text-muted md:py-3.5 md:text-[13px]";
 
   if (!isMember) {
     return (

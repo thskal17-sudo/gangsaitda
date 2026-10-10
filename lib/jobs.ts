@@ -7,10 +7,12 @@ import { createClient } from "@/lib/supabase/server";
  * 비회원 화면에서 가리는 게 아니라, 데이터베이스가 비회원에게 아예 내주지 않는다.
  */
 
-/** 누구나 볼 수 있는 것: 번호와 제목 */
+/** 누구나 볼 수 있는 것: 번호와 제목 (+ 지역 탭용 권역. 구·군은 빼고 "부산"처럼 첫 단어만) */
 export type JobTitle = {
   id: string;
   title: string;
+  /** 권역 (lib/regions.ts). 목록 함수(open_job_titles)만 돌려주고, 제목 하나를 받는 곳에서는 없다. */
+  regionGroup?: string;
 };
 
 /** 공고 요약. 회원에게 보여주는 목록 카드와 상세 화면 윗부분에 쓴다. */
@@ -46,7 +48,7 @@ export type JobDetail = Job & {
 };
 
 /** 데이터베이스에서 오는 한 줄의 모양 (supabase/jobs.sql 과 칸 이름이 같다) */
-type TitleRow = { id: number; title: string };
+type TitleRow = { id: number; title: string; region_group?: string | null };
 type DetailRow = {
   job_id: number;
   organization: string;
@@ -123,7 +125,7 @@ export async function getOpenJobTitles(today: string): Promise<JobTitle[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("open_job_titles", { today });
   if (error) fail("목록", error);
-  return (data as TitleRow[]).map((row) => ({ id: String(row.id), title: row.title }));
+  return (data as TitleRow[]).map((row) => ({ id: String(row.id), title: row.title, regionGroup: row.region_group ?? undefined }));
 }
 
 /** 지원할 수 있는 공고 — **회원용**. 마감이 지나지 않은 것만, 마감 가까운 순. */

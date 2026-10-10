@@ -3,7 +3,6 @@ import { Gowun_Batang } from "next/font/google";
 import Link from "next/link";
 // 글꼴: Pretendard (무료, 상업적 이용 가능). 화면에 나온 글자에 필요한 조각만 받는다.
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
-import "wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.css"; // 글꼴 비교용 (HOME_FONT=wanted)
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
 import HeaderAuth from "@/components/header-auth";
@@ -53,7 +52,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const member = await getCurrentMember();
 
   return (
-    <html lang="ko" className={`antialiased ${gowunBatang.variable} ${process.env.HOME_FONT === "wanted" ? "font-wanted" : ""}`}>
+    <html lang="ko" className={`antialiased ${gowunBatang.variable}`}>
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink">
         <header className="sticky top-0 z-10 mx-auto w-full max-w-[430px] shrink-0 bg-white/90 backdrop-blur md:max-w-none">
           <div className="mx-auto flex h-14 items-center justify-between px-4 md:h-16 md:max-w-[1080px] md:px-8">
