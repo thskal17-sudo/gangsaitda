@@ -77,6 +77,7 @@ npm run dev
 | `supabase/job-import.sql` | 사이트 서버만 부를 수 있는 공고 저장 함수 (관리자 로그인 없이) |
 | `components/region-tabs.tsx`, `lib/regions.ts` | 지역 탭 (전체·부산·울산·경남). 권역 목록은 `lib/regions.ts` 한 곳 |
 | `supabase/job-region-group.sql` | 비회원용 목록 함수에 권역 칸 추가 (지역 탭이 비회원에게도 동작) |
+| `components/job-search.tsx`, `lib/job-search.ts` | 공고 검색칸 (`?q=검색어`). 제목·기관·지역에서 찾고, 띄어쓰기는 무시 |
 | `app/admin/kakao/`, `app/api/kakao/`, `lib/kakao.ts`, `lib/kakao-actions.ts`, `components/kakao-buttons.tsx` | 관리자 · 카톡 알림 (운영자 카카오 계정 연결, 강사섭외 의뢰가 오면 '나와의 채팅'으로 알림) |
 | `supabase/kakao-notify.sql` | 카톡 연결 정보(토큰) 표. 사이트 서버만 읽고 씀 |
 | `app/robots.ts`, `app/sitemap.ts` | 검색엔진 안내문(robots.txt)과 사이트맵(sitemap.xml). 관리자·내 계정·api 는 검색 제외 |
