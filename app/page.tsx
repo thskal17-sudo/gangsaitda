@@ -42,7 +42,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {/* ① 첫인사: 제목 + 숫자 세 칸(지원가능한 공고 · 오늘 마감 · 함께하는 강사님). 제목의 N 은 로고 "잇"의 빨강 */}
+      {/* ① 첫인사: 제목 + 숫자 세 칸(지원가능한 공고 · D-day 공고 · 함께하는 강사님). 제목의 N 은 로고 "잇"의 빨강 */}
       <section className="pt-2 md:pt-6">
         <h1 className="text-[30px] leading-[1.3] font-black tracking-tight md:text-[52px] md:leading-[1.2]">
           오늘 지원가능한
@@ -56,7 +56,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <ul className="mt-5 grid grid-cols-3 gap-2 md:mt-8 md:gap-5">
           {[
             { label: "지원가능한 공고", value: openJobs.length, unit: "건", tone: "text-brand" },
-            { label: "오늘 마감", value: todayDeadlineCount, unit: "건", tone: "text-accent" },
+            { label: "D-day 공고", value: todayDeadlineCount, unit: "건", tone: "text-accent" },
             // 함께하는 강사 수는 lib/site.ts 의 INSTRUCTOR_COUNT_LABEL
             { label: "함께하는 강사님", value: INSTRUCTOR_COUNT_LABEL, unit: "", tone: "text-ink" },
           ].map((t) => (
