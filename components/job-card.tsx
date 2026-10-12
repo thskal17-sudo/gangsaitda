@@ -18,7 +18,7 @@ export function DeadlineBadge({ daysLeft }: { daysLeft: number }) {
   if (daysLeft <= URGENT_DAYS) {
     return (
       <span className="nums shrink-0 rounded-badge bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
-        {daysLeft === 0 ? "오늘 마감" : `마감임박 D-${daysLeft}`}
+        {daysLeft === 0 ? "D-day" : `마감임박 D-${daysLeft}`}
       </span>
     );
   }
