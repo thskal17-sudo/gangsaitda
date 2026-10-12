@@ -267,7 +267,7 @@ function JobTableHead({ isMember }: { isMember: boolean }) {
 
 const ROW_COLUMNS = "md:grid-cols-[120px_minmax(0,1fr)_200px_180px]";
 
-/** 남은 날 글자 색: 오늘 마감은 주황, 마감임박은 진하게, 그 뒤는 옅게 */
+/** 남은 날 글자 색: 당일(D-day)은 주황, 마감임박은 진하게, 그 뒤는 옅게 */
 function dayClass(daysLeft: number): string {
   if (daysLeft === 0) return "text-accent";
   if (daysLeft <= URGENT_DAYS) return "text-ink";
@@ -293,9 +293,9 @@ function JobRow({ job, today }: { job: Job | JobTitle; today: string }) {
   return (
     <Link href={`/jobs/${job.id}`} className={`${rowClass} md:grid md:items-center ${ROW_COLUMNS}`}>
       <span
-        className={`nums w-[52px] shrink-0 pt-px text-[20px] font-black tracking-tight md:w-auto md:pt-0 md:text-[28px] ${dayClass(daysLeft)}`}
+        className={`nums w-[66px] shrink-0 pt-px text-[20px] font-black tracking-tight whitespace-nowrap md:w-auto md:pt-0 md:text-[28px] ${dayClass(daysLeft)}`}
       >
-        {daysLeft === 0 ? "오늘" : `D-${daysLeft}`}
+        {daysLeft === 0 ? "D-day" : `D-${daysLeft}`}
       </span>
       <div className="flex min-w-0 flex-col gap-1">
         <span className="text-[16px] leading-snug font-bold group-hover:text-brand md:text-[18px]">{summary.title}</span>
