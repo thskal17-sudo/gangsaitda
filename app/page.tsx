@@ -9,6 +9,7 @@ import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type Jo
 import { getCurrentMember } from "@/lib/member";
 import { countByRegion, parseRegionParam, regionGroupOfJob } from "@/lib/regions";
 import { INSTRUCTOR_COUNT_LABEL } from "@/lib/site";
+import JobSearch from "@/components/job-search";
 import RegionTabs from "@/components/region-tabs";
 
 /** 홈 공고 표에 보여줄 개수 (마감 가까운 순) */
@@ -112,6 +113,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       {/* ④ 공고 표 (마감 가까운 순) */}
       <section aria-label="마감이 가까운 공고" className="mt-9 md:mt-16">
+        {/* 검색칸: 홈은 7건만 보여주므로, 검색하면 공고 화면(/jobs)으로 가서 결과를 모두 보여준다. 고른 지역은 같이 넘긴다. */}
+        <div className="mb-3 md:mb-4">
+          <JobSearch query="" basePath="/jobs" keepParams={region ? { region } : {}} surface="gray" />
+        </div>
         <div className="mb-4 md:mb-6">
           <RegionTabs active={region} counts={countByRegion(openJobs)} total={openJobs.length} basePath="/" />
         </div>

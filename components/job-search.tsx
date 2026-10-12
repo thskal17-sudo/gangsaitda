@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 /**
- * 공고 검색칸. 단어를 넣고 검색하면 주소에 ?q=검색어 가 붙어 그 공고만 보인다 (lib/job-search.ts).
+ * 공고 검색칸. 단어를 넣고 검색하면 basePath 로 가면서 주소에 ?q=검색어 가 붙어 그 공고만 보인다 (lib/job-search.ts).
+ * 홈에서는 basePath="/jobs" 로 두어, 검색하면 공고 화면에서 결과를 보여준다.
  * 자바스크립트 없이 동작하는 보통 양식(GET)이라, 뒤로가기·주소 공유가 된다.
  * 검색 중이면 오른쪽에 '지우기' 가 나오고, 누르면 검색어만 뗀 주소로 간다.
  */
@@ -9,6 +10,7 @@ export default function JobSearch({
   query,
   basePath,
   keepParams = {},
+  surface = "white",
 }: {
   /** 지금 검색어. 없으면 "" */
   query: string;
@@ -16,6 +18,8 @@ export default function JobSearch({
   basePath: string;
   /** 같이 남겨야 하는 주소 값 (예: { region: "부산" }) */
   keepParams?: Record<string, string>;
+  /** 바탕이 흰 화면(홈)에서는 "gray" 로 두어 칸이 보이게 한다 */
+  surface?: "white" | "gray";
 }) {
   const keep = Object.entries(keepParams).filter(([, v]) => v);
   const clearQuery = new URLSearchParams(Object.fromEntries(keep)).toString();
@@ -47,7 +51,9 @@ export default function JobSearch({
         enterKeyHint="search"
         autoComplete="off"
         maxLength={50}
-        className="block h-12 w-full rounded-control border-2 border-transparent bg-white pr-20 pl-11 text-[16px] text-ink transition-colors outline-none placeholder:text-muted/70 focus:border-brand md:h-14"
+        className={`block h-12 w-full rounded-control border-2 border-transparent pr-20 pl-11 text-[16px] text-ink transition-colors outline-none placeholder:text-muted/70 focus:border-brand md:h-14 ${
+          surface === "gray" ? "bg-bg focus:bg-white" : "bg-white"
+        }`}
       />
       <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-1">
         {query && (
