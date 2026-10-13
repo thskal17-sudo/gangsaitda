@@ -2,7 +2,7 @@ import Link from "next/link";
 import { REGION_GROUPS, type RegionGroup } from "@/lib/regions";
 
 /**
- * 지역 탭: 전체 · 부산 · 울산 · 경남 (lib/regions.ts 의 목록 순서). 각 탭에 공고 수를 같이 보여준다.
+ * 지역 탭: 전체 · 부산 · 울산 · 경남 · 경북 (lib/regions.ts 의 목록 순서). 각 탭에 공고 수를 같이 보여준다.
  * 누르면 주소에 ?region=부산 이 붙어 그 지역만 보인다 (뒤로가기·공유가 된다). '전체'는 region 을 뗀다.
  * 휴대폰에서는 옆으로 밀어 볼 수 있고, PC 에서는 한 줄에 다 보인다.
  */

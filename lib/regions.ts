@@ -1,11 +1,11 @@
 /**
  * 공고를 지역 탭으로 나누는 기준 (홈 공고 표, 공고 화면).
  *
- * 권역을 늘리려면 아래 목록에 한 줄만 더한다 (예: "경북"). 탭·숫자·주소(?region=경북)가 함께 생긴다.
+ * 권역을 늘리려면 아래 목록에 하나만 더한다 (예: "대구"). 탭·숫자·주소(?region=대구)가 함께 생긴다.
  * 공고의 '지역' 칸 첫 단어로 권역을 정한다: "부산 북구" → 부산, "경남 창원시" → 경남.
  * 목록에 없는 지역(예: 서울)은 '전체'에서만 보인다.
  */
-export const REGION_GROUPS = ["부산", "울산", "경남"] as const;
+export const REGION_GROUPS = ["부산", "울산", "경남", "경북"] as const;
 
 export type RegionGroup = (typeof REGION_GROUPS)[number];
 
