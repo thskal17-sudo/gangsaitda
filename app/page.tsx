@@ -51,7 +51,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           강사공고 <span className="nums text-logo-red">{openJobs.length}</span>건
         </h1>
         <p className="mt-3 text-[15px] leading-relaxed text-muted md:mt-5 md:text-[18px]">
-          부산·울산·경남 교육청, 구·군청, 시설공단, 대학 평생교육원 공고를
+          부산·울산·경남·경북 교육청, 시·군·구청, 시설공단, 대학 평생교육원 공고를
           <br className="hidden md:block" /> 매일 아침 직접 확인해서 올려요.
         </p>
         <ul className="mt-5 grid grid-cols-3 gap-2 md:mt-8 md:gap-5">

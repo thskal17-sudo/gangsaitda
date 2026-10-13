@@ -11,7 +11,7 @@ import TopNav from "@/components/top-nav";
 import { getCurrentMember } from "@/lib/member";
 import { SITE_URL } from "@/lib/site";
 
-const DESCRIPTION = "부산·울산·경남 학교·기관의 강사 공고를 한곳에서 확인하세요.";
+const DESCRIPTION = "부산·울산·경남·경북 학교·기관의 강사 공고를 한곳에서 확인하세요.";
 
 /*
  * 검색·공유용 정보. 카톡·문자로 주소를 보내면 아래 제목·설명과 app/opengraph-image.png 가 미리보기로 뜬다.
