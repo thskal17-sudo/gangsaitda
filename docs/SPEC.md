@@ -304,7 +304,7 @@
 ## 4-2. 사이트 아이콘 · 공유 미리보기
 
 - **아이콘**: 로고의 빨간 "잇"을 흰 바탕 가운데에 둔 그림 (`app/icon.png`, `app/apple-icon.png`, `app/favicon.ico`)
-- **공유 미리보기**(카톡·문자·SNS): `app/opengraph-image.png` (로고 + "강사와 기관을 잇다" + 부산·울산·경남 안내. 그림 파일이라 경북은 아직 안 적혀 있음)
+- **공유 미리보기**(카톡·문자·SNS): `app/opengraph-image.png` (로고 + "강사와 기관을 잇다" + 부산·울산·경남·경북 안내)
   - 제목 "강사잇다 — 강사와 기관을 잇다", 설명 "부산·울산·경남·경북 학교·기관의 강사 공고를 한곳에서 확인하세요." (`app/layout.tsx`)
   - 대표 주소는 `app/layout.tsx` 의 `metadataBase` (`https://www.gangsaitda.com`).
 
