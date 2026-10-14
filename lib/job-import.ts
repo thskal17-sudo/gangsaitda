@@ -1,5 +1,5 @@
 import { toRpcArgs } from "@/lib/admin-job-schema";
-import { MAX_ROWS, parseJobSheet, titleKey } from "@/lib/job-excel";
+import { MAX_ROWS, REQUIRED_COLUMN_NAMES, parseJobSheet, titleKey } from "@/lib/job-excel";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /*
@@ -23,9 +23,13 @@ export type ImportSummary = {
   failed: { title: string; reason: string }[];
 };
 
-/** 줄 목록(칸 이름 → 값)을 엑셀 시트 모양(첫 줄은 칸 이름)으로 바꾼다. 칸 이름은 처음 나온 순서. */
+/**
+ * 줄 목록(칸 이름 → 값)을 엑셀 시트 모양(첫 줄은 칸 이름)으로 바꾼다. 칸 이름은 처음 나온 순서.
+ * 꼭 있어야 하는 칸은 어느 줄에도 없더라도 칸 이름 줄에 넣어 둔다. 그래야 '보류' 줄(마감일 없음)만 온 묶음도
+ * 묶음 전체가 거절되지 않고 줄마다 확인된다 (보류면 건너뜀, 아니면 '마감일 …' 이유를 돌려줌).
+ */
 function toSheet(rows: Record<string, unknown>[]): unknown[][] {
-  const header: string[] = [];
+  const header: string[] = [...REQUIRED_COLUMN_NAMES];
   for (const row of rows) {
     for (const name of Object.keys(row)) if (!header.includes(name)) header.push(name);
   }
