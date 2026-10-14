@@ -29,6 +29,9 @@ const COLUMN_NAMES: Record<keyof JobInput, string[]> = {
 /** 꼭 있어야 하는 칸 (양식의 앞 여섯 칸) */
 const REQUIRED_COLUMNS: (keyof JobInput)[] = ["title", "organization", "region", "deadline", "schedule", "description"];
 
+/** 꼭 있어야 하는 칸의 엑셀 이름 (제목, 기관명, 지역, 마감일, 수업 일정, 상세 내용) */
+export const REQUIRED_COLUMN_NAMES: string[] = REQUIRED_COLUMNS.map((key) => COLUMN_NAMES[key][0]);
+
 /** 한 번에 올릴 수 있는 줄 수 */
 export const MAX_ROWS = 200;
 
