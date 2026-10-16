@@ -83,7 +83,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         {member ? (
           <ShortcutBox
             href="/account/profile"
-            title="섭외 받을 프로필을 내 보세요"
+            title="섭외받을 프로필을 등록해보세요"
             description="기관 의뢰가 오면 운영자가 골라 전달해 드려요"
             highlight
           />
