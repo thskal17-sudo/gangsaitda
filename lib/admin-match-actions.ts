@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminStatus } from "@/lib/admin";
 import { isMatchStatus } from "@/lib/match-status";
+import { REQUEST_FILES_BUCKET } from "@/lib/profile";
+import { REQUEST_FILE_MAX_BYTES, planFolder, requestFileExtension } from "@/lib/request-files";
 import { createClient } from "@/lib/supabase/server";
 
 /*
@@ -73,15 +75,102 @@ export async function setMatchStatus(requestId: string, matchId: string, status:
   done(requestId);
 }
 
-/** 추천 강사에서 빼기 (강사 프로필은 그대로) */
+/** 추천 강사에서 빼기 (강사 프로필은 그대로, 올려 둔 강의계획서는 함께 지운다) */
 export async function removeMatch(requestId: string, matchId: string): Promise<void> {
   await guard(requestId, "remove");
   if (!ID.test(matchId)) redirect(`${pagePath(requestId)}?failed=remove`);
   const supabase = await createClient();
+  const before = await readPlanPath(requestId, matchId);
   const { error } = await supabase.from("request_matches").delete().eq("id", Number(matchId)).eq("request_id", Number(requestId));
+  if (!error && before) await supabase.storage.from(REQUEST_FILES_BUCKET).remove([before]);
   if (error) {
     console.error("[admin] 추천 강사 빼기 실패", error.code, error.message);
     redirect(`${pagePath(requestId)}?failed=remove`);
   }
+  done(requestId);
+}
+
+/* ---- 강의계획서 (추천 강사마다 하나) --------------------------------------------------
+ * 파일은 브라우저가 저장소에 바로 올린다 (사이트 서버를 거치면 큰 파일이 막히므로).
+ * 순서: preparePlanUpload 로 '올릴 자리'를 받음 → 브라우저가 올림 → savePlan 으로 표에 적음(전 파일은 지움).
+ */
+
+type Fail = { error: string };
+const NOT_ADMIN: Fail = { error: "관리자만 할 수 있어요. 다시 로그인해 주세요." };
+
+async function readPlanPath(requestId: string, matchId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("request_matches")
+    .select("plan_path")
+    .eq("id", Number(matchId))
+    .eq("request_id", Number(requestId))
+    .maybeSingle();
+  return (data as { plan_path: string | null } | null)?.plan_path ?? null;
+}
+
+export async function preparePlanUpload(
+  requestId: string,
+  matchId: string,
+  fileName: unknown,
+  size: unknown,
+): Promise<{ path: string; signedUrl: string } | Fail> {
+  if ((await getAdminStatus()) !== "admin" || !ID.test(requestId) || !ID.test(matchId)) return NOT_ADMIN;
+  if (typeof fileName !== "string" || typeof size !== "number") return { error: "파일을 다시 골라 주세요." };
+  const ext = requestFileExtension(fileName);
+  if (!ext) return { error: "PDF, 한글, 워드, 파워포인트, 사진(JPG·PNG) 파일만 올릴 수 있어요." };
+  if (size <= 0 || size > REQUEST_FILE_MAX_BYTES) return { error: "파일은 10MB 까지 올릴 수 있어요." };
+
+  const path = `${planFolder(requestId, matchId)}${Date.now()}.${ext}`;
+  const supabase = await createClient();
+  const { data, error } = await supabase.storage.from(REQUEST_FILES_BUCKET).createSignedUploadUrl(path);
+  if (error || !data) {
+    console.error("[admin] 강의계획서 올릴 자리 만들기 실패", error?.message);
+    return { error: "파일을 올릴 준비를 하지 못했어요. 잠시 뒤에 다시 시도해 주세요." };
+  }
+  return { path, signedUrl: data.signedUrl };
+}
+
+/** 방금 올린 강의계획서를 추천 강사 줄에 적는다. 전에 올린 파일이 있으면 지운다. */
+export async function savePlan(requestId: string, matchId: string, path: unknown, fileName: unknown): Promise<{ ok: true } | Fail> {
+  if ((await getAdminStatus()) !== "admin" || !ID.test(requestId) || !ID.test(matchId)) return NOT_ADMIN;
+  if (typeof path !== "string" || !path.startsWith(planFolder(requestId, matchId)) || path.includes("..")) {
+    return { error: "파일을 다시 올려 주세요." };
+  }
+  const name = String(fileName ?? "").slice(0, 200) || "강의계획서";
+
+  const supabase = await createClient();
+  const before = await readPlanPath(requestId, matchId);
+  const { error } = await supabase
+    .from("request_matches")
+    .update({ plan_path: path, plan_name: name })
+    .eq("id", Number(matchId))
+    .eq("request_id", Number(requestId));
+  if (error) {
+    console.error("[admin] 강의계획서 저장 실패", error.code, error.message);
+    await supabase.storage.from(REQUEST_FILES_BUCKET).remove([path]);
+    return { error: "강의계획서를 저장하지 못했어요. 잠시 뒤에 다시 시도해 주세요." };
+  }
+  if (before && before !== path) await supabase.storage.from(REQUEST_FILES_BUCKET).remove([before]);
+  done(requestId);
+  return { ok: true };
+}
+
+/** 강의계획서 지우기 */
+export async function removePlan(requestId: string, matchId: string): Promise<void> {
+  await guard(requestId, "plan");
+  if (!ID.test(matchId)) redirect(`${pagePath(requestId)}?failed=plan`);
+  const supabase = await createClient();
+  const before = await readPlanPath(requestId, matchId);
+  const { error } = await supabase
+    .from("request_matches")
+    .update({ plan_path: null, plan_name: null })
+    .eq("id", Number(matchId))
+    .eq("request_id", Number(requestId));
+  if (error) {
+    console.error("[admin] 강의계획서 지우기 실패", error.code, error.message);
+    redirect(`${pagePath(requestId)}?failed=plan`);
+  }
+  if (before) await supabase.storage.from(REQUEST_FILES_BUCKET).remove([before]);
   done(requestId);
 }

@@ -39,6 +39,7 @@ export default function RequestCard({
         >
           {r.verifiedDate ? "기관 확인됨" : "기관 확인 전"}
         </span>
+        {r.moreRequested && <span className="rounded-badge bg-warn px-2.5 py-0.5 text-[12px] font-semibold text-white">다른 강사 요청</span>}
         <span className="nums">
           {r.receivedDate === today ? "오늘" : formatKoreanDate(r.receivedDate)} 받음 · {r.id}번
         </span>
@@ -72,6 +73,12 @@ export default function RequestCard({
           {r.contactEmail}
         </a>
       </div>
+
+      {r.moreRequested && (
+        <p className="mt-4 rounded-control bg-warn/8 px-4 py-3 text-[14px] text-warn">
+          <b>담당자가 다른 강사를 원해요.</b> {r.moreNote ? `“${r.moreNote}”` : "남긴 말은 없어요."} 새 강사를 추천하면 이 표시는 사라져요.
+        </p>
+      )}
 
       {children}
     </li>
