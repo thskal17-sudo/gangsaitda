@@ -101,6 +101,7 @@ export async function getRequest(id: string): Promise<AdminRequest | null> {
 /** 의뢰에 붙인 추천 강사 한 명 */
 export type AdminMatch = {
   id: string;
+  /** 추천한 강사: 가입 강사는 회원번호, 운영자 등록 강사는 등록번호 (lib/admin-profiles.ts 의 memberId 와 같은 값) */
   memberId: string;
   status: MatchStatus;
   /** 상태를 마지막으로 바꾼 날 (한국 날짜) */
@@ -114,7 +115,8 @@ export type AdminMatch = {
 type MatchRow = {
   id: number;
   request_id: number;
-  member_id: string;
+  member_id: string | null;
+  instructor_id: string | null;
   status: string;
   updated_at: string;
   org_chosen_at: string | null;
@@ -127,13 +129,13 @@ export async function getMatches(requestId: string): Promise<AdminMatch[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("request_matches")
-    .select("id, request_id, member_id, status, updated_at, org_chosen_at, plan_path, plan_name")
+    .select("id, request_id, member_id, instructor_id, status, updated_at, org_chosen_at, plan_path, plan_name")
     .eq("request_id", Number(requestId))
     .order("id");
   if (error) throw new Error(`추천 강사를 불러오지 못했습니다: ${error.message}`);
   return (data as MatchRow[]).map((m) => ({
     id: String(m.id),
-    memberId: m.member_id,
+    memberId: m.member_id ?? m.instructor_id ?? "",
     status: isMatchStatus(m.status) ? m.status : "추천",
     updatedDate: seoulDateOf(m.updated_at),
     chosen: Boolean(m.org_chosen_at),
@@ -170,13 +172,15 @@ export async function getPlanFileUrl(requestId: string, matchId: string): Promis
   const supabase = await createClient();
   const { data: row } = await supabase
     .from("request_matches")
-    .select("plan_path, plan_name, member_id")
+    .select("plan_path, plan_name, member_id, instructor_id")
     .eq("id", Number(matchId))
     .eq("request_id", Number(requestId))
     .maybeSingle();
-  const r = row as { plan_path: string | null; plan_name: string | null; member_id: string } | null;
+  const r = row as { plan_path: string | null; plan_name: string | null; member_id: string | null; instructor_id: string | null } | null;
   if (!r?.plan_path) return null;
-  const { data: member } = await supabase.from("members").select("name").eq("id", r.member_id).maybeSingle();
+  const { data: member } = r.member_id
+    ? await supabase.from("members").select("name").eq("id", r.member_id).maybeSingle()
+    : await supabase.from("admin_instructors").select("name").eq("id", r.instructor_id ?? "").maybeSingle();
   const { data, error } = await supabase.storage.from("request-files").createSignedUrl(r.plan_path, 60);
   if (error || !data) {
     console.error("[admin] 강의계획서 주소 만들기 실패", error?.message);

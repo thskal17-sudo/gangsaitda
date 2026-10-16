@@ -44,12 +44,16 @@ export async function setRequestVerified(requestId: string, verified: boolean): 
   done(requestId);
 }
 
-/** 강사 프로필을 이 의뢰의 추천 강사로 붙인다. 이미 붙어 있으면 그대로 둔다. */
-export async function addMatch(requestId: string, memberId: string): Promise<void> {
+/**
+ * 강사를 이 의뢰의 추천 강사로 붙인다. 이미 붙어 있으면 그대로 둔다.
+ * source: member = 강사가 직접 낸 프로필(회원번호), admin = 운영자가 직접 등록한 강사(등록번호)
+ */
+export async function addMatch(requestId: string, profileId: string, source: "member" | "admin" = "member"): Promise<void> {
   await guard(requestId, "add");
-  if (!MEMBER_ID.test(memberId)) redirect(`${pagePath(requestId)}?failed=add`);
+  if (!MEMBER_ID.test(profileId)) redirect(`${pagePath(requestId)}?failed=add`);
   const supabase = await createClient();
-  const { error } = await supabase.from("request_matches").insert({ request_id: Number(requestId), member_id: memberId });
+  const who = source === "admin" ? { instructor_id: profileId } : { member_id: profileId };
+  const { error } = await supabase.from("request_matches").insert({ request_id: Number(requestId), ...who });
   // 23505 = 이미 붙어 있음 (버튼을 두 번 눌렀을 때). 실패로 보지 않는다.
   if (error && error.code !== "23505") {
     console.error("[admin] 추천 강사 붙이기 실패", error.code, error.message);

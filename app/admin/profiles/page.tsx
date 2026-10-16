@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin } from "@/lib/admin";
@@ -30,12 +31,28 @@ export default async function AdminProfilesPage({ searchParams }: PageProps<"/ad
 
   return (
     <AdminShell active="profiles">
-      <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">강사 프로필</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">강사 프로필</h1>
+        <Link
+          href="/admin/profiles/new"
+          className="flex h-11 shrink-0 items-center rounded-control bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand/90"
+        >
+          + 강사 직접 등록
+        </Link>
+      </div>
       <p className="mt-1 text-sm leading-relaxed text-muted">
         기관 전달에 동의한 강사들이에요. 의뢰에 맞는 분야·지역으로 걸러 보세요.
         <br />
         <b className="text-ink">연락처는 섭외가 확정된 뒤에만</b> 기관에 알려 주세요.
+        <br />
+        사이트에 가입하지 않은 강사님은 동의를 받은 뒤 &lsquo;강사 직접 등록&rsquo;으로 올릴 수 있어요.
       </p>
+
+      {(params.saved || params.deleted) && (
+        <p role="status" className="mt-4 rounded-card bg-ok/10 px-5 py-4 text-[15px] font-semibold text-ok">
+          {params.deleted ? "등록한 강사를 지웠어요." : "강사를 저장했어요. 의뢰의 '추천 강사 관리'에서 추천할 수 있어요."}
+        </p>
+      )}
 
       <div className="mt-5 flex flex-col gap-3 rounded-card bg-white p-4 md:p-5">
         <FilterRow basePath="/admin/profiles" label="분야" name="field" values={PROFILE_FIELDS} current={field} other={{ region }} />
