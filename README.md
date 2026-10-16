@@ -72,6 +72,9 @@ npm run dev
 | `supabase/admin-job-edit.sql` | 공고 수정·숨기기 함수 + 숨긴 공고를 사이트에서 빼는 규칙 |
 | `app/admin/requests/`, `lib/admin-requests.ts`, `lib/admin-request-actions.ts`, `lib/request-status.ts`, `components/admin-request-status.tsx` | 관리자 · 강사섭외 의뢰 보기·처리 상태 바꾸기 |
 | `supabase/admin-requests.sql` | 관리자만 의뢰를 읽고 상태를 바꾸게 하는 규칙·함수 |
+| `app/admin/requests/[id]/`, `components/admin-request-card.tsx`, `components/admin-match-buttons.tsx`, `lib/admin-match-actions.ts`, `lib/match-status.ts` | 관리자 · 의뢰별 추천 강사 관리 (기관 확인, 추천 강사 붙이기·진행 상태·빼기) |
+| `components/admin-profile-row.tsx` | 관리자 · 강사 프로필 줄과 분야·지역 거르기 단추 (프로필 화면·추천 강사 고르기 공용) |
+| `supabase/request-matching.sql` | 의뢰를 낸 회원·기관 확인 칸, 추천 강사 표 (관리자만) |
 | `app/admin/jobs/upload/`, `components/admin-excel-upload.tsx`, `lib/job-excel.ts` | 관리자 · 엑셀로 공고 여러 개 올리기 (미리보기 → 올리기) |
 | `public/gangsaitda-job-template.xlsx` | 엑셀 올리기 양식 (공고·예시·안내 시트) |
 | `app/api/jobs/import/route.ts`, `lib/job-import.ts`, `lib/supabase/service.ts` | 수집 프로그램이 공고를 바로 넣는 '받는 문' (비밀 열쇠 확인, 엑셀 올리기와 같은 규칙) |
