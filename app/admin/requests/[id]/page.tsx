@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { AddMatchButton, MatchStatusButtons, RemoveMatchButton, VerifyButton } from "@/components/admin-match-buttons";
+import { AddMatchButton, MatchStatusButtons, PlanUpload, RemoveMatchButton, VerifyButton } from "@/components/admin-match-buttons";
 import { FilterRow, ProfileRow, pick } from "@/components/admin-profile-row";
 import RequestCard from "@/components/admin-request-card";
 import RequestStatusButtons from "@/components/admin-request-status";
@@ -22,14 +22,16 @@ const FAILED: Record<string, string> = {
   add: "추천 강사를 붙이지 못했어요.",
   status: "진행 상태를 바꾸지 못했어요.",
   remove: "추천에서 빼지 못했어요.",
+  plan: "강의계획서를 지우지 못했어요.",
 };
 
 /**
  * 관리자 · 강사섭외 의뢰 하나의 추천 강사 관리.
  *   ① 기관 확인: 대표번호로 전화하거나 기관 업무 메일인지 보고 '기관 확인됨'으로 표시
- *   ② 추천 강사: 붙인 강사마다 진행 상태(추천 · 검토 중 · 연락 중 · 확정 · 불발)를 바꾸거나 뺀다
+ *   ② 추천 강사: 붙인 강사마다 진행 상태(추천 · 검토 중 · 연락 중 · 확정 · 불발)를 바꾸거나 빼고, 강의계획서를 올린다.
+ *      담당자가 '이 강사님으로 할게요'를 누른 강사에는 '기관 선택' 표시가 붙는다.
  *   ③ 강사 고르기: 분야·지역으로 걸러 '추천하기'
- * 다음 단계에서 의뢰를 낸 담당자가 '기관 확인됨' 의뢰의 추천 강사를 보게 된다 (연락처는 확정 뒤에만).
+ * 의뢰를 낸 담당자는 '내 의뢰'(/account/requests)에서 '기관 확인됨' 의뢰의 추천 강사를 본다 (연락처는 확정 뒤에만).
  */
 export default async function AdminRequestMatchPage({ params, searchParams }: PageProps<"/admin/requests/[id]">) {
   await connection();
@@ -103,7 +105,7 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
             <p className="mt-1 text-[14px] leading-relaxed text-muted">
               학교알리미·기관 홈페이지의 대표번호로 전화해 담당자를 확인하거나, 기관 업무용 메일인지 보고 표시해 주세요.
               <br />
-              확인 전에는 담당자에게 추천 강사가 보이지 않아요.
+              확인 전에는 담당자 &lsquo;내 의뢰&rsquo; 화면에 추천 강사가 보이지 않아요.
             </p>
           </div>
           <VerifyButton requestId={request.id} verified={Boolean(request.verifiedDate)} />
@@ -127,12 +129,18 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
                   key={m.id}
                   profile={p}
                   badge={
-                    <span className={`rounded-badge px-2 py-0.5 text-[11px] font-semibold ${MATCH_STATUS_STYLE[m.status]}`}>
-                      {m.status}
-                    </span>
+                    <>
+                      <span className={`rounded-badge px-2 py-0.5 text-[11px] font-semibold ${MATCH_STATUS_STYLE[m.status]}`}>
+                        {m.status}
+                      </span>
+                      {m.chosen && (
+                        <span className="rounded-badge bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">기관 선택</span>
+                      )}
+                    </>
                   }
                 >
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                  <PlanUpload requestId={request.id} matchId={m.id} planName={m.planName} />
+                  <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center">
                     <div className="min-w-0 md:w-[420px]">
                       <MatchStatusButtons requestId={request.id} matchId={m.id} status={m.status} />
                     </div>

@@ -160,13 +160,15 @@ function Sent({ onAgain }: { onAgain: () => void }) {
       <h2 className="mt-4 text-[20px] font-bold tracking-tight text-ink">의뢰가 접수되었습니다</h2>
       <p className="mt-2 text-[15px] leading-relaxed text-muted">
         내용을 확인한 뒤 담당자 연락처로 연락드리겠습니다.
+        <br />
+        추천 강사님은 &lsquo;내 의뢰&rsquo;에서 보고 고를 수 있어요.
       </p>
       <div className="mx-auto mt-6 flex max-w-xs flex-col gap-3">
         <Link
-          href="/jobs"
+          href="/account/requests"
           className="flex h-14 items-center justify-center rounded-control bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand/90"
         >
-          공고 둘러보기
+          내 의뢰 보기
         </Link>
         <button
           type="button"

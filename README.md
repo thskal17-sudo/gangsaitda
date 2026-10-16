@@ -75,6 +75,9 @@ npm run dev
 | `app/admin/requests/[id]/`, `components/admin-request-card.tsx`, `components/admin-match-buttons.tsx`, `lib/admin-match-actions.ts`, `lib/match-status.ts` | 관리자 · 의뢰별 추천 강사 관리 (기관 확인, 추천 강사 붙이기·진행 상태·빼기) |
 | `components/admin-profile-row.tsx` | 관리자 · 강사 프로필 줄과 분야·지역 거르기 단추 (프로필 화면·추천 강사 고르기 공용) |
 | `supabase/request-matching.sql` | 의뢰를 낸 회원·기관 확인 칸, 추천 강사 표 (관리자만) |
+| `app/account/requests/`, `lib/my-requests.ts`, `lib/my-request-actions.ts`, `components/my-request-buttons.tsx` | 기관 담당자 · 내 의뢰 (추천 강사 프로필·강의계획서 보기, 이 강사님으로 할게요, 다른 강사를 원해요) |
+| `lib/request-files.ts`, `app/admin/requests/[id]/plan/` | 강의계획서 파일 규칙, 관리자 내려받기 |
+| `supabase/request-portal.sql` | 강의계획서·기관 선택·다른 강사 요청 칸, 담당자용 함수, 강의계획서 저장소 |
 | `app/admin/jobs/upload/`, `components/admin-excel-upload.tsx`, `lib/job-excel.ts` | 관리자 · 엑셀로 공고 여러 개 올리기 (미리보기 → 올리기) |
 | `public/gangsaitda-job-template.xlsx` | 엑셀 올리기 양식 (공고·예시·안내 시트) |
 | `app/api/jobs/import/route.ts`, `lib/job-import.ts`, `lib/supabase/service.ts` | 수집 프로그램이 공고를 바로 넣는 '받는 문' (비밀 열쇠 확인, 엑셀 올리기와 같은 규칙) |

@@ -42,6 +42,9 @@ export default function SiteFooter({ isMember }: { isMember: boolean }) {
             <Link href="/account/profile" className="hover:text-ink hover:underline">
               내 프로필
             </Link>
+            <Link href="/account/requests" className="hover:text-ink hover:underline">
+              내 의뢰
+            </Link>
             <Link href="/account/delete" className="hover:text-ink hover:underline">
               회원 탈퇴
             </Link>
