@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import AdminBulkHide from "@/components/admin-bulk-hide";
 import HideButton from "@/components/admin-hide-button";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { DeadlineBadge } from "@/components/job-card";
@@ -9,6 +10,9 @@ import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 
 // 관리자 화면은 검색 결과에 나오지 않게 한다.
 export const metadata: Metadata = { title: "공고 관리", robots: { index: false, follow: false } };
+
+/** 목록 체크박스가 속하는 '한꺼번에 숨기기' 양식 이름 (components/admin-bulk-hide.tsx) */
+const BULK_FORM_ID = "admin-bulk-hide";
 
 /** 마감까지 이 날 수 이하로 남은 공고를 '곧 마감'으로 센다 (공고 카드의 '마감임박'과 같은 기준). */
 const SOON_DAYS = 3;
@@ -148,31 +152,35 @@ export default async function AdminJobsPage({ searchParams }: PageProps<"/admin"
           <span className="nums font-semibold text-ink">{shown.length}</span>건
         </p>
 
-        {shown.length === 0 ? (
-          <p className="mt-3 rounded-control bg-bg p-5 text-center text-sm text-muted">조건에 맞는 공고가 없어요.</p>
-        ) : (
-          <>
-            {/* PC 에서만 보이는 칸 이름 */}
-            <div className={`mt-3 hidden gap-4 border-b border-line pb-2 text-[13px] font-semibold text-muted md:grid ${ROW_COLUMNS}`}>
-              <span>공고</span>
-              <span>마감</span>
-              <span>상태</span>
-              <span>관리</span>
-            </div>
-            <ul className="divide-y divide-line">
-              {shown.map((job) => (
-                <AdminJobRow key={job.id} job={job} today={today} />
-              ))}
-            </ul>
-          </>
-        )}
+        {/* 한꺼번에 숨기기. 목록이 비어도 감싸 둔다: 전부 숨기거나 다시 올려 목록이 비었을 때도 결과 문구가 남게 */}
+        <AdminBulkHide formId={BULK_FORM_ID} total={shown.length}>
+          {shown.length === 0 ? (
+            <p className="mt-3 rounded-control bg-bg p-5 text-center text-sm text-muted">조건에 맞는 공고가 없어요.</p>
+          ) : (
+            <>
+              {/* PC 에서만 보이는 칸 이름 */}
+              <div className={`mt-3 hidden gap-4 border-b border-line pb-2 text-[13px] font-semibold text-muted md:grid ${ROW_COLUMNS}`}>
+                <span aria-hidden="true" />
+                <span>공고</span>
+                <span>마감</span>
+                <span>상태</span>
+                <span>관리</span>
+              </div>
+              <ul className="divide-y divide-line">
+                {shown.map((job) => (
+                  <AdminJobRow key={job.id} job={job} today={today} />
+                ))}
+              </ul>
+            </>
+          )}
+        </AdminBulkHide>
       </div>
     </AdminShell>
   );
 }
 
-/** PC 에서 목록 칸 너비: 공고 · 마감 · 상태 · 관리 */
-const ROW_COLUMNS = "md:grid-cols-[minmax(0,1fr)_180px_72px_172px]";
+/** PC 에서 목록 칸 너비: 체크 · 공고 · 마감 · 상태 · 관리 */
+const ROW_COLUMNS = "md:grid-cols-[20px_minmax(0,1fr)_180px_72px_172px]";
 
 function Notice({ job, message }: { job: AdminJob; message: string }) {
   return (
@@ -200,7 +208,16 @@ function AdminJobRow({ job, today }: { job: AdminJob; today: string }) {
         : { label: "모집 중", className: "bg-ok/10 text-ok" };
 
   return (
-    <li className={`py-4 md:grid md:items-center md:gap-4 ${ROW_COLUMNS}`}>
+    <li className={`relative py-4 pl-8 md:grid md:items-center md:gap-4 md:pl-0 ${ROW_COLUMNS}`}>
+      {/* 한꺼번에 숨기기용 체크. 휴대폰에서는 줄 왼쪽 위, PC 에서는 첫 칸 */}
+      <input
+        type="checkbox"
+        name="id"
+        value={job.id}
+        form={BULK_FORM_ID}
+        aria-label={`'${job.title}' 고르기`}
+        className="absolute top-[19px] left-0 size-[18px] accent-brand md:static"
+      />
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <Link href={`/jobs/${job.id}`} className="truncate text-[16px] font-bold tracking-tight text-ink hover:underline">

@@ -68,6 +68,7 @@ npm run dev
 | `app/admin/jobs/new/`, `lib/admin-job-schema.ts`, `lib/admin-job-actions.ts` | 관리자 · 공고 등록 화면과 저장 |
 | `supabase/admin-job-create.sql` | 관리자만 공고를 올릴 수 있는 함수 (제목·상세를 한 번에 저장) |
 | `app/admin/jobs/[id]/edit/`, `components/admin-job-form.tsx`, `components/admin-hide-button.tsx` | 관리자 · 공고 수정 화면, 등록·수정 공용 양식, 숨기기 버튼 |
+| `components/admin-bulk-hide.tsx` | 관리자 · 공고 관리 목록에서 체크한 공고를 한꺼번에 숨기기·다시 올리기 |
 | `supabase/admin-job-edit.sql` | 공고 수정·숨기기 함수 + 숨긴 공고를 사이트에서 빼는 규칙 |
 | `app/admin/requests/`, `lib/admin-requests.ts`, `lib/admin-request-actions.ts`, `lib/request-status.ts`, `components/admin-request-status.tsx` | 관리자 · 강사섭외 의뢰 보기·처리 상태 바꾸기 |
 | `supabase/admin-requests.sql` | 관리자만 의뢰를 읽고 상태를 바꾸게 하는 규칙·함수 |

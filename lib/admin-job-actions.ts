@@ -116,3 +116,45 @@ export async function setJobHidden(id: string, hidden: boolean): Promise<void> {
 
   refreshSite();
 }
+
+/** 한꺼번에 숨기기 결과. 화면이 안내 문구를 띄우고 체크를 푼다. */
+export type BulkHiddenState = { done: number; failed: number; hidden: boolean; error?: string; at: number } | null;
+
+/** 한 번에 고를 수 있는 공고 수 ("use server" 파일이라 함수 말고는 밖으로 내보낼 수 없다) */
+const BULK_HIDE_MAX = 300;
+
+/**
+ * 한꺼번에 숨기기 / 다시 올리기. 공고 관리 목록에서 체크한 공고들(name="id")을 받는다.
+ * 하나씩 숨기는 것과 같은 데이터베이스 함수(admin_set_job_hidden)를 공고마다 부른다 (SQL 변경 없음).
+ * 몇 개가 실패해도 나머지는 처리하고, 성공·실패 수를 돌려준다.
+ */
+export async function setJobsHidden(_prev: BulkHiddenState, formData: FormData): Promise<BulkHiddenState> {
+  const hidden = formData.get("mode") !== "show";
+  const at = Date.now();
+  if ((await getAdminStatus()) !== "admin") return { done: 0, failed: 0, hidden, error: NOT_ADMIN, at };
+
+  const ids = [...new Set(formData.getAll("id").map(String))].filter((id) => /^\d{1,15}$/.test(id));
+  if (ids.length === 0) return { done: 0, failed: 0, hidden, error: "공고를 하나 이상 골라 주세요.", at };
+  if (ids.length > BULK_HIDE_MAX) return { done: 0, failed: 0, hidden, error: `한 번에 ${BULK_HIDE_MAX}개까지 할 수 있어요.`, at };
+
+  const supabase = await createClient();
+  let done = 0;
+  let failed = 0;
+  // 10개씩 동시에 보낸다 (너무 많이 한꺼번에 보내지 않게)
+  for (let i = 0; i < ids.length; i += 10) {
+    const results = await Promise.all(
+      ids.slice(i, i + 10).map((id) => supabase.rpc("admin_set_job_hidden", { p_id: Number(id), p_hidden: hidden })),
+    );
+    for (const { error } of results) {
+      if (error) {
+        console.error("[admin] 한꺼번에 숨기기 실패", error.code, error.message);
+        failed += 1;
+      } else {
+        done += 1;
+      }
+    }
+  }
+
+  if (done > 0) refreshSite();
+  return { done, failed, hidden, at };
+}
