@@ -32,9 +32,9 @@ export function VerifyButton({ requestId, verified }: { requestId: string; verif
 }
 
 /** 강사 고르기 목록의 '추천하기' */
-export function AddMatchButton({ requestId, memberId }: { requestId: string; memberId: string }) {
+export function AddMatchButton({ requestId, profileId, source }: { requestId: string; profileId: string; source: "member" | "admin" }) {
   return (
-    <form action={addMatch.bind(null, requestId, memberId)}>
+    <form action={addMatch.bind(null, requestId, profileId, source)}>
       <Pending idle="추천하기" className="bg-brand text-white hover:bg-brand/90" />
     </form>
   );

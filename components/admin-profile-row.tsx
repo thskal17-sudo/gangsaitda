@@ -77,8 +77,11 @@ export function ProfileRow({
       <details className="group">
         <summary className="flex cursor-pointer list-none flex-col gap-1.5 md:flex-row md:items-center md:gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-[16px] font-bold text-ink">{p.name}</span>
+              {p.source === "admin" && (
+                <span className="rounded-badge bg-ink px-2 py-0.5 text-[11px] font-semibold text-white">운영자 등록</span>
+              )}
               <span className={`rounded-badge px-2 py-0.5 text-[11px] font-semibold ${p.method === "file" ? "bg-brand/10 text-brand" : "bg-ok/10 text-ok"}`}>
                 {p.method === "file" ? "파일" : "양식"}
               </span>
@@ -119,11 +122,26 @@ export function ProfileRow({
             <a href={`tel:${p.phone}`} className="nums text-ink hover:underline">
               {formatPhone(p.phone)}
             </a>
-            {" · "}
-            <a href={`mailto:${p.email}`} className="text-ink hover:underline">
-              {p.email}
-            </a>
+            {p.email && (
+              <>
+                {" · "}
+                <a href={`mailto:${p.email}`} className="text-ink hover:underline">
+                  {p.email}
+                </a>
+              </>
+            )}
           </p>
+          {p.source === "admin" && (
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-muted">
+              <span>
+                기관 전달 동의: {p.consentDate ? formatKoreanDate(p.consentDate) : "-"} 확인
+                {p.consentNote && <> · {p.consentNote}</>}
+              </span>
+              <Link href={`/admin/profiles/${p.memberId}/edit`} className="font-semibold text-brand hover:underline">
+                고치기·지우기 →
+              </Link>
+            </div>
+          )}
         </div>
       </details>
       {children && <div className="mt-3">{children}</div>}

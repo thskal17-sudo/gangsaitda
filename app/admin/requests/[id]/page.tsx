@@ -161,7 +161,13 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
         <h2 id="pick-title" className="text-[17px] font-bold text-ink">
           ③ 강사 고르기
         </h2>
-        <p className="mt-1 text-[14px] text-muted">기관 전달에 동의한 강사들이에요. 분야·지역으로 걸러 보세요.</p>
+        <p className="mt-1 text-[14px] text-muted">
+          기관 전달에 동의한 강사들이에요. 분야·지역으로 걸러 보세요. 목록에 없는 강사는{" "}
+          <Link href="/admin/profiles/new" className="font-semibold text-brand hover:underline">
+            강사 직접 등록
+          </Link>
+          으로 올릴 수 있어요.
+        </p>
         <div className="mt-4 flex flex-col gap-3">
           <FilterRow basePath={basePath} label="분야" name="field" values={PROFILE_FIELDS} current={field} other={{ region }} />
           <FilterRow basePath={basePath} label="지역" name="region" values={PROFILE_REGIONS} current={region} other={{ field }} />
@@ -181,7 +187,7 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
           <ul className="mt-1 divide-y divide-line">
             {candidates.map((p) => (
               <ProfileRow key={p.memberId} profile={p}>
-                <AddMatchButton requestId={request.id} memberId={p.memberId} />
+                <AddMatchButton requestId={request.id} profileId={p.memberId} source={p.source} />
               </ProfileRow>
             ))}
           </ul>
