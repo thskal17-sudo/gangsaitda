@@ -1,4 +1,5 @@
 import { cache } from "react";
+import type { MemberType } from "@/lib/auth-schema";
 import { supabaseEnvOrNull } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,4 +21,23 @@ export const getCurrentMember = cache(async (): Promise<Member | null> => {
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims.sub) return null;
   return { id: data.claims.sub };
+});
+
+/**
+ * 지금 회원의 종류(강사 / 기관). 비회원이거나 아직 알 수 없으면 null.
+ * null 이면 화면은 예전처럼 강사·기관 메뉴를 모두 보여준다
+ * (supabase/member-type.sql 을 아직 실행하지 않았을 때도 사이트가 멈추지 않게).
+ */
+export const getMemberType = cache(async (): Promise<MemberType | null> => {
+  const member = await getCurrentMember();
+  if (!member) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("members").select("member_type").eq("id", member.id).maybeSingle();
+  if (error) {
+    console.error("[member] 회원 종류 읽기 실패", error.code, error.message);
+    return null;
+  }
+  const type = (data as { member_type: string } | null)?.member_type;
+  return type === "강사" || type === "기관" ? type : null;
 });

@@ -24,7 +24,7 @@ npm run dev
 | `app/page.tsx` | 홈 화면 (첫인사, 오늘 올라온 공고 수, 마감이 가까운 공고 5개, 바로가기) |
 | `app/jobs/page.tsx` | 공고 목록 화면 (`?view=today` 면 오늘 올라온 공고만) |
 | `app/jobs/[id]/page.tsx` | 공고 상세 화면 (회원 전용) |
-| `app/signup/` | 회원가입 화면 |
+| `app/signup/` | 회원가입 화면 (강사 / 기관 담당자 고르기, 기관은 기관명) |
 | `app/login/` | 로그인 화면 |
 | `app/certificates/` | 자격증 (준비 중) |
 | `app/request/` | 강사섭외 의뢰서 (학교·기관이 회원가입 후 보냄) |
@@ -90,7 +90,9 @@ npm run dev
 | `app/admin/kakao/`, `app/api/kakao/`, `lib/kakao.ts`, `lib/kakao-actions.ts`, `components/kakao-buttons.tsx` | 관리자 · 카톡 알림 (운영자 카카오 계정 연결, 강사섭외 의뢰가 오면 '나와의 채팅'으로 알림) |
 | `supabase/kakao-notify.sql` | 카톡 연결 정보(토큰) 표. 사이트 서버만 읽고 씀 |
 | `app/robots.ts`, `app/sitemap.ts` | 검색엔진 안내문(robots.txt)과 사이트맵(sitemap.xml). 관리자·내 계정·api 는 검색 제외 |
-| `app/admin/members/`, `lib/admin-members.ts` | 관리자 · 회원 목록 (보기만) |
+| `app/admin/members/`, `lib/admin-members.ts`, `lib/admin-member-actions.ts`, `components/admin-member-type-button.tsx` | 관리자 · 회원 목록 (회원 종류 강사/기관 바꾸기) |
+| `supabase/member-type.sql` | 회원 종류(강사/기관)·기관명 칸, 가입 처리 함수 갱신, 관리자용 종류 바꾸기 함수 |
+| `components/member-type-notice.tsx` | 종류가 맞지 않는 화면에 들어왔을 때 안내 (기관 회원 → 내 프로필, 강사 회원 → 강사섭외·내 의뢰) |
 | `supabase/admin-members.sql` | 관리자만 모든 회원 정보를 읽게 하는 규칙 |
 | `app/account/delete/`, `components/site-footer.tsx` | 회원 탈퇴 화면, 사이트 맨 아래(회원에게만 '회원 탈퇴' 링크) |
 | `supabase/delete-account.sql` | 로그인한 회원이 자기 계정만 지우는 함수 |

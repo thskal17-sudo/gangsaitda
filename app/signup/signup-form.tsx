@@ -6,7 +6,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Field, FormError, SubmitButton } from "@/components/auth-form";
 import PrivacyConsent, { SIGNUP_TERMS } from "@/components/privacy-consent";
 import { signup } from "@/lib/auth-actions";
-import { type SignupInput, signupSchema } from "@/lib/auth-schema";
+import { type MemberType, type SignupInput, signupSchema } from "@/lib/auth-schema";
 
 /** 가입할 때 고르는 회원 종류 */
 const TYPE_CHOICES = [
@@ -14,14 +14,14 @@ const TYPE_CHOICES = [
   { value: "기관", title: "기관 담당자", description: "강사 섭외를 의뢰하고, 추천 강사를 받아요" },
 ] as const;
 
-export default function SignupForm({ next }: { next: string }) {
+export default function SignupForm({ next, defaultType }: { next: string; defaultType?: MemberType }) {
   const [serverError, setServerError] = useState<string>();
   const {
     register,
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<SignupInput>({ resolver: zodResolver(signupSchema), defaultValues: { orgName: "" } });
+  } = useForm<SignupInput>({ resolver: zodResolver(signupSchema), defaultValues: { memberType: defaultType, orgName: "" } });
   const memberType = useWatch({ control, name: "memberType" });
 
   const onSubmit = handleSubmit(async (values) => {
