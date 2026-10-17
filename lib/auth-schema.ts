@@ -21,20 +21,34 @@ const password = z
   .min(8, "비밀번호는 8자 이상으로 입력해 주세요.")
   .max(72, "비밀번호는 72자까지 입력할 수 있습니다.");
 
-export const signupSchema = z.object({
-  name: z.string().trim().min(1, "이름을 입력해 주세요.").max(30, "이름은 30자까지 입력할 수 있습니다."),
-  phone: z
-    .string()
-    .trim()
-    .min(1, "연락처를 입력해 주세요.")
-    .refine(
-      (value) => /^[\d\s-]+$/.test(value) && /^0\d{8,10}$/.test(phoneDigits(value)),
-      "연락처를 확인해 주세요. 예) 010-1234-5678",
-    ),
-  email,
-  password,
-  privacyAgreed: z.literal(true, "개인정보 수집·이용에 동의해야 가입할 수 있습니다."),
-});
+/** 회원 종류. 가입할 때 고르고, 회원은 바꿀 수 없다 (관리자만 바꾼다). */
+export const MEMBER_TYPES = ["강사", "기관"] as const;
+export type MemberType = (typeof MEMBER_TYPES)[number];
+
+const name = z.string().trim().min(1, "이름을 입력해 주세요.").max(30, "이름은 30자까지 입력할 수 있습니다.");
+const phone = z
+  .string()
+  .trim()
+  .min(1, "연락처를 입력해 주세요.")
+  .refine(
+    (value) => /^[\d\s-]+$/.test(value) && /^0\d{8,10}$/.test(phoneDigits(value)),
+    "연락처를 확인해 주세요. 예) 010-1234-5678",
+  );
+
+export const signupSchema = z
+  .object({
+    memberType: z.enum(MEMBER_TYPES, "강사로 가입할지, 기관으로 가입할지 골라 주세요."),
+    orgName: z.string().trim().max(50, "기관명은 50자까지 입력할 수 있습니다."),
+    name,
+    phone,
+    email,
+    password,
+    privacyAgreed: z.literal(true, "개인정보 수집·이용에 동의해야 가입할 수 있습니다."),
+  })
+  .refine((v) => v.memberType !== "기관" || v.orgName.length > 0, {
+    message: "기관명을 입력해 주세요. 예) 부산OO중학교",
+    path: ["orgName"],
+  });
 
 export type SignupInput = z.infer<typeof signupSchema>;
 
@@ -46,7 +60,7 @@ export const loginSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>;
 
 /** 이메일(아이디) 찾기: 가입할 때 적은 이름·연락처 */
-export const findEmailSchema = signupSchema.pick({ name: true, phone: true });
+export const findEmailSchema = z.object({ name, phone });
 
 export type FindEmailInput = z.infer<typeof findEmailSchema>;
 
