@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { MemberType } from "@/lib/auth-schema";
 import { OPERATOR } from "@/lib/site";
 
 /**
- * 사이트 맨 아래. 운영자 정보(lib/site.ts 의 OPERATOR)와, 회원에게만 '회원 탈퇴' 링크를 보여준다.
+ * 사이트 맨 아래. 운영자 정보(lib/site.ts 의 OPERATOR)와, 회원에게만 내 화면·'회원 탈퇴' 링크를 보여준다.
+ * 강사 회원은 '내 프로필', 기관 회원은 '내 의뢰' (종류를 모르면 둘 다).
  */
-export default function SiteFooter({ isMember }: { isMember: boolean }) {
+export default function SiteFooter({ isMember, memberType }: { isMember: boolean; memberType: MemberType | null }) {
   const o = OPERATOR;
 
   return (
@@ -39,12 +41,16 @@ export default function SiteFooter({ isMember }: { isMember: boolean }) {
         </Link>
         {isMember && (
           <>
-            <Link href="/account/profile" className="hover:text-ink hover:underline">
-              내 프로필
-            </Link>
-            <Link href="/account/requests" className="hover:text-ink hover:underline">
-              내 의뢰
-            </Link>
+            {memberType !== "기관" && (
+              <Link href="/account/profile" className="hover:text-ink hover:underline">
+                내 프로필
+              </Link>
+            )}
+            {memberType !== "강사" && (
+              <Link href="/account/requests" className="hover:text-ink hover:underline">
+                내 의뢰
+              </Link>
+            )}
             <Link href="/account/delete" className="hover:text-ink hover:underline">
               회원 탈퇴
             </Link>

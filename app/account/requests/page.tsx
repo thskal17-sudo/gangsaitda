@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import MemberTypeNotice from "@/components/member-type-notice";
 import { formatKoreanDate } from "@/lib/date";
-import { getCurrentMember } from "@/lib/member";
+import { getCurrentMember, getMemberType } from "@/lib/member";
 import { type MyRequest, getMyRequests } from "@/lib/my-requests";
 
 export const metadata: Metadata = { title: "내 의뢰", robots: { index: false, follow: false } };
@@ -16,6 +17,16 @@ export default async function MyRequestsPage() {
   await connection();
   const member = await getCurrentMember();
   if (!member) redirect("/login?next=/account/requests");
+  if ((await getMemberType()) === "강사") {
+    return (
+      <section className="mx-auto w-full max-w-[720px]">
+        <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">내 의뢰</h1>
+        <div className="mt-5">
+          <MemberTypeNotice need="기관" />
+        </div>
+      </section>
+    );
+  }
   const requests = await getMyRequests();
 
   return (

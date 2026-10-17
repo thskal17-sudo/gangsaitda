@@ -6,7 +6,7 @@ import { URGENT_DAYS } from "@/components/job-card";
 import { AD_INQUIRY_HREF, COURSES, type Course } from "@/lib/courses";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
-import { getCurrentMember } from "@/lib/member";
+import { getCurrentMember, getMemberType } from "@/lib/member";
 import { countByRegion, parseRegionParam, regionGroupOfJob } from "@/lib/regions";
 import { INSTRUCTOR_COUNT_LABEL } from "@/lib/site";
 import JobSearch from "@/components/job-search";
@@ -22,9 +22,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   // 공고 탭과 같은 규칙: 회원은 기관·지역·마감일까지, 비회원은 제목만 받는다.
   const member = await getCurrentMember();
-  const [openJobs, todayDeadlineCount] = await Promise.all([
+  const [openJobs, todayDeadlineCount, memberType] = await Promise.all([
     member ? getOpenJobs(today) : getOpenJobTitles(today),
     getTodayDeadlineCount(today),
+    getMemberType(),
   ]);
   const params = await searchParams;
   // 지역 탭 (?region=부산): 표만 그 권역으로 줄인다. 위쪽 숫자(지원가능한 공고 N건)는 전체 기준.
@@ -78,24 +79,38 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </div>
       </section>
 
-      {/* ② 바로가기: 비회원은 강사 가입, 회원은 내 프로필 + 강사섭외. PC 에서는 나란히 */}
+      {/* ② 바로가기. PC 에서는 나란히
+          비회원: 강사 가입 + 강사섭외 / 강사 회원: 내 프로필 / 기관 회원: 강사섭외 의뢰 + 내 의뢰
+          (회원 종류를 모르면 예전처럼 내 프로필 + 강사섭외) */}
       <div className="mt-5 grid grid-cols-1 gap-3 md:mt-12 md:grid-cols-2 md:gap-6">
-        {member ? (
-          <ShortcutBox
-            href="/account/profile"
-            title="섭외받을 프로필을 등록해보세요"
-            description="기관 의뢰가 오면 운영자가 골라 전달해 드려요"
-            highlight
-          />
+        {memberType === "기관" ? (
+          <>
+            <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" highlight />
+            <ShortcutBox href="/account/requests" title="내 의뢰" description="보낸 의뢰와 추천 강사 보기" />
+          </>
         ) : (
-          <ShortcutBox
-            href="/signup"
-            title="강사로 활동하고 계신가요?"
-            description="무료 가입하면 기관·마감일·지원 방법까지 볼 수 있어요"
-            highlight
-          />
+          <>
+            {member ? (
+              <ShortcutBox
+                href="/account/profile"
+                title="섭외받을 프로필을 등록해보세요"
+                description="기관 의뢰가 오면 운영자가 골라 전달해 드려요"
+                highlight
+                wide={memberType === "강사"}
+              />
+            ) : (
+              <ShortcutBox
+                href="/signup"
+                title="강사로 활동하고 계신가요?"
+                description="무료 가입하면 기관·마감일·지원 방법까지 볼 수 있어요"
+                highlight
+              />
+            )}
+            {memberType !== "강사" && (
+              <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
+            )}
+          </>
         )}
-        <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
       </div>
 
       {/* ③ 교육과정 */}
@@ -158,24 +173,26 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 }
 
 
-/** 홈 바로가기 상자. highlight 는 옅은 남색 바탕(강사 등록), 아니면 흰 바탕에 테두리(강사섭외). */
+/** 홈 바로가기 상자. highlight 는 옅은 남색 바탕(주요 바로가기), 아니면 흰 바탕에 테두리. wide 는 PC 에서 두 칸을 다 쓴다. */
 function ShortcutBox({
   href,
   title,
   description,
   highlight,
+  wide,
 }: {
   href: string;
   title: string;
   description: string;
   highlight?: boolean;
+  wide?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={`group flex items-center justify-between gap-4 rounded-card px-5 py-[18px] transition-colors md:px-8 md:py-7 ${
         highlight ? "border border-transparent bg-brand/8 hover:border-brand" : "border border-line hover:border-brand"
-      }`}
+      } ${wide ? "md:col-span-2" : ""}`}
     >
       <div>
         <p className={`text-[16px] font-bold tracking-tight md:text-[20px] ${highlight ? "text-brand" : ""}`}>{title}</p>

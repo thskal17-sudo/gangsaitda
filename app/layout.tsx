@@ -8,7 +8,7 @@ import BottomNav from "@/components/bottom-nav";
 import HeaderAuth from "@/components/header-auth";
 import SiteFooter from "@/components/site-footer";
 import TopNav from "@/components/top-nav";
-import { getCurrentMember } from "@/lib/member";
+import { getCurrentMember, getMemberType } from "@/lib/member";
 import { SITE_URL } from "@/lib/site";
 
 const DESCRIPTION = "부산·울산·경남·경북 학교·기관의 강사 공고를 한곳에서 확인하세요.";
@@ -54,6 +54,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // 위쪽 띠에 로그인/로그아웃 중 무엇을 보여줄지 정한다.
   const member = await getCurrentMember();
+  const memberType = await getMemberType();
 
   return (
     <html lang="ko" className="antialiased">
@@ -83,7 +84,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             이보다 작으면 맨 아래 내용이 하단 탭에 가려진다. PC 에는 하단 탭이 없다. */}
         <main className="mx-auto w-full max-w-[430px] flex-1 px-4 pt-5 pb-[calc(4rem+1px+1.25rem+env(safe-area-inset-bottom))] md:max-w-[1080px] md:px-8 md:pt-10 md:pb-16">
           {children}
-          <SiteFooter isMember={member !== null} />
+          <SiteFooter isMember={member !== null} memberType={memberType} />
         </main>
 
         <BottomNav isMember={member !== null} />

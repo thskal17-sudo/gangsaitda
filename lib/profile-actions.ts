@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCurrentMember } from "@/lib/member";
+import { getCurrentMember, getMemberType } from "@/lib/member";
 import { PROFILE_BUCKET, removeProfileFiles } from "@/lib/profile";
 import { PROFILE_FILE_MAX_BYTES, profileFileExtension, profileSchema } from "@/lib/profile-schema";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 
 type Fail = { error: string };
 const notLoggedIn: Fail = { error: "로그인이 풀렸습니다. 다시 로그인한 뒤 시도해 주세요." };
+const notInstructor: Fail = { error: "강사 회원만 프로필을 낼 수 있어요." };
 
 /** 파일 올릴 자리 받기. 회원번호 폴더 안에 새 이름(시각.확장자)으로 둔다 (한글 파일 이름은 저장소가 받지 않아서). */
 export async function prepareProfileUpload(
@@ -22,6 +23,7 @@ export async function prepareProfileUpload(
 ): Promise<{ path: string; signedUrl: string } | Fail> {
   const member = await getCurrentMember();
   if (!member) return notLoggedIn;
+  if ((await getMemberType()) === "기관") return notInstructor;
   if (typeof fileName !== "string" || typeof size !== "number") return { error: "파일을 다시 골라 주세요." };
   const ext = profileFileExtension(fileName);
   if (!ext) return { error: "PDF, 파워포인트, 한글, 워드 파일만 올릴 수 있어요." };
@@ -48,6 +50,7 @@ export async function saveProfile(
 
   const member = await getCurrentMember();
   if (!member) return notLoggedIn;
+  if ((await getMemberType()) === "기관") return notInstructor;
   const supabase = await createClient();
 
   const { data: before } = await supabase

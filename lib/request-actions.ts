@@ -3,7 +3,7 @@
 import { after } from "next/server";
 import { phoneDigits } from "@/lib/auth-schema";
 import { sendKakaoToMe } from "@/lib/kakao";
-import { getCurrentMember } from "@/lib/member";
+import { getCurrentMember, getMemberType } from "@/lib/member";
 import { requestSchema } from "@/lib/request-schema";
 import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +20,9 @@ export async function sendRequest(input: unknown): Promise<{ ok: true } | { erro
 
   if (!(await getCurrentMember())) {
     return { error: "로그인이 풀렸습니다. 다시 로그인한 뒤 보내 주세요." };
+  }
+  if ((await getMemberType()) === "강사") {
+    return { error: "기관 담당자 회원만 의뢰를 보낼 수 있어요." };
   }
 
   // 숨은 칸이 채워져 있으면 사람이 아니라 자동 프로그램이다. 저장하지 않고 성공한 척한다.
