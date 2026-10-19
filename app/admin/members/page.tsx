@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import MemberTypeButton from "@/components/admin-member-type-button";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin } from "@/lib/admin";
-import { getAllMembers } from "@/lib/admin-members";
+import { filterMembers, getAllMembers, parseMemberFilter } from "@/lib/admin-members";
 import { formatPhone } from "@/lib/admin-requests";
 import { addDays, formatKoreanDate, todayInSeoul } from "@/lib/date";
 
@@ -20,36 +20,26 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
   if (!(await checkAdmin("/admin/members"))) return <NotAdminCard />;
 
   const params = await searchParams;
-  const q = typeof params.q === "string" ? params.q.trim().slice(0, 50) : "";
+  const filter = parseMemberFilter(params);
+  const { q, smsOnly } = filter;
   const failed = params.failed === "type";
-  const smsOnly = params.sms === "1";
 
   const today = todayInSeoul();
   const weekAgo = addDays(today, -6);
   const members = await getAllMembers();
 
-  // 이름·이메일·연락처로 찾기. 연락처는 010-1234-5678 처럼 적어도 찾아진다.
-  const qLower = q.toLowerCase();
-  const qDigits = q.replace(/\D/g, "");
-  const searched = q
-    ? members.filter(
-        (m) =>
-          m.name.toLowerCase().includes(qLower) ||
-          m.email.toLowerCase().includes(qLower) ||
-          (m.orgName ?? "").toLowerCase().includes(qLower) ||
-          (qDigits.length >= 3 && m.phone.includes(qDigits)),
-      )
-    : members;
-  const shown = smsOnly ? searched.filter((m) => m.smsDate) : searched;
+  // 이름·기관명·이메일·연락처로 찾기 + 문자 수신 동의만 (엑셀 내려받기도 같은 조건)
+  const shown = filterMembers(members, filter);
   const smsCount = members.filter((m) => m.smsDate).length;
   // 걸러 보기 단추가 검색어를 이어 가게
-  const filterHref = (sms: boolean) => {
+  const query = (sms: boolean) => {
     const sp = new URLSearchParams();
     if (q) sp.set("q", q);
     if (sms) sp.set("sms", "1");
     const s = sp.toString();
-    return s ? `/admin/members?${s}` : "/admin/members";
+    return s ? `?${s}` : "";
   };
+  const filterHref = (sms: boolean) => `/admin/members${query(sms)}`;
 
   const stats = [
     {
@@ -119,10 +109,22 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
           ))}
         </div>
 
-        <p className="mt-4 text-sm text-muted">
-          {q && <>&lsquo;{q}&rsquo; 검색 결과 · </>}
-          <span className="nums font-semibold text-ink">{shown.length}</span>명
-        </p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-muted">
+            {q && <>&lsquo;{q}&rsquo; 검색 결과 · </>}
+            <span className="nums font-semibold text-ink">{shown.length}</span>명
+          </p>
+          {/* 지금 보이는 회원 그대로 엑셀(CSV)로. 개인정보이니 필요한 때만 받고, 다 쓴 파일은 지워 주세요. */}
+          {shown.length > 0 && (
+            <a
+              href={`/admin/members/export${query(smsOnly)}`}
+              download
+              className="flex h-9 shrink-0 items-center rounded-control bg-ok/10 px-3.5 text-[14px] font-semibold text-ok transition-colors hover:bg-ok/15"
+            >
+              엑셀로 내려받기
+            </a>
+          )}
+        </div>
 
         {shown.length === 0 ? (
           <p className="mt-3 rounded-control bg-bg p-5 text-center text-sm text-muted">
