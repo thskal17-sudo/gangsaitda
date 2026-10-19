@@ -3,7 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { URGENT_DAYS } from "@/components/job-card";
-import { AD_INQUIRY_HREF, COURSES, type Course } from "@/lib/courses";
+import { AD_INQUIRY_HREF, type Course, coursesOn } from "@/lib/courses";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
 import { getCurrentMember, getMemberType } from "@/lib/member";
@@ -118,7 +118,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <SectionHead id="courses-title" title="강사 경력에 더하는 교육과정" href="/certificates" />
         {/* 휴대폰: 옆으로 밀어 보는 한 줄 / PC: 3칸 */}
         <ul className="-mr-4 mt-3.5 flex snap-x gap-3 overflow-x-auto pr-4 pb-1 md:mr-0 md:mt-5 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:p-0">
-          {COURSES.map((course, i) => (
+          {coursesOn(today).map((course, i) => (
             <li key={i} className="w-60 shrink-0 snap-start md:w-auto">
               <CourseCard course={course} />
             </li>
@@ -227,9 +227,17 @@ function CourseCard({ course }: { course: Course }) {
   // 과정 이름이 없으면 광고 모집 자리: 누르면 운영 이메일로 광고 문의
   const isAdSlot = !course.name;
   const href = isAdSlot ? AD_INQUIRY_HREF : (course.href ?? "/certificates");
+  // 다른 사이트(신청폼 등)는 새 창으로 열어 강사잇다 화면이 그대로 남게 한다
+  const external = href.startsWith("http");
+  // 지난 교육: 카드는 남기되 그림은 흐리게, 누르지 못하게 (신청이 끝났으므로)
+  const ended = !isAdSlot && course.ended;
+  const Box = ended ? "div" : "a";
 
   return (
-    <a href={href} className="group flex flex-col gap-2.5 md:gap-3.5">
+    <Box
+      {...(ended ? {} : { href, ...(external ? { target: "_blank", rel: "noopener noreferrer" } : {}) })}
+      className="group flex flex-col gap-2.5 md:gap-3.5"
+    >
       <div
         className={`relative flex h-[140px] flex-col items-center justify-center gap-2 overflow-hidden rounded-[14px] md:h-[210px] md:rounded-[16px] ${TONE_CLASS[course.tone]}`}
       >
@@ -239,7 +247,7 @@ function CourseCard({ course }: { course: Course }) {
             alt=""
             fill
             sizes="(min-width: 768px) 340px, 240px"
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className={`object-cover transition-transform duration-300 ${ended ? "opacity-45 grayscale" : "group-hover:scale-[1.03]"}`}
           />
         ) : (
           <>
@@ -247,14 +255,19 @@ function CourseCard({ course }: { course: Course }) {
             <span className="text-[12px] font-bold md:text-[13px]">{isAdSlot ? "이 자리에 과정을 소개하세요" : "과정 대표 이미지"}</span>
           </>
         )}
+        {ended && (
+          <span className="absolute top-2.5 left-2.5 rounded-badge bg-ink/80 px-2.5 py-1 text-[11px] font-bold text-white md:top-3.5 md:left-3.5 md:text-[13px]">
+            지난 교육
+          </span>
+        )}
       </div>
-      <p className="truncate text-[16px] leading-snug font-bold text-ink group-hover:text-brand md:text-[19px]">
+      <p className={`truncate text-[16px] leading-snug font-bold md:text-[19px] ${ended ? "text-muted" : "text-ink group-hover:text-brand"}`}>
         {isAdSlot ? "교육 광고 모집합니다" : course.name}
       </p>
-      <p className="-mt-1.5 text-[12px] font-medium text-brand md:-mt-2 md:text-[14px]">
-        {isAdSlot ? "광고 문의하기 →" : course.provider}
+      <p className={`-mt-1.5 text-[12px] font-medium md:-mt-2 md:text-[14px] ${ended ? "text-muted" : "text-brand"}`}>
+        {isAdSlot ? "광고 문의하기 →" : ended ? (course.endedText ?? "지난 교육") : course.provider}
       </p>
-    </a>
+    </Box>
   );
 }
 
