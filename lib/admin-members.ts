@@ -56,3 +56,57 @@ export async function getAllMembers(): Promise<AdminMember[]> {
     joinedDate: seoulDateOf(row.created_at),
   }));
 }
+
+/** 회원 목록 거르기 조건 (화면과 엑셀 내려받기가 함께 쓴다) */
+export type MemberFilter = { q: string; smsOnly: boolean };
+
+/** 주소의 ?q=…&sms=1 을 거르기 조건으로 */
+export function parseMemberFilter(params: { q?: unknown; sms?: unknown }): MemberFilter {
+  return {
+    q: typeof params.q === "string" ? params.q.trim().slice(0, 50) : "",
+    smsOnly: params.sms === "1",
+  };
+}
+
+/** 이름·기관명·이메일·연락처로 찾고(연락처는 010-1234-5678 처럼 적어도 찾아짐), 문자 수신 동의만 거른다. */
+export function filterMembers(members: AdminMember[], { q, smsOnly }: MemberFilter): AdminMember[] {
+  const qLower = q.toLowerCase();
+  const qDigits = q.replace(/\D/g, "");
+  return members.filter(
+    (m) =>
+      (!smsOnly || m.smsDate !== null) &&
+      (!q ||
+        m.name.toLowerCase().includes(qLower) ||
+        m.email.toLowerCase().includes(qLower) ||
+        (m.orgName ?? "").toLowerCase().includes(qLower) ||
+        (qDigits.length >= 3 && m.phone.includes(qDigits))),
+  );
+}
+
+/** 연락처를 엑셀에서도 0 이 사라지지 않게 하이픈을 넣어 적는다. 예: 01012345678 → 010-1234-5678 */
+function phoneText(phone: string): string {
+  if (/^02\d{7,8}$/.test(phone)) return phone.replace(/^(02)(\d{3,4})(\d{4})$/, "$1-$2-$3");
+  return phone.replace(/^(\d{3})(\d{3,4})(\d{4})$/, "$1-$2-$3");
+}
+
+/** CSV 한 칸. 쉼표·따옴표·줄바꿈을 감싸고, = + - @ 로 시작하면 엑셀이 수식으로 읽지 않게 앞에 ' 를 붙인다. */
+function csvCell(value: string): string {
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+/** 회원 목록을 엑셀에서 바로 열리는 CSV 로 (한글이 깨지지 않게 맨 앞에 BOM) */
+export function membersCsv(members: AdminMember[]): string {
+  const head = ["가입일", "종류", "이름", "기관명", "연락처", "이메일", "문자 수신 동의일", "등급"];
+  const rows = members.map((m) => [
+    m.joinedDate,
+    m.type,
+    m.name,
+    m.orgName ?? "",
+    phoneText(m.phone),
+    m.email,
+    m.smsDate ?? "",
+    m.grade,
+  ]);
+  return "\uFEFF" + [head, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+}
