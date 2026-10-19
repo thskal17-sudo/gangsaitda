@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import MemberTypeButton from "@/components/admin-member-type-button";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
@@ -12,6 +13,7 @@ export const metadata: Metadata = { title: "회원", robots: { index: false, fol
 /**
  * 관리자 · 회원 목록. 가입한 회원을 최근 순으로 본다.
  * 회원 종류(강사 / 기관)를 보여 주고, 가입할 때 잘못 고른 회원은 여기서 바꾼다.
+ * '문자 수신 동의만'(?sms=1)을 누르면 교육·강의 섭외 소식 문자를 받겠다고 한 회원만 보인다. 문자는 이 회원들에게만 보낸다.
  */
 export default async function AdminMembersPage({ searchParams }: PageProps<"/admin/members">) {
   await connection();
@@ -20,6 +22,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q.trim().slice(0, 50) : "";
   const failed = params.failed === "type";
+  const smsOnly = params.sms === "1";
 
   const today = todayInSeoul();
   const weekAgo = addDays(today, -6);
@@ -28,7 +31,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
   // 이름·이메일·연락처로 찾기. 연락처는 010-1234-5678 처럼 적어도 찾아진다.
   const qLower = q.toLowerCase();
   const qDigits = q.replace(/\D/g, "");
-  const shown = q
+  const searched = q
     ? members.filter(
         (m) =>
           m.name.toLowerCase().includes(qLower) ||
@@ -37,12 +40,22 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
           (qDigits.length >= 3 && m.phone.includes(qDigits)),
       )
     : members;
+  const shown = smsOnly ? searched.filter((m) => m.smsDate) : searched;
+  const smsCount = members.filter((m) => m.smsDate).length;
+  // 걸러 보기 단추가 검색어를 이어 가게
+  const filterHref = (sms: boolean) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set("q", q);
+    if (sms) sp.set("sms", "1");
+    const s = sp.toString();
+    return s ? `/admin/members?${s}` : "/admin/members";
+  };
 
   const stats = [
     {
       label: "전체 회원",
       value: members.length,
-      note: `강사 ${members.filter((m) => m.type === "강사").length} · 기관 ${members.filter((m) => m.type === "기관").length}`,
+      note: `강사 ${members.filter((m) => m.type === "강사").length} · 기관 ${members.filter((m) => m.type === "기관").length} · 문자 동의 ${smsCount}`,
     },
     { label: "오늘 가입", value: members.filter((m) => m.joinedDate === today).length },
     { label: "최근 7일 가입", value: members.filter((m) => m.joinedDate >= weekAgo).length },
@@ -74,6 +87,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
 
       <div className="mt-6 rounded-card bg-white p-4 md:p-5">
         <form action="/admin/members" className="flex gap-2">
+          {smsOnly && <input type="hidden" name="sms" value="1" />}
           <input
             type="search"
             name="q"
@@ -87,6 +101,24 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
           </button>
         </form>
 
+        <div className="mt-3 flex gap-2">
+          {[
+            { label: "전체", on: !smsOnly, href: filterHref(false) },
+            { label: `문자 수신 동의만 (${smsCount})`, on: smsOnly, href: filterHref(true) },
+          ].map((f) => (
+            <Link
+              key={f.label}
+              href={f.href}
+              aria-current={f.on ? "true" : undefined}
+              className={`nums flex h-9 items-center rounded-badge px-3.5 text-[14px] font-semibold transition-colors ${
+                f.on ? "bg-ink text-white" : "bg-bg text-muted hover:text-ink"
+              }`}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </div>
+
         <p className="mt-4 text-sm text-muted">
           {q && <>&lsquo;{q}&rsquo; 검색 결과 · </>}
           <span className="nums font-semibold text-ink">{shown.length}</span>명
@@ -94,7 +126,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
 
         {shown.length === 0 ? (
           <p className="mt-3 rounded-control bg-bg p-5 text-center text-sm text-muted">
-            {q ? "찾는 회원이 없어요." : "아직 가입한 회원이 없어요."}
+            {q || smsOnly ? "찾는 회원이 없어요." : "아직 가입한 회원이 없어요."}
           </p>
         ) : (
           <>
@@ -124,9 +156,12 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/adm
                     {m.email}
                   </a>
                   <div className="mt-1 flex items-center gap-2 md:contents">
-                    <a href={`tel:${m.phone}`} className="nums text-[14px] text-ink hover:text-brand hover:underline">
-                      {formatPhone(m.phone)}
-                    </a>
+                    <span className="flex flex-col">
+                      <a href={`tel:${m.phone}`} className="nums text-[14px] text-ink hover:text-brand hover:underline">
+                        {formatPhone(m.phone)}
+                      </a>
+                      {m.smsDate && <span className="nums text-[12px] font-semibold text-ok">문자 동의 · {formatKoreanDate(m.smsDate)}</span>}
+                    </span>
                     <div className="ml-auto flex items-center gap-2 md:ml-0">
                       <span
                         className={`rounded-badge px-2.5 py-0.5 text-[12px] font-semibold ${

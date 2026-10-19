@@ -4,13 +4,17 @@ import type { UseFormRegisterReturn } from "react-hook-form";
 /** recipient 가 있으면 '제3자 제공' 동의 (받는 곳을 함께 보여준다) */
 type Terms = { items: string; purpose: string; retention: string; refusal: string; recipient?: string };
 
-/** 개인정보 동의 (필수). 무엇을 왜 얼마나 보관하는지 펼쳐 볼 수 있다. 기본 문구는 '수집·이용 동의'. */
+/**
+ * 개인정보 동의. 무엇을 왜 얼마나 보관하는지 펼쳐 볼 수 있다. 기본 문구는 '수집·이용 동의'.
+ * optional 이면 [선택] 으로 보인다 (체크하지 않아도 된다).
+ */
 export default function PrivacyConsent({
   terms,
   error,
   label = "개인정보 수집·이용에 동의합니다",
+  optional,
   ...checkbox
-}: { terms: Terms; error?: string; label?: string } & UseFormRegisterReturn) {
+}: { terms: Terms; error?: string; label?: string; optional?: boolean } & UseFormRegisterReturn) {
   const errorId = `${checkbox.name}-error`;
   return (
     <div className={`rounded-control border-2 bg-bg p-4 ${error ? "border-warn" : "border-transparent"}`}>
@@ -23,7 +27,7 @@ export default function PrivacyConsent({
           {...checkbox}
         />
         <span className="text-sm font-semibold text-ink">
-          <span className="text-warn">[필수]</span> {label}
+          {optional ? <span className="text-brand">[선택]</span> : <span className="text-warn">[필수]</span>} {label}
         </span>
       </label>
 
@@ -66,8 +70,20 @@ export const SIGNUP_TERMS: Terms = {
   items: "회원 종류(강사·기관 담당자), 이름, 연락처, 이메일, 기관명(기관 담당자만)",
   purpose: "회원 확인, 공고 상세 정보 제공, 회원 종류에 맞는 서비스 제공, 서비스 이용 관련 안내 및 문의 응대",
   retention: "회원 탈퇴 시까지 (법령에 따라 보관해야 하는 경우 그 기간까지)",
-  refusal: "동의를 거부할 수 있으나, 거부하면 회원가입을 할 수 없습니다. 광고·홍보 메시지는 보내지 않습니다.",
+  refusal: "동의를 거부할 수 있으나, 거부하면 회원가입을 할 수 없습니다. 광고성 문자는 아래 [선택] 문자 수신에 동의한 경우에만 보냅니다.",
 };
+
+/** 교육·강의 섭외 소식 문자 수신 동의 (선택, 가입 화면·문자 수신 설정 화면) */
+export const SMS_TERMS: Terms = {
+  items: "연락처(가입할 때 적은 휴대폰 번호), 수신 동의 여부와 일시",
+  purpose: "강사잇다 교육 과정 안내, 강의 섭외·새 공고 소식 문자 발송 (광고성 정보 포함)",
+  retention: "수신 동의 철회 또는 회원 탈퇴 시까지",
+  refusal:
+    "동의하지 않아도 가입과 서비스 이용에는 아무 제한이 없습니다. 동의한 뒤에도 사이트 맨 아래 '문자 수신 설정'에서 언제든 끌 수 있습니다.",
+};
+
+/** 문자 수신 동의 칸의 이름표 */
+export const SMS_LABEL = "교육·강의 섭외 소식을 문자로 받을게요 (광고성 정보 수신 동의)";
 
 /** 강사섭외 의뢰 동의 문구 */
 export const REQUEST_TERMS: Terms = {

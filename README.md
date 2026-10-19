@@ -91,6 +91,7 @@ npm run dev
 | `supabase/kakao-notify.sql` | 카톡 연결 정보(토큰) 표. 사이트 서버만 읽고 씀 |
 | `app/robots.ts`, `app/sitemap.ts` | 검색엔진 안내문(robots.txt)과 사이트맵(sitemap.xml). 관리자·내 계정·api 는 검색 제외 |
 | `app/admin/members/`, `lib/admin-members.ts`, `lib/admin-member-actions.ts`, `components/admin-member-type-button.tsx` | 관리자 · 회원 목록 (회원 종류 강사/기관 바꾸기) |
+| `app/account/sms/`, `lib/sms-consent*.ts`, `supabase/sms-consent.sql` | 교육·강의 섭외 소식 문자 수신 동의 (선택). 가입 때 체크, 회원이 직접 켜고 끔, 관리자 회원 목록에서 동의한 회원만 걸러 보기 |
 | `supabase/member-type.sql` | 회원 종류(강사/기관)·기관명 칸, 가입 처리 함수 갱신, 관리자용 종류 바꾸기 함수 |
 | `components/member-type-notice.tsx` | 종류가 맞지 않는 화면에 들어왔을 때 안내 (기관 회원 → 내 프로필, 강사 회원 → 강사섭외·내 의뢰) |
 | `supabase/admin-members.sql` | 관리자만 모든 회원 정보를 읽게 하는 규칙 |

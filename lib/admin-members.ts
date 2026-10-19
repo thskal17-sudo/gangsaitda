@@ -17,6 +17,8 @@ export type AdminMember = {
   type: MemberType;
   /** 기관 회원의 기관명 */
   orgName: string | null;
+  /** 교육·강의 섭외 소식 문자 수신 동의한 날 (한국 날짜). 동의 안 했으면 null */
+  smsDate: string | null;
   /** 가입한 날 (한국 날짜) */
   joinedDate: string;
 };
@@ -29,6 +31,7 @@ type Row = {
   grade: string;
   member_type: string;
   org_name: string | null;
+  sms_agreed_at: string | null;
   created_at: string;
 };
 
@@ -37,7 +40,7 @@ export async function getAllMembers(): Promise<AdminMember[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("members")
-    .select("id, name, phone, email, grade, member_type, org_name, created_at")
+    .select("id, name, phone, email, grade, member_type, org_name, sms_agreed_at, created_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error(`회원 목록을 불러오지 못했습니다: ${error.message}`);
 
@@ -49,6 +52,7 @@ export async function getAllMembers(): Promise<AdminMember[]> {
     grade: row.grade,
     type: row.member_type === "기관" ? "기관" : "강사",
     orgName: row.org_name,
+    smsDate: row.sms_agreed_at ? seoulDateOf(row.sms_agreed_at) : null,
     joinedDate: seoulDateOf(row.created_at),
   }));
 }

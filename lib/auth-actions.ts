@@ -28,11 +28,11 @@ import { createClient } from "@/lib/supabase/server";
 export async function signup(input: unknown, next: unknown): Promise<AuthResult> {
   const parsed = signupSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const { memberType, orgName, name, phone, email, password } = parsed.data;
+  const { memberType, orgName, name, phone, email, password, smsAgreed } = parsed.data;
 
   const supabase = await createClient();
   // 이름·연락처·회원 종류·동의 여부를 함께 보내면, 데이터베이스가 회원 정보 표(members)에 한 줄을 만든다.
-  // (supabase/member-type.sql 의 handle_new_member 참고. 동의가 없으면 데이터베이스가 가입을 거절한다.)
+  // (supabase/sms-consent.sql 의 handle_new_member 참고. 동의가 없으면 데이터베이스가 가입을 거절한다.)
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -43,6 +43,7 @@ export async function signup(input: unknown, next: unknown): Promise<AuthResult>
         member_type: memberType,
         ...(memberType === "기관" ? { org_name: orgName } : {}),
         privacy_agreed: true,
+        sms_agreed: smsAgreed,
       },
     },
   });

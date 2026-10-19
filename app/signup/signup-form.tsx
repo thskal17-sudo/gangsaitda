@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Field, FormError, SubmitButton } from "@/components/auth-form";
-import PrivacyConsent, { SIGNUP_TERMS } from "@/components/privacy-consent";
+import PrivacyConsent, { SIGNUP_TERMS, SMS_LABEL, SMS_TERMS } from "@/components/privacy-consent";
 import { signup } from "@/lib/auth-actions";
 import { type MemberType, type SignupInput, signupSchema } from "@/lib/auth-schema";
 
@@ -21,7 +21,7 @@ export default function SignupForm({ next, defaultType }: { next: string; defaul
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<SignupInput>({ resolver: zodResolver(signupSchema), defaultValues: { memberType: defaultType, orgName: "" } });
+  } = useForm<SignupInput>({ resolver: zodResolver(signupSchema), defaultValues: { memberType: defaultType, orgName: "", smsAgreed: false } });
   const memberType = useWatch({ control, name: "memberType" });
 
   const onSubmit = handleSubmit(async (values) => {
@@ -96,6 +96,7 @@ export default function SignupForm({ next, defaultType }: { next: string; defaul
       />
 
       <PrivacyConsent terms={SIGNUP_TERMS} error={errors.privacyAgreed?.message} {...register("privacyAgreed")} />
+      <PrivacyConsent terms={SMS_TERMS} label={SMS_LABEL} optional {...register("smsAgreed")} />
 
       <FormError message={serverError} />
       <SubmitButton pending={isSubmitting}>무료로 가입하기</SubmitButton>
