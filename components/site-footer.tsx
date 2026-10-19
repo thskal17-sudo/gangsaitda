@@ -51,6 +51,9 @@ export default function SiteFooter({ isMember, memberType }: { isMember: boolean
                 내 의뢰
               </Link>
             )}
+            <Link href="/account/sms" className="hover:text-ink hover:underline">
+              문자 수신 설정
+            </Link>
             <Link href="/account/delete" className="hover:text-ink hover:underline">
               회원 탈퇴
             </Link>

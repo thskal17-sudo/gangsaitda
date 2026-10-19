@@ -44,6 +44,8 @@ export const signupSchema = z
     email,
     password,
     privacyAgreed: z.literal(true, "개인정보 수집·이용에 동의해야 가입할 수 있습니다."),
+    /** [선택] 교육·강의 섭외 소식 문자 수신 동의 */
+    smsAgreed: z.boolean(),
   })
   .refine((v) => v.memberType !== "기관" || v.orgName.length > 0, {
     message: "기관명을 입력해 주세요. 예) 부산OO중학교",
