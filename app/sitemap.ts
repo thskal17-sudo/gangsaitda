@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
+import { COURSES } from "@/lib/courses";
 import { todayInSeoul } from "@/lib/date";
 import { getOpenJobTitles } from "@/lib/jobs";
 import { SITE_URL } from "@/lib/site";
 
 /**
  * 사이트맵 (sitemap.xml). 검색엔진이 어떤 화면이 있는지 한 번에 알게 한다.
- * 고정 화면 + 지금 지원할 수 있는 공고 상세(비회원에게도 제목이 보이는 것). 열 때마다 새로 만든다.
+ * 고정 화면 + 교육 소개 화면 + 지금 지원할 수 있는 공고 상세(비회원에게도 제목이 보이는 것). 열 때마다 새로 만든다.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();
@@ -20,6 +21,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/certificates`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
     { url: `${SITE_URL}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.1 },
   ];
+  for (const course of COURSES) {
+    if (course.slug && course.detail) {
+      pages.push({ url: `${SITE_URL}/courses/${course.slug}`, lastModified: now, changeFrequency: "weekly", priority: 0.5 });
+    }
+  }
 
   try {
     const jobs = await getOpenJobTitles(todayInSeoul());

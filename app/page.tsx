@@ -226,16 +226,21 @@ const TONE_CLASS: Record<Course["tone"], string> = {
 function CourseCard({ course }: { course: Course }) {
   // 과정 이름이 없으면 광고 모집 자리: 누르면 운영 이메일로 광고 문의
   const isAdSlot = !course.name;
-  const href = isAdSlot ? AD_INQUIRY_HREF : (course.href ?? "/certificates");
+  // 소개 화면이 있으면 그 화면으로, 없으면 신청 주소로 바로 간다
+  const href = isAdSlot
+    ? AD_INQUIRY_HREF
+    : course.slug && course.detail
+      ? `/courses/${course.slug}`
+      : (course.href ?? "/certificates");
   // 다른 사이트(신청폼 등)는 새 창으로 열어 강사잇다 화면이 그대로 남게 한다
   const external = href.startsWith("http");
-  // 지난 교육: 카드는 남기되 그림은 흐리게, 누르지 못하게 (신청이 끝났으므로)
+  // 지난 교육: 카드는 남기되 그림은 흐리게. 소개 화면이 없으면 누르지 못하게 (신청이 끝났으므로)
   const ended = !isAdSlot && course.ended;
-  const Box = ended ? "div" : "a";
+  const Box = ended && external ? "div" : "a";
 
   return (
     <Box
-      {...(ended ? {} : { href, ...(external ? { target: "_blank", rel: "noopener noreferrer" } : {}) })}
+      {...(Box === "div" ? {} : { href, ...(external ? { target: "_blank", rel: "noopener noreferrer" } : {}) })}
       className="group flex flex-col gap-2.5 md:gap-3.5"
     >
       <div
