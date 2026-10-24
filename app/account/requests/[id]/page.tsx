@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import FeedbackForm from "@/components/feedback-form";
 import { ChooseButton, ClosePostingButton, MoreForm } from "@/components/my-request-buttons";
 import NotFoundCard from "@/components/not-found-card";
 import { formatPhone } from "@/lib/admin-requests";
 import { formatKoreanDate } from "@/lib/date";
 import type { MatchStatus } from "@/lib/match-status";
 import { getCurrentMember } from "@/lib/member";
+import { type MyFeedback, getMyFeedback } from "@/lib/my-feedback";
 import { type MyPosting, getMyPosting } from "@/lib/my-postings";
 import { type MyMatch, getMyRequest, getMyRequestMatches } from "@/lib/my-requests";
 
@@ -23,6 +25,8 @@ const NOTICES: Record<string, { ok: boolean; text: string }> = {
   "done=posting": { ok: true, text: "모집 공고를 냈어요. 운영자가 검토한 뒤 공고 목록에 올려 드릴게요." },
   "done=closed": { ok: true, text: "모집을 마감했어요. 공고가 목록에서 내려갔어요." },
   "failed=close": { ok: false, text: "모집을 마감하지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
+  "done=feedback": { ok: true, text: "만족도를 남겨 주셔서 고마워요. 운영자만 보고, 더 나은 강사님을 찾는 데 써요." },
+  "failed=feedback": { ok: false, text: "만족도를 저장하지 못했어요. 별점을 고른 뒤 다시 시도해 주세요." },
 };
 
 /** 기관에 보여 줄 진행 상태 (운영자 상태를 기관 말로) */
@@ -39,6 +43,7 @@ const STATUS_LABEL: Partial<Record<MatchStatus, { text: string; className: strin
  * - 마음에 드는 강사가 없으면 '다른 강사를 원해요' + 한 줄 의견.
  * - 강사 연락처는 운영자가 '섭외 확정'으로 바꾼 강사만 보인다.
  * - 강사 모집 공고: 의뢰마다 하나 쓸 수 있다 (운영자 검토 뒤 공고 목록에 게시). 승인된 공고는 '모집 마감'으로 내린다.
+ * - 운영자가 의뢰를 '완료'로 바꾸면 강의 만족도(별점 + 한 줄 의견)를 남길 수 있다. 운영자만 본다.
  */
 export default async function MyRequestPage({ params, searchParams }: PageProps<"/account/requests/[id]">) {
   await connection();
@@ -56,7 +61,11 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
       />
     );
   }
-  const [matches, posting] = await Promise.all([request.verified ? getMyRequestMatches(request.id) : [], getMyPosting(request.id)]);
+  const [matches, posting, feedback] = await Promise.all([
+    request.verified ? getMyRequestMatches(request.id) : [],
+    getMyPosting(request.id),
+    request.status === "완료" ? getMyFeedback(request.id) : null,
+  ]);
   const open = matches.filter((m) => m.status !== "불발");
 
   const sp = await searchParams;
@@ -104,6 +113,8 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
         </dl>
       </details>
 
+      {request.status === "완료" && <FeedbackCard requestId={request.id} feedback={feedback} />}
+
       <PostingCard requestId={request.id} posting={posting} />
 
       {!request.verified ? (
@@ -150,6 +161,25 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
         </>
       )}
     </section>
+  );
+}
+
+/** 완료된 의뢰의 강의 만족도 칸. 남긴 뒤에도 고칠 수 있다. */
+function FeedbackCard({ requestId, feedback }: { requestId: string; feedback: MyFeedback | null }) {
+  return (
+    <div className="mt-4 rounded-card bg-white p-5 md:p-6">
+      <h2 className="text-[17px] font-bold text-ink">강의는 어떠셨나요?</h2>
+      <p className="mt-1 text-[14px] leading-relaxed text-muted">
+        {feedback ? (
+          <>
+            <span className="nums">{formatKoreanDate(feedback.updatedDate)}</span>에 남기셨어요. 고치고 싶으면 다시 저장해 주세요.
+          </>
+        ) : (
+          "별점과 한 줄 의견을 남겨 주세요. 운영자만 보고, 강사님에게는 보이지 않아요."
+        )}
+      </p>
+      <FeedbackForm requestId={requestId} initial={feedback ?? undefined} />
+    </div>
   );
 }
 

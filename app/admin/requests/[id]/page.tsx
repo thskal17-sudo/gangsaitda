@@ -10,7 +10,7 @@ import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import NotFoundCard from "@/components/not-found-card";
 import { checkAdmin } from "@/lib/admin";
 import { getAllProfiles } from "@/lib/admin-profiles";
-import { getMatches, getMemberNames, getPosting, getRequest } from "@/lib/admin-requests";
+import { getFeedbacks, getMatches, getMemberNames, getPosting, getRequest } from "@/lib/admin-requests";
 import { formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { MATCH_STATUS_STYLE } from "@/lib/match-status";
 import { PROFILE_FIELDS, PROFILE_REGIONS } from "@/lib/profile-schema";
@@ -68,7 +68,7 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
   const failed = typeof sp.failed === "string" ? FAILED[sp.failed] : undefined;
   const done = typeof sp.done === "string" ? DONE[sp.done] : undefined;
 
-  const [matches, profiles, posting] = await Promise.all([getMatches(request.id), getAllProfiles(), getPosting(request.id)]);
+  const [matches, profiles, posting, feedbacks] = await Promise.all([getMatches(request.id), getAllProfiles(), getPosting(request.id), getFeedbacks()]);
   const profileOf = new Map(profiles.map((p) => [p.memberId, p]));
   // 프로필 없이 직접 지원한 강사는 이름을 회원 표에서 가져온다
   const names = await getMemberNames(matches.filter((m) => m.applied && !profileOf.has(m.memberId)).map((m) => m.memberId));
@@ -109,7 +109,7 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
       )}
 
       <ul className="mt-5">
-        <RequestCard request={request} today={todayInSeoul()}>
+        <RequestCard request={request} today={todayInSeoul()} feedback={feedbacks.get(request.id)}>
           <div className="mt-4 md:max-w-[360px]">
             <RequestStatusButtons id={request.id} status={request.status} />
           </div>

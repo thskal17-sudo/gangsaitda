@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { type AdminPosting, type AdminRequest, formatPhone } from "@/lib/admin-requests";
+import { type AdminFeedback, type AdminPosting, type AdminRequest, formatPhone } from "@/lib/admin-requests";
 import { formatKoreanDate } from "@/lib/date";
 import type { RequestStatus } from "@/lib/request-status";
 
@@ -16,12 +16,15 @@ export default function RequestCard({
   request: r,
   today,
   posting,
+  feedback,
   children,
 }: {
   request: AdminRequest;
   today: string;
   /** 담당자가 낸 모집 공고 상태 (목록에서만 넘긴다) */
   posting?: Pick<AdminPosting, "status" | "closed">;
+  /** 완료 뒤 담당자가 남긴 강의 만족도 */
+  feedback?: AdminFeedback;
   /** 카드 맨 아래에 붙일 내용 (처리 상태 버튼, 추천 강사 요약 등) */
   children?: ReactNode;
 }) {
@@ -83,6 +86,16 @@ export default function RequestCard({
           {r.contactEmail}
         </a>
       </div>
+
+      {feedback && (
+        <p className="mt-4 rounded-control bg-accent/10 px-4 py-3 text-[14px] leading-relaxed text-ink">
+          <b className="text-accent">
+            만족도 <span className="nums">{"★".repeat(feedback.rating)}{"☆".repeat(5 - feedback.rating)}</span>
+          </b>
+          <span className="nums ml-2 text-[12px] text-muted">{formatKoreanDate(feedback.date)}</span>
+          {feedback.comment && <span className="mt-1 block">&ldquo;{feedback.comment}&rdquo;</span>}
+        </p>
+      )}
 
       {r.moreRequested && (
         <p className="mt-4 rounded-control bg-warn/8 px-4 py-3 text-[14px] text-warn">
