@@ -81,6 +81,13 @@ export default async function GuidePage() {
           ))}
         </ol>
         <Tip>의뢰서 작성부터 공고 게시, 강사 추천, 연락처 전달까지 <b>모두 무료</b>예요. 강사료는 기관과 강사님이 직접 정해요.</Tip>
+        <p className="rounded-control bg-brand/8 px-4 py-3 text-[14px] leading-relaxed text-ink">
+          <b>이 과정이 복잡하게 느껴지시면 강사잇다에 문의해 주세요.</b> 대신 공고를 올리고, 맞는 강사님의 프로필을 전달해 드려요.
+          <br />
+          <a href={`mailto:${OPERATOR.email}`} className="font-semibold text-brand hover:underline">
+            {OPERATOR.email}
+          </a>
+        </p>
       </Section>
 
       {/* 2. 회원가입 */}
@@ -206,8 +213,9 @@ export default async function GuidePage() {
       </Section>
 
       <div className="mt-6 rounded-card bg-brand/8 p-5 text-[15px] leading-relaxed text-ink md:p-6">
-        <p className="font-bold">궁금한 점이 있으면 언제든 물어보세요.</p>
-        <p className="mt-1">
+        <p className="font-bold">궁금한 점이 있거나 과정이 복잡하게 느껴지면 언제든 문의해 주세요.</p>
+        <p className="mt-1">의뢰서만 보내 주시면 공고 게시부터 강사 프로필 전달까지 운영자가 대신 해 드려요.</p>
+        <p className="mt-2">
           운영자 이메일{" "}
           <a href={`mailto:${OPERATOR.email}`} className="font-semibold text-brand hover:underline">
             {OPERATOR.email}
