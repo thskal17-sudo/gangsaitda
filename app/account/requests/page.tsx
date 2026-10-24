@@ -81,6 +81,11 @@ function RequestLink({ request: r }: { request: MyRequest }) {
       <p className="mt-0.5 text-[14px] text-muted">
         {r.orgName} · {r.schedule}
       </p>
+      {r.status === "완료" && (
+        <p className={`mt-2 text-[13px] font-semibold ${r.feedbackRating ? "text-muted" : "text-accent"}`}>
+          {r.feedbackRating ? `만족도 ${"★".repeat(r.feedbackRating)}${"☆".repeat(5 - r.feedbackRating)} 남김` : "강의는 어떠셨나요? 만족도를 남겨 주세요 →"}
+        </p>
+      )}
       {r.postingStatus && (
         <p className="mt-2 text-[13px] font-semibold">
           {r.postingStatus === "승인" ? (

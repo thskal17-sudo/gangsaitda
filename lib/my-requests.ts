@@ -37,6 +37,8 @@ export type MyRequest = {
   postingJobId?: string;
   /** 담당자가 모집을 마감했다 */
   postingClosed: boolean;
+  /** 남긴 만족도 별점 (1~5). 안 남겼으면 없음 */
+  feedbackRating?: number;
 };
 
 type RequestRow = {
@@ -61,6 +63,7 @@ type RequestRow = {
   posting_status: string | null;
   posting_job_id: number | null;
   posting_closed: boolean;
+  feedback_rating: number | null;
 };
 
 /** 내가 보낸 의뢰 — 최근에 보낸 순 */
@@ -91,6 +94,7 @@ export async function getMyRequests(): Promise<MyRequest[]> {
       r.posting_status === "검토 중" || r.posting_status === "승인" || r.posting_status === "반려" ? r.posting_status : undefined,
     postingJobId: r.posting_job_id === null ? undefined : String(r.posting_job_id),
     postingClosed: r.posting_closed,
+    feedbackRating: r.feedback_rating ?? undefined,
   }));
 }
 

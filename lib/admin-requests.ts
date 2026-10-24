@@ -307,3 +307,19 @@ export async function getPostingStatuses(): Promise<Map<string, Pick<AdminPostin
   }
   return map;
 }
+
+/* ---- 강의 만족도 (supabase/request-feedback.sql, 관리자만 읽음) --------------------------------- */
+
+export type AdminFeedback = { rating: number; comment?: string; /** 마지막으로 남긴 날 (한국 날짜) */ date: string };
+
+/** 의뢰 번호 → 담당자가 남긴 만족도 */
+export async function getFeedbacks(): Promise<Map<string, AdminFeedback>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("request_feedback").select("request_id, rating, comment, updated_at");
+  if (error) throw new Error(`만족도를 불러오지 못했습니다: ${error.message}`);
+  const map = new Map<string, AdminFeedback>();
+  for (const r of data as { request_id: number; rating: number; comment: string | null; updated_at: string }[]) {
+    map.set(String(r.request_id), { rating: r.rating, comment: r.comment?.trim() || undefined, date: seoulDateOf(r.updated_at) });
+  }
+  return map;
+}

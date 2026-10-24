@@ -5,7 +5,7 @@ import RequestCard from "@/components/admin-request-card";
 import RequestStatusButtons from "@/components/admin-request-status";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin } from "@/lib/admin";
-import { getAllRequests, getMatchCounts, getPostingStatuses } from "@/lib/admin-requests";
+import { getAllRequests, getFeedbacks, getMatchCounts, getPostingStatuses } from "@/lib/admin-requests";
 import { todayInSeoul } from "@/lib/date";
 import { REQUEST_STATUSES, type RequestStatus, isRequestStatus } from "@/lib/request-status";
 
@@ -20,7 +20,7 @@ export default async function AdminRequestsPage({ searchParams }: PageProps<"/ad
   const filter = isRequestStatus(params.status) ? params.status : null;
 
   const today = todayInSeoul();
-  const [requests, matchCounts, postings] = await Promise.all([getAllRequests(), getMatchCounts(), getPostingStatuses()]);
+  const [requests, matchCounts, postings, feedbacks] = await Promise.all([getAllRequests(), getMatchCounts(), getPostingStatuses(), getFeedbacks()]);
   const reviewCount = [...postings.values()].filter((p) => p.status === "검토 중").length;
   const shown = filter ? requests.filter((r) => r.status === filter) : requests;
   const count = (s: RequestStatus) => requests.filter((r) => r.status === s).length;
@@ -93,7 +93,7 @@ export default async function AdminRequestsPage({ searchParams }: PageProps<"/ad
             const m = matchCounts.get(r.id);
             const posting = postings.get(r.id);
             return (
-              <RequestCard key={r.id} request={r} today={today} posting={posting}>
+              <RequestCard key={r.id} request={r} today={today} posting={posting} feedback={feedbacks.get(r.id)}>
                 <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="md:w-[360px]">
                     <RequestStatusButtons id={r.id} status={r.status} />
