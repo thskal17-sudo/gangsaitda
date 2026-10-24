@@ -66,11 +66,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Image
                 src="/logo.png"
                 alt="강사잇다"
-                width={833}
-                height={205}
+                width={1600}
+                height={472}
                 loading="eager"
                 fetchPriority="high"
-                className="h-[22px] w-auto md:h-[26px]"
+                className="h-[28px] w-auto md:h-[34px]"
               />
             </Link>
             <div className="flex items-center gap-2 md:gap-4">
