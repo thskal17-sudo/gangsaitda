@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { closeMyPosting } from "@/lib/my-posting-actions";
 import { chooseMatch, requestMore } from "@/lib/my-request-actions";
 
 /*
@@ -45,6 +46,20 @@ export function MoreForm({ requestId }: { requestId: string }) {
         />
       </label>
       <Submit idle="다른 강사를 원해요" className="h-14 w-full bg-ink px-5 text-[16px] text-white hover:bg-ink/85" />
+    </form>
+  );
+}
+
+/** 올라간 모집 공고 '모집 마감' (한 번 더 묻는다) */
+export function ClosePostingButton({ requestId }: { requestId: string }) {
+  return (
+    <form
+      action={closeMyPosting.bind(null, requestId)}
+      onSubmit={(e) => {
+        if (!window.confirm("모집을 마감할까요? 공고가 목록에서 내려가고, 다시 올리려면 운영자에게 알려 주셔야 해요.")) e.preventDefault();
+      }}
+    >
+      <Submit idle="모집 마감" className="h-11 bg-bg px-4 text-[14px] text-muted hover:bg-line hover:text-warn" />
     </form>
   );
 }

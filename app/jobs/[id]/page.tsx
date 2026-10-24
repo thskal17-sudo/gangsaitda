@@ -7,14 +7,16 @@ import {
   ApplyActions,
   ClosedNotice,
   FactList,
+  FromRequestBadge,
   LineList,
   MembersOnlyNotice,
+  PostingApply,
   SourceLink,
   TextSection,
 } from "@/components/job-detail";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getJobDetail, getJobTitle } from "@/lib/jobs";
-import { getCurrentMember } from "@/lib/member";
+import { getCurrentMember, getMemberType } from "@/lib/member";
 
 export async function generateMetadata({ params }: PageProps<"/jobs/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -39,6 +41,8 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
   if (!job) notFound();
 
   const daysLeft = detail ? daysBetween(today, detail.deadline) : null;
+  // 기관이 직접 올린 공고는 지원 방법이 다르다 (강사잇다가 받음). 강사·기관 회원에 따라 안내가 다르다.
+  const memberType = detail?.fromRequest ? await getMemberType() : null;
 
   return (
     <article>
@@ -64,7 +68,10 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
       <header className="mt-4">
         {detail && daysLeft !== null && (
           <div className="mb-1.5 flex items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-sm font-medium text-muted">{detail.organization}</p>
+            <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted">
+              {detail.fromRequest && <FromRequestBadge />}
+              <span className="truncate">{detail.organization}</span>
+            </p>
             <DeadlineBadge daysLeft={daysLeft} />
           </div>
         )}
@@ -85,7 +92,7 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
               ]}
             />
             <SourceLink url={detail.sourceUrl} />
-            {daysLeft < 0 ? <ClosedNotice /> : <ApplyActions job={detail} />}
+            {daysLeft < 0 ? <ClosedNotice /> : detail.fromRequest ? <PostingApply memberType={memberType} /> : <ApplyActions job={detail} />}
           </aside>
 
           <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">

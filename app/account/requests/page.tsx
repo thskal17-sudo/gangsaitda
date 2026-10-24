@@ -81,6 +81,17 @@ function RequestLink({ request: r }: { request: MyRequest }) {
       <p className="mt-0.5 text-[14px] text-muted">
         {r.orgName} · {r.schedule}
       </p>
+      {r.postingStatus && (
+        <p className="mt-2 text-[13px] font-semibold">
+          {r.postingStatus === "승인" ? (
+            <span className={r.postingClosed ? "text-muted" : "text-ok"}>모집 공고 {r.postingClosed ? "마감함" : "게시 중"}</span>
+          ) : r.postingStatus === "반려" ? (
+            <span className="text-warn">모집 공고 반려됨 · 고쳐서 다시 내 주세요</span>
+          ) : (
+            <span className="text-brand">모집 공고 검토 중</span>
+          )}
+        </p>
+      )}
       {r.verified && r.matchCount > 0 && (
         <p className="nums mt-3 text-[14px] text-ink">
           추천 {r.matchCount}명 · 고른 강사 {r.chosenCount}명{r.confirmedCount > 0 && ` · 확정 ${r.confirmedCount}명`}

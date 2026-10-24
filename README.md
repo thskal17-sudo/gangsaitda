@@ -91,6 +91,9 @@ npm run dev
 | `supabase/kakao-notify.sql` | 카톡 연결 정보(토큰) 표. 사이트 서버만 읽고 씀 |
 | `app/robots.ts`, `app/sitemap.ts` | 검색엔진 안내문(robots.txt)과 사이트맵(sitemap.xml). 관리자·내 계정·api 는 검색 제외 |
 | `app/admin/members/`, `lib/admin-members.ts`, `lib/admin-member-actions.ts`, `components/admin-member-type-button.tsx` | 관리자 · 회원 목록 (회원 종류 강사/기관 바꾸기, 엑셀(CSV) 내려받기 `app/admin/members/export/`) |
+| `app/account/requests/[id]/posting/`, `lib/my-postings.ts`, `lib/my-posting-actions.ts`, `lib/posting-schema.ts` | 기관 담당자 · 강사 모집 공고 쓰기·고치기·모집 마감 (운영자 검토 뒤 공고 목록에 게시) |
+| `components/admin-posting-review.tsx`, `lib/admin-posting-actions.ts` | 관리자 · 모집 공고 승인(공고 올리기)/반려(사유) |
+| `supabase/request-postings.sql` | 모집 공고 표, jobs.request_id, 담당자·관리자 함수 |
 | `app/account/sms/`, `lib/sms-consent*.ts`, `supabase/sms-consent.sql` | 교육·강의 섭외 소식 문자 수신 동의 (선택). 가입 때 체크, 회원이 직접 켜고 끔, 관리자 회원 목록에서 동의한 회원만 걸러 보기 |
 | `supabase/member-type.sql` | 회원 종류(강사/기관)·기관명 칸, 가입 처리 함수 갱신, 관리자용 종류 바꾸기 함수 |
 | `components/member-type-notice.tsx` | 종류가 맞지 않는 화면에 들어왔을 때 안내 (기관 회원 → 내 프로필, 강사 회원 → 강사섭외·내 의뢰) |

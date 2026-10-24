@@ -189,3 +189,81 @@ export async function getPlanFileUrl(requestId: string, matchId: string): Promis
   const downloadName = `${(member as { name: string } | null)?.name ?? "강사"}_${r.plan_name ?? "강의계획서"}`;
   return `${data.signedUrl}&download=${encodeURIComponent(downloadName)}`;
 }
+
+/* ---- 기관이 낸 강사 모집 공고 (supabase/request-postings.sql) ---------------------------- */
+
+export type PostingStatus = "검토 중" | "승인" | "반려";
+
+export type AdminPosting = {
+  title: string;
+  /** 지원 마감일 (한국 날짜) */
+  deadline: string;
+  description: string;
+  qualifications?: string;
+  documents?: string;
+  status: PostingStatus;
+  reviewNote?: string;
+  /** 승인되어 올라간 공고 번호 */
+  jobId?: string;
+  submittedDate: string;
+  reviewedDate?: string;
+  /** 담당자가 모집을 마감했다 (공고는 숨겨짐) */
+  closed: boolean;
+};
+
+type PostingRow = {
+  request_id: number;
+  title: string;
+  deadline: string;
+  description: string;
+  qualifications: string | null;
+  documents: string | null;
+  status: string;
+  review_note: string | null;
+  job_id: number | null;
+  submitted_at: string;
+  reviewed_at: string | null;
+  closed_at: string | null;
+};
+
+const POSTING_COLUMNS = "request_id, title, deadline, description, qualifications, documents, status, review_note, job_id, submitted_at, reviewed_at, closed_at";
+
+function toPosting(row: PostingRow): AdminPosting {
+  return {
+    title: row.title,
+    deadline: row.deadline,
+    description: row.description,
+    qualifications: row.qualifications?.trim() || undefined,
+    documents: row.documents?.trim() || undefined,
+    status: row.status === "승인" || row.status === "반려" ? row.status : "검토 중",
+    reviewNote: row.review_note?.trim() || undefined,
+    jobId: row.job_id === null ? undefined : String(row.job_id),
+    submittedDate: seoulDateOf(row.submitted_at),
+    reviewedDate: row.reviewed_at ? seoulDateOf(row.reviewed_at) : undefined,
+    closed: row.closed_at !== null,
+  };
+}
+
+/** 의뢰 하나의 모집 공고. 담당자가 아직 안 썼으면 null */
+export async function getPosting(requestId: string): Promise<AdminPosting | null> {
+  if (!/^\d{1,15}$/.test(requestId)) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("request_postings").select(POSTING_COLUMNS).eq("request_id", Number(requestId)).maybeSingle();
+  if (error) throw new Error(`모집 공고를 불러오지 못했습니다: ${error.message}`);
+  return data ? toPosting(data as PostingRow) : null;
+}
+
+/** 의뢰 번호 → 모집 공고 상태 (목록 카드의 배지와 '검토 요청 N건') */
+export async function getPostingStatuses(): Promise<Map<string, Pick<AdminPosting, "status" | "closed">>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("request_postings").select("request_id, status, closed_at");
+  if (error) throw new Error(`모집 공고를 불러오지 못했습니다: ${error.message}`);
+  const map = new Map<string, Pick<AdminPosting, "status" | "closed">>();
+  for (const r of data as Pick<PostingRow, "request_id" | "status" | "closed_at">[]) {
+    map.set(String(r.request_id), {
+      status: r.status === "승인" || r.status === "반려" ? r.status : "검토 중",
+      closed: r.closed_at !== null,
+    });
+  }
+  return map;
+}
