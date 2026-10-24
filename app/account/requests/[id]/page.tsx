@@ -43,7 +43,8 @@ const STATUS_LABEL: Partial<Record<MatchStatus, { text: string; className: strin
  * - 마음에 드는 강사가 없으면 '다른 강사를 원해요' + 한 줄 의견.
  * - 강사 연락처는 운영자가 '섭외 확정'으로 바꾼 강사만 보인다.
  * - 강사 모집 공고: 의뢰마다 하나 쓸 수 있다 (운영자 검토 뒤 공고 목록에 게시). 승인된 공고는 '모집 마감'으로 내린다.
- * - 운영자가 의뢰를 '완료'로 바꾸면 강의 만족도(별점 + 한 줄 의견)를 남길 수 있다. 운영자만 본다.
+ * - 운영자가 의뢰를 '완료'로 바꾸면 강사 프로필·파일·연락처는 더 이상 보이지 않고(개인정보 안내대로 섭외 검토가 끝날 때까지만 전달),
+ *   강의 만족도(별점 + 한 줄 의견)를 남길 수 있다. 운영자만 본다.
  */
 export default async function MyRequestPage({ params, searchParams }: PageProps<"/account/requests/[id]">) {
   await connection();
@@ -61,8 +62,9 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
       />
     );
   }
+  const done = request.status === "완료";
   const [matches, posting, feedback] = await Promise.all([
-    request.verified ? getMyRequestMatches(request.id) : [],
+    request.verified && !done ? getMyRequestMatches(request.id) : [],
     getMyPosting(request.id),
     request.status === "완료" ? getMyFeedback(request.id) : null,
   ]);
@@ -113,11 +115,21 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
         </dl>
       </details>
 
-      {request.status === "완료" && <FeedbackCard requestId={request.id} feedback={feedback} />}
+      {done && (
+        <div className="mt-4 rounded-card bg-white p-6 text-center">
+          <p className="text-[17px] font-bold text-ink">섭외가 끝난 의뢰예요</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-muted">
+            개인정보 보호를 위해 강사님 프로필·파일·연락처는 더 이상 보이지 않아요.
+            <br />
+            다시 봐야 하면 운영자에게 알려 주세요.
+          </p>
+        </div>
+      )}
+      {done && <FeedbackCard requestId={request.id} feedback={feedback} />}
 
       <PostingCard requestId={request.id} posting={posting} />
 
-      {!request.verified ? (
+      {done ? null : !request.verified ? (
         <div className="mt-4 rounded-card bg-white p-6 text-center">
           <p className="text-[17px] font-bold text-ink">운영자가 의뢰를 확인하고 있어요</p>
           <p className="mt-2 text-[15px] leading-relaxed text-muted">

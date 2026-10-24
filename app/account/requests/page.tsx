@@ -61,7 +61,9 @@ export default async function MyRequestsPage() {
 
 /** 의뢰 한 줄: 지금 어디까지 왔는지 한눈에 */
 function RequestLink({ request: r }: { request: MyRequest }) {
-  const progress = !r.verified
+  const progress = r.status === "완료"
+    ? { text: "섭외 완료", className: "bg-ink text-white" }
+    : !r.verified
     ? { text: "운영자가 확인하고 있어요", className: "bg-bg text-muted" }
     : r.confirmedCount > 0
       ? { text: `섭외 확정 ${r.confirmedCount}명`, className: "bg-ok text-white" }
@@ -97,7 +99,7 @@ function RequestLink({ request: r }: { request: MyRequest }) {
           )}
         </p>
       )}
-      {r.verified && r.matchCount > 0 && (
+      {r.verified && r.status !== "완료" && r.matchCount > 0 && (
         <p className="nums mt-3 text-[14px] text-ink">
           추천 {r.matchCount}명 · 고른 강사 {r.chosenCount}명{r.confirmedCount > 0 && ` · 확정 ${r.confirmedCount}명`}
           <span className="ml-1 font-semibold text-brand">보기 →</span>
