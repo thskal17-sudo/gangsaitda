@@ -15,7 +15,7 @@ import {
   signupSchema,
 } from "@/lib/auth-schema";
 import { NEW_PASSWORD_PATH, RECOVERY_COOKIE, type RecoveryToken } from "@/lib/recovery";
-import { removeProfileFiles } from "@/lib/profile";
+import { removeAllMemberFiles } from "@/lib/profile";
 import { safeNext } from "@/lib/safe-next";
 import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
@@ -98,9 +98,9 @@ export async function deleteAccount(input: unknown): Promise<AuthResult> {
     };
   }
 
-  // 강사 프로필 파일은 계정과 함께 지워지지 않으므로 먼저 지운다 (프로필 줄은 데이터베이스가 함께 지운다).
+  // 강사 프로필·지원 파일은 계정과 함께 지워지지 않으므로 먼저 지운다 (프로필·추천·지원 줄은 데이터베이스가 함께 지운다).
   const userId = claims?.claims.sub;
-  if (userId) await removeProfileFiles(userId).catch((e) => console.error("[account] 프로필 파일 삭제 실패", e));
+  if (userId) await removeAllMemberFiles(userId).catch((e) => console.error("[account] 프로필 파일 삭제 실패", e));
 
   const { error } = await supabase.rpc("delete_my_account");
   if (error) {

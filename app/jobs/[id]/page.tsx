@@ -16,6 +16,7 @@ import {
 } from "@/components/job-detail";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getJobDetail, getJobTitle } from "@/lib/jobs";
+import { getMyApplication } from "@/lib/apply";
 import { getCurrentMember, getMemberType } from "@/lib/member";
 
 export async function generateMetadata({ params }: PageProps<"/jobs/[id]">): Promise<Metadata> {
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: PageProps<"/jobs/[id]">): Pro
     : { title: "공고를 찾을 수 없습니다", robots: { index: false } };
 }
 
-export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">) {
+export default async function JobDetailPage({ params, searchParams }: PageProps<"/jobs/[id]">) {
   // 오늘 날짜와 로그인 상태에 따라 달라지므로, 열 때마다 새로 그린다.
   await connection();
   const { id } = await params;
@@ -41,8 +42,9 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
   if (!job) notFound();
 
   const daysLeft = detail ? daysBetween(today, detail.deadline) : null;
-  // 기관이 직접 올린 공고는 지원 방법이 다르다 (강사잇다가 받음). 강사·기관 회원에 따라 안내가 다르다.
-  const memberType = detail?.fromRequest ? await getMemberType() : null;
+  // 기관이 직접 올린 공고는 지원 방법이 다르다 (강사잇다에서 바로 지원). 강사·기관 회원에 따라 안내가 다르고, 이미 지원했으면 그 상태를 보여 준다.
+  const [memberType, application] = detail?.fromRequest ? await Promise.all([getMemberType(), getMyApplication(detail.id)]) : [null, null];
+  const justApplied = (await searchParams).applied === "1" && application !== null;
 
   return (
     <article>
@@ -64,6 +66,12 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
         </svg>
         공고 목록
       </Link>
+
+      {justApplied && (
+        <p role="status" className="mt-4 rounded-card bg-ok/10 px-5 py-4 text-[15px] font-semibold text-ok">
+          지원했어요. 기관이 검토한 뒤 고르면 운영자가 연락드릴게요.
+        </p>
+      )}
 
       <header className="mt-4">
         {detail && daysLeft !== null && (
@@ -92,7 +100,7 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
               ]}
             />
             <SourceLink url={detail.sourceUrl} />
-            {daysLeft < 0 ? <ClosedNotice /> : detail.fromRequest ? <PostingApply memberType={memberType} /> : <ApplyActions job={detail} />}
+            {daysLeft < 0 ? <ClosedNotice /> : detail.fromRequest ? <PostingApply jobId={detail.id} memberType={memberType} application={application} /> : <ApplyActions job={detail} />}
           </aside>
 
           <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">

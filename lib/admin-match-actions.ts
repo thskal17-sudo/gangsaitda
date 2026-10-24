@@ -79,14 +79,21 @@ export async function setMatchStatus(requestId: string, matchId: string, status:
   done(requestId);
 }
 
-/** 추천 강사에서 빼기 (강사 프로필은 그대로, 올려 둔 강의계획서는 함께 지운다) */
+/** 추천·지원 강사에서 빼기 (강사 프로필은 그대로, 강의계획서와 지원하며 올린 프로필 파일은 함께 지운다) */
 export async function removeMatch(requestId: string, matchId: string): Promise<void> {
   await guard(requestId, "remove");
   if (!ID.test(matchId)) redirect(`${pagePath(requestId)}?failed=remove`);
   const supabase = await createClient();
-  const before = await readPlanPath(requestId, matchId);
+  const { data: row } = await supabase
+    .from("request_matches")
+    .select("plan_path, apply_profile_path")
+    .eq("id", Number(matchId))
+    .eq("request_id", Number(requestId))
+    .maybeSingle();
+  const r = row as { plan_path: string | null; apply_profile_path: string | null } | null;
+  const files = [r?.plan_path, r?.apply_profile_path].filter((p): p is string => Boolean(p));
   const { error } = await supabase.from("request_matches").delete().eq("id", Number(matchId)).eq("request_id", Number(requestId));
-  if (!error && before) await supabase.storage.from(REQUEST_FILES_BUCKET).remove([before]);
+  if (!error && files.length > 0) await supabase.storage.from(REQUEST_FILES_BUCKET).remove(files);
   if (error) {
     console.error("[admin] 추천 강사 빼기 실패", error.code, error.message);
     redirect(`${pagePath(requestId)}?failed=remove`);

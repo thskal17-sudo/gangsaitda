@@ -61,11 +61,24 @@ export async function getMyProfile(memberId: string): Promise<Profile | null> {
 }
 
 /**
- * 그 회원 폴더의 프로필 파일을 모두 지운다 (프로필 삭제·회원 탈퇴). 저장소 규칙상 본인 파일만 지워진다.
- * 운영자가 이 강사의 추천에 올려 둔 강의계획서도 함께 지운다 (추천 줄은 프로필을 지우면 데이터베이스가 함께 지운다).
+ * 그 회원 폴더의 프로필 파일을 모두 지운다 (프로필 삭제). 저장소 규칙상 본인 파일만 지워진다.
+ * 운영자가 이 강사의 **추천** 줄에 올려 둔 강의계획서도 함께 지운다 (추천 줄은 프로필을 지우면 데이터베이스가 함께 지운다).
+ * 강사가 공고에 직접 지원한 줄과 그 파일은 남는다 (지원은 프로필과 별개).
  * 강의계획서는 강사가 직접 지울 수 없는 저장소라 사이트 서버 열쇠(SUPABASE_SECRET_KEY)로 지운다. 프로필을 지우기 **전에** 불러야 한다.
  */
 export async function removeProfileFiles(memberId: string): Promise<void> {
+  await removeMemberFiles(memberId, "profile");
+}
+
+/**
+ * 회원 탈퇴: 프로필 파일 + 추천·지원 줄의 강의계획서·지원 프로필 파일을 모두 지운다 (줄은 데이터베이스가 함께 지운다).
+ * 계정을 지우기 **전에** 불러야 한다.
+ */
+export async function removeAllMemberFiles(memberId: string): Promise<void> {
+  await removeMemberFiles(memberId, "all");
+}
+
+async function removeMemberFiles(memberId: string, scope: "profile" | "all"): Promise<void> {
   const supabase = await createClient();
   const { data: files } = await supabase.storage.from(PROFILE_BUCKET).list(memberId);
   if (files && files.length > 0) {
@@ -74,11 +87,15 @@ export async function removeProfileFiles(memberId: string): Promise<void> {
 
   const service = createServiceClient();
   if (!service) return;
-  const { data: plans, error } = await service.from("request_matches").select("plan_path").eq("member_id", memberId).not("plan_path", "is", null);
+  let query = service.from("request_matches").select("plan_path, apply_profile_path").eq("member_id", memberId);
+  if (scope === "profile") query = query.is("applied_at", null);
+  const { data: rows, error } = await query;
   if (error) {
     console.error("[profile] 강의계획서 찾기 실패", error.message);
     return;
   }
-  const paths = (plans as { plan_path: string }[]).map((p) => p.plan_path);
+  const paths = (rows as { plan_path: string | null; apply_profile_path: string | null }[])
+    .flatMap((r) => [r.plan_path, r.apply_profile_path])
+    .filter((p): p is string => Boolean(p));
   if (paths.length > 0) await service.storage.from(REQUEST_FILES_BUCKET).remove(paths);
 }

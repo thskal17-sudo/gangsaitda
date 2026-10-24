@@ -120,6 +120,10 @@ export type MyMatch = {
   /** 확정된 강사만 */
   phone?: string;
   email?: string;
+  /** 강사가 공고에서 직접 지원했다 (아니면 운영자 추천) */
+  applied: boolean;
+  /** 지원하면서 남긴 한마디 */
+  applyMessage?: string;
 };
 
 type MatchRow = {
@@ -139,6 +143,8 @@ type MatchRow = {
   has_plan: boolean;
   phone: string | null;
   email: string | null;
+  applied: boolean;
+  apply_message: string | null;
 };
 
 /** 내 의뢰의 추천 강사. 기관 확인 전이거나 내 의뢰가 아니면 빈 목록 */
@@ -161,5 +167,7 @@ export async function getMyRequestMatches(requestId: string): Promise<MyMatch[]>
     planName: m.has_plan ? m.plan_name || "강의계획서" : undefined,
     phone: m.phone ?? undefined,
     email: m.email ?? undefined,
+    applied: m.applied,
+    applyMessage: m.apply_message?.trim() || undefined,
   }));
 }
