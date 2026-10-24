@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql, job-region-group.sql, kakao-notify.sql, request-matching.sql, request-portal.sql, admin-instructors.sql, member-type.sql, sms-consent.sql, request-postings.sql, job-apply.sql, request-feedback.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql, job-region-group.sql, kakao-notify.sql, request-matching.sql, request-portal.sql, admin-instructors.sql, member-type.sql, sms-consent.sql, request-postings.sql, job-apply.sql, request-feedback.sql, request-complete-hide.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -2294,6 +2294,94 @@ revoke execute on function public.my_requests() from public, anon;
 grant execute on function public.my_requests() to authenticated;
 
 -- Supabase에게 바뀐 표·새 함수를 알리기
+notify pgrst, 'reload schema';
+
+-- ============================================================
+-- request-complete-hide.sql
+-- ============================================================
+
+-- 강사잇다 · 완료된 의뢰에서는 기관 화면에 강사 프로필·파일·연락처를 가린다
+-- job-apply.sql 을 먼저 실행한 뒤, Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다.
+-- 여러 번 실행해도 괜찮습니다.
+--
+-- 개인정보 안내대로 강사 정보는 "기관의 섭외 검토가 끝날 때까지"만 전달한다.
+-- 운영자가 의뢰를 '완료'로 바꾸면 담당자 함수(my_request_matches, my_match_file)가 아무것도 돌려주지 않는다.
+-- 다시 '처리 중'으로 되돌리면 다시 보인다. 운영자(관리자 화면)에는 그대로 보인다.
+
+-- 1) 담당자 함수: 의뢰가 '완료'되면 강사 목록·파일을 더 이상 돌려주지 않는다 ---------------------
+drop function if exists public.my_request_matches(bigint);
+create function public.my_request_matches(p_request_id bigint)
+returns table (
+  match_id bigint, status text, chosen boolean,
+  name text, fields text[], regions text[], method text,
+  career text, certificates text, intro text,
+  file_name text, has_file boolean, plan_name text, has_plan boolean,
+  phone text, email text,
+  applied boolean, apply_message text
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select m.id, m.status, m.org_chosen_at is not null,
+         coalesce(mb.name, ai.name),
+         coalesce(p.fields, ai.fields, '{}'::text[]), coalesce(p.regions, ai.regions, '{}'::text[]),
+         coalesce(p.method, 'file'),
+         p.career, p.certificates, p.intro,
+         coalesce(p.file_name, m.apply_profile_name, ai.file_name),
+         case when m.member_id is not null then ((p.method = 'file' and p.file_path is not null) or m.apply_profile_path is not null)
+              else ai.file_path is not null end,
+         m.plan_name, m.plan_path is not null,
+         case when m.status = '확정' then coalesce(mb.phone, ai.phone) end,
+         case when m.status = '확정' then coalesce(mb.email, ai.email) end,
+         m.applied_at is not null, m.apply_message
+  from public.request_matches m
+  join public.instructor_requests r on r.id = m.request_id
+  left join public.instructor_profiles p on p.member_id = m.member_id
+  left join public.members mb on mb.id = m.member_id
+  left join public.admin_instructors ai on ai.id = m.instructor_id
+  where m.request_id = p_request_id
+    and r.requester_id = (select auth.uid())
+    and r.org_verified_at is not null
+    and r.status <> '완료'
+    and (p.member_id is not null or ai.id is not null or m.applied_at is not null)
+  order by m.id;
+$$;
+revoke execute on function public.my_request_matches(bigint) from public, anon;
+grant execute on function public.my_request_matches(bigint) to authenticated;
+
+drop function if exists public.my_match_file(bigint, text);
+create function public.my_match_file(p_match_id bigint, p_kind text)
+returns table (bucket text, path text, file_name text, instructor_name text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case when p_kind = 'plan' then 'request-files'
+              when p.file_path is not null then 'instructor-profiles'
+              when m.apply_profile_path is not null then 'request-files'
+              else 'instructor-profiles' end,
+         case when p_kind = 'plan' then m.plan_path else coalesce(p.file_path, m.apply_profile_path, ai.file_path) end,
+         case when p_kind = 'plan' then m.plan_name else coalesce(p.file_name, m.apply_profile_name, ai.file_name) end,
+         coalesce(mb.name, ai.name)
+  from public.request_matches m
+  join public.instructor_requests r on r.id = m.request_id
+  left join public.instructor_profiles p on p.member_id = m.member_id
+  left join public.members mb on mb.id = m.member_id
+  left join public.admin_instructors ai on ai.id = m.instructor_id
+  where m.id = p_match_id
+    and p_kind in ('plan', 'profile')
+    and r.requester_id = (select auth.uid())
+    and r.org_verified_at is not null
+    and r.status <> '완료'
+    and (case when p_kind = 'plan' then m.plan_path else coalesce(p.file_path, m.apply_profile_path, ai.file_path) end) is not null;
+$$;
+revoke execute on function public.my_match_file(bigint, text) from public, anon;
+grant execute on function public.my_match_file(bigint, text) to authenticated;
+
+-- Supabase에게 바뀐 함수를 알리기
 notify pgrst, 'reload schema';
 
 
