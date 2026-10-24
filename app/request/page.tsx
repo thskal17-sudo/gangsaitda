@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { MembersOnlyNotice } from "@/components/job-detail";
 import MemberTypeNotice from "@/components/member-type-notice";
 import { getCurrentMember, getMemberType } from "@/lib/member";
@@ -10,7 +11,7 @@ export const metadata: Metadata = { title: "강사섭외" };
  * 강사섭외 의뢰서. 학교·기관 담당자가 **기관 담당자로 회원가입한 뒤** 보낸다.
  * 비회원에게는 의뢰서 대신 가입·로그인 안내를 보여주고, 가입·로그인하면 이 화면으로 돌아온다.
  * 강사 회원에게는 의뢰서 대신 '기관 담당자 전용' 안내를 보여준다.
- * 회사소개서 PDF 는 비회원도 내려받을 수 있다.
+ * 활용설명서(/guide) 칸은 모두에게 보이지만, 설명서 자체는 기관 담당자 회원만 연다.
  */
 export default async function RequestPage() {
   const member = await getCurrentMember();
@@ -24,21 +25,22 @@ export default async function RequestPage() {
         <br />
         확인한 뒤 담당자 연락처로 연락드립니다.
       </p>
-      {/* 회사소개서: 담당자가 내부 보고용으로 내려받는다 (public/gangsaitda-company-intro.pdf) */}
-      <a
-        href="/gangsaitda-company-intro.pdf"
-        download="gangsaitda-company-intro.pdf"
+      {/* 활용설명서: 기관 담당자 회원만 본다 (/guide). 나머지에게는 가입하면 볼 수 있다는 안내 */}
+      <Link
+        href="/guide"
         className="group mt-5 flex items-center gap-4 rounded-card bg-white p-5 transition-transform duration-150 active:scale-[0.98]"
       >
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-brand/10 text-brand">
-          <DownloadIcon />
+          <BookIcon />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[16px] font-bold tracking-tight text-ink">강사잇다 회사소개서</span>
-          <span className="nums mt-0.5 block text-[13px] text-muted">PDF · 12쪽 · 3.2MB</span>
+          <span className="block text-[16px] font-bold tracking-tight text-ink">강사잇다 활용설명서</span>
+          <span className="mt-0.5 block text-[13px] text-muted">
+            {memberType === "기관" ? "의뢰부터 강사 고르기, 확정까지 순서대로" : "기관 담당자 회원만 볼 수 있어요"}
+          </span>
         </span>
-        <span className="shrink-0 text-sm font-semibold text-brand group-hover:underline">내려받기</span>
-      </a>
+        <span className="shrink-0 text-sm font-semibold text-brand group-hover:underline">보기</span>
+      </Link>
       <div className="mt-5">
         {member && memberType === "강사" ? (
           <MemberTypeNotice need="기관" />
@@ -57,7 +59,7 @@ export default async function RequestPage() {
   );
 }
 
-function DownloadIcon() {
+function BookIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -69,7 +71,8 @@ function DownloadIcon() {
       className="h-5 w-5"
       aria-hidden="true"
     >
-      <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+      <path d="M4 20.5V5.5M8 7h8M8 11h6" />
     </svg>
   );
 }

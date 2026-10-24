@@ -47,9 +47,14 @@ export default function SiteFooter({ isMember, memberType }: { isMember: boolean
               </Link>
             )}
             {memberType !== "강사" && (
-              <Link href="/account/requests" className="hover:text-ink hover:underline">
-                내 의뢰
-              </Link>
+              <>
+                <Link href="/account/requests" className="hover:text-ink hover:underline">
+                  내 의뢰
+                </Link>
+                <Link href="/guide" className="hover:text-ink hover:underline">
+                  활용설명서
+                </Link>
+              </>
             )}
             <Link href="/account/sms" className="hover:text-ink hover:underline">
               문자 수신 설정
