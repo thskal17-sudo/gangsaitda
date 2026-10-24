@@ -196,3 +196,35 @@ export function MembersOnlyNotice({
     </section>
   );
 }
+
+/** 기관이 강사잇다에 직접 올린 공고 표시 */
+export function FromRequestBadge() {
+  return <span className="shrink-0 rounded-badge bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">강사잇다 모집</span>;
+}
+
+/**
+ * 기관이 직접 올린 공고의 지원 방법. 담당자 연락처는 공개하지 않고 강사잇다가 지원을 받는다.
+ * 지금은 '내 프로필 등록 → 운영자가 기관에 전달'. (다음 단계: 이 화면에서 바로 지원하기)
+ */
+export function PostingApply({ memberType }: { memberType: "강사" | "기관" | null }) {
+  return (
+    <div className="mt-5 border-t border-line pt-5">
+      <h2 className="text-sm font-bold text-ink">지원 방법</h2>
+      <p className="mt-2 text-sm leading-relaxed text-ink">
+        이 공고는 기관이 강사잇다에 직접 올렸어요. <b>지원은 강사잇다가 받아요.</b>
+        <br />
+        내 프로필을 등록해 두면 운영자가 공고에 맞는 강사님을 기관에 전달하고, 기관이 고르면 연락드려요. 연락처는 섭외가 확정된 뒤에만 기관에 알려요.
+      </p>
+      {memberType === "기관" ? (
+        <p className="mt-3 rounded-control bg-bg px-4 py-3 text-sm text-muted">강사 회원만 지원할 수 있어요.</p>
+      ) : (
+        <Link
+          href="/account/profile"
+          className="mt-3 flex h-14 items-center justify-center rounded-control bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand/90"
+        >
+          내 프로필 등록하고 지원하기
+        </Link>
+      )}
+    </div>
+  );
+}

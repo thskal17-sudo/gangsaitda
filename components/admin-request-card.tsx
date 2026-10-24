@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { type AdminRequest, formatPhone } from "@/lib/admin-requests";
+import { type AdminPosting, type AdminRequest, formatPhone } from "@/lib/admin-requests";
 import { formatKoreanDate } from "@/lib/date";
 import type { RequestStatus } from "@/lib/request-status";
 
@@ -15,10 +15,13 @@ export const STATUS_STYLE: Record<RequestStatus, string> = {
 export default function RequestCard({
   request: r,
   today,
+  posting,
   children,
 }: {
   request: AdminRequest;
   today: string;
+  /** 담당자가 낸 모집 공고 상태 (목록에서만 넘긴다) */
+  posting?: Pick<AdminPosting, "status" | "closed">;
   /** 카드 맨 아래에 붙일 내용 (처리 상태 버튼, 추천 강사 요약 등) */
   children?: ReactNode;
 }) {
@@ -40,6 +43,13 @@ export default function RequestCard({
           {r.verifiedDate ? "기관 확인됨" : "기관 확인 전"}
         </span>
         {r.moreRequested && <span className="rounded-badge bg-warn px-2.5 py-0.5 text-[12px] font-semibold text-white">다른 강사 요청</span>}
+        {posting?.status === "검토 중" && <span className="rounded-badge bg-accent px-2.5 py-0.5 text-[12px] font-semibold text-white">공고 검토 요청</span>}
+        {posting?.status === "승인" && (
+          <span className={`rounded-badge px-2.5 py-0.5 text-[12px] font-semibold ${posting.closed ? "bg-bg text-muted" : "bg-ok/10 text-ok"}`}>
+            {posting.closed ? "공고 마감함" : "공고 게시 중"}
+          </span>
+        )}
+        {posting?.status === "반려" && <span className="rounded-badge bg-warn/10 px-2.5 py-0.5 text-[12px] font-semibold text-warn">공고 반려함</span>}
         <span className="nums">
           {r.receivedDate === today ? "오늘" : formatKoreanDate(r.receivedDate)} 받음 · {r.id}번
         </span>

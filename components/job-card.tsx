@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FromRequestBadge } from "@/components/job-detail";
 import { daysBetween, formatKoreanDate } from "@/lib/date";
 import type { Job, JobTitle } from "@/lib/jobs";
 
@@ -42,7 +43,10 @@ export default function JobCard({ job, today }: { job: Job | JobTitle; today: st
       <article className="flex h-full flex-col rounded-card bg-white p-5 transition-transform duration-150 group-active:scale-[0.98]">
         {summary && (
           <div className="mb-1.5 flex items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-[13px] font-medium text-muted">{summary.organization}</p>
+            <p className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-muted">
+              {summary.fromRequest && <FromRequestBadge />}
+              <span className="truncate">{summary.organization}</span>
+            </p>
             <DeadlineBadge daysLeft={daysBetween(today, summary.deadline)} />
           </div>
         )}

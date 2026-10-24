@@ -5,7 +5,7 @@ import RequestCard from "@/components/admin-request-card";
 import RequestStatusButtons from "@/components/admin-request-status";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin } from "@/lib/admin";
-import { getAllRequests, getMatchCounts } from "@/lib/admin-requests";
+import { getAllRequests, getMatchCounts, getPostingStatuses } from "@/lib/admin-requests";
 import { todayInSeoul } from "@/lib/date";
 import { REQUEST_STATUSES, type RequestStatus, isRequestStatus } from "@/lib/request-status";
 
@@ -20,7 +20,8 @@ export default async function AdminRequestsPage({ searchParams }: PageProps<"/ad
   const filter = isRequestStatus(params.status) ? params.status : null;
 
   const today = todayInSeoul();
-  const [requests, matchCounts] = await Promise.all([getAllRequests(), getMatchCounts()]);
+  const [requests, matchCounts, postings] = await Promise.all([getAllRequests(), getMatchCounts(), getPostingStatuses()]);
+  const reviewCount = [...postings.values()].filter((p) => p.status === "검토 중").length;
   const shown = filter ? requests.filter((r) => r.status === filter) : requests;
   const count = (s: RequestStatus) => requests.filter((r) => r.status === s).length;
 
@@ -43,6 +44,11 @@ export default async function AdminRequestsPage({ searchParams }: PageProps<"/ad
       {params.failed && (
         <p role="alert" className="mt-4 rounded-card bg-warn/8 px-5 py-4 text-[15px] font-semibold text-warn">
           처리 상태를 바꾸지 못했어요. 잠시 뒤에 다시 시도해 주세요.
+        </p>
+      )}
+      {reviewCount > 0 && (
+        <p role="status" className="mt-4 rounded-card bg-accent/10 px-5 py-4 text-[15px] font-semibold text-accent">
+          기관이 낸 모집 공고 <span className="nums">{reviewCount}</span>건이 검토를 기다려요. 아래 &lsquo;공고 검토 요청&rsquo; 표시가 붙은 의뢰의 &lsquo;추천 강사 관리&rsquo;에서 승인하거나 반려해 주세요.
         </p>
       )}
 
@@ -85,8 +91,9 @@ export default async function AdminRequestsPage({ searchParams }: PageProps<"/ad
         <ul className="mt-3 flex flex-col gap-3">
           {shown.map((r) => {
             const m = matchCounts.get(r.id);
+            const posting = postings.get(r.id);
             return (
-              <RequestCard key={r.id} request={r} today={today}>
+              <RequestCard key={r.id} request={r} today={today} posting={posting}>
                 <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="md:w-[360px]">
                     <RequestStatusButtons id={r.id} status={r.status} />

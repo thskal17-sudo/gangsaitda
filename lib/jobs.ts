@@ -21,6 +21,8 @@ export type Job = JobTitle & {
   region: string;
   /** 마감일 (한국 날짜). 예: "2026-09-25" */
   deadline: string;
+  /** 기관 담당자가 강사잇다에 직접 올린 공고 (운영자 승인). 지원은 강사잇다가 받는다 */
+  fromRequest?: boolean;
 };
 
 /**
@@ -63,10 +65,10 @@ type DetailRow = {
   documents: string | null;
   apply_url: string | null;
   apply_email: string | null;
-  jobs: { title: string } | null;
+  jobs: { title: string; request_id?: number | null } | null;
 };
 
-const SUMMARY_COLUMNS = "job_id, organization, region, deadline, jobs!inner(title)";
+const SUMMARY_COLUMNS = "job_id, organization, region, deadline, jobs!inner(title, request_id)";
 
 /** 공고 번호는 숫자만 받는다. 엉뚱한 주소(/jobs/abc)는 데이터베이스에 묻지 않고 '없음'으로 본다. */
 function toJobId(id: string): number | null {
@@ -86,6 +88,7 @@ function toSummary(row: Pick<DetailRow, "job_id" | "organization" | "region" | "
     organization: row.organization,
     region: row.region,
     deadline: row.deadline,
+    fromRequest: row.jobs?.request_id != null,
   };
 }
 
@@ -161,7 +164,7 @@ export async function getJobDetail(id: string): Promise<JobDetail | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("job_details")
-    .select("*, jobs!inner(title)")
+    .select("*, jobs!inner(title, request_id)")
     .eq("job_id", jobId)
     .maybeSingle();
   if (error) fail("상세", error);

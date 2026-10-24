@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { ChooseButton, MoreForm } from "@/components/my-request-buttons";
+import { ChooseButton, ClosePostingButton, MoreForm } from "@/components/my-request-buttons";
 import NotFoundCard from "@/components/not-found-card";
 import { formatPhone } from "@/lib/admin-requests";
 import { formatKoreanDate } from "@/lib/date";
 import type { MatchStatus } from "@/lib/match-status";
 import { getCurrentMember } from "@/lib/member";
+import { type MyPosting, getMyPosting } from "@/lib/my-postings";
 import { type MyMatch, getMyRequest, getMyRequestMatches } from "@/lib/my-requests";
 
 export const metadata: Metadata = { title: "추천 강사", robots: { index: false, follow: false } };
@@ -19,6 +20,9 @@ const NOTICES: Record<string, { ok: boolean; text: string }> = {
   "done=more": { ok: true, text: "다른 강사를 찾아 달라고 전했어요. 새 강사님이 추천되면 이 화면에 보여요." },
   "failed=choose": { ok: false, text: "강사님을 고르지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
   "failed=more": { ok: false, text: "요청을 보내지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
+  "done=posting": { ok: true, text: "모집 공고를 냈어요. 운영자가 검토한 뒤 공고 목록에 올려 드릴게요." },
+  "done=closed": { ok: true, text: "모집을 마감했어요. 공고가 목록에서 내려갔어요." },
+  "failed=close": { ok: false, text: "모집을 마감하지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
 };
 
 /** 기관에 보여 줄 진행 상태 (운영자 상태를 기관 말로) */
@@ -34,6 +38,7 @@ const STATUS_LABEL: Partial<Record<MatchStatus, { text: string; className: strin
  * - 추천 강사마다 프로필(작성한 내용 또는 파일)과 강의계획서를 보고 '이 강사님으로 할게요'를 누른다 (여러 명, 취소 가능).
  * - 마음에 드는 강사가 없으면 '다른 강사를 원해요' + 한 줄 의견.
  * - 강사 연락처는 운영자가 '섭외 확정'으로 바꾼 강사만 보인다.
+ * - 강사 모집 공고: 의뢰마다 하나 쓸 수 있다 (운영자 검토 뒤 공고 목록에 게시). 승인된 공고는 '모집 마감'으로 내린다.
  */
 export default async function MyRequestPage({ params, searchParams }: PageProps<"/account/requests/[id]">) {
   await connection();
@@ -51,7 +56,7 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
       />
     );
   }
-  const matches = request.verified ? await getMyRequestMatches(request.id) : [];
+  const [matches, posting] = await Promise.all([request.verified ? getMyRequestMatches(request.id) : [], getMyPosting(request.id)]);
   const open = matches.filter((m) => m.status !== "불발");
 
   const sp = await searchParams;
@@ -99,6 +104,8 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
         </dl>
       </details>
 
+      <PostingCard requestId={request.id} posting={posting} />
+
       {!request.verified ? (
         <div className="mt-4 rounded-card bg-white p-6 text-center">
           <p className="text-[17px] font-bold text-ink">운영자가 의뢰를 확인하고 있어요</p>
@@ -143,6 +150,81 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
         </>
       )}
     </section>
+  );
+}
+
+/** 강사 모집 공고 칸: 아직 안 썼으면 쓰기 안내, 썼으면 검토 상태와 할 수 있는 일 */
+function PostingCard({ requestId, posting }: { requestId: string; posting: MyPosting | null }) {
+  const writeHref = `/account/requests/${requestId}/posting`;
+  const linkClass = "flex h-11 items-center justify-center rounded-control px-4 text-[14px] font-semibold transition-colors";
+
+  if (!posting) {
+    return (
+      <div className="mt-4 flex flex-col gap-3 rounded-card bg-white p-5 md:flex-row md:items-center md:justify-between md:p-6">
+        <div>
+          <h2 className="text-[17px] font-bold text-ink">강사 모집 공고도 올려 보세요</h2>
+          <p className="mt-1 text-[14px] leading-relaxed text-muted">
+            공고 목록에 올라가 더 많은 강사님이 볼 수 있어요. 운영자가 검토한 뒤 올려 드려요.
+          </p>
+        </div>
+        <Link href={writeHref} className={`${linkClass} shrink-0 bg-brand text-white hover:bg-brand/90`}>
+          공고 쓰기
+        </Link>
+      </div>
+    );
+  }
+
+  const badge =
+    posting.status === "승인"
+      ? posting.closed
+        ? { text: "모집 마감함", className: "bg-bg text-muted" }
+        : { text: "공고 게시 중", className: "bg-ok text-white" }
+      : posting.status === "반려"
+        ? { text: "반려됨", className: "bg-warn text-white" }
+        : { text: "운영자 검토 중", className: "bg-brand/10 text-brand" };
+
+  return (
+    <div className="mt-4 rounded-card bg-white p-5 md:p-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-[17px] font-bold text-ink">강사 모집 공고</h2>
+        <span className={`rounded-badge px-2.5 py-0.5 text-[12px] font-semibold ${badge.className}`}>{badge.text}</span>
+      </div>
+      <p className="mt-1.5 text-[15px] font-semibold text-ink">{posting.values.title}</p>
+      <p className="nums mt-0.5 text-[13px] text-muted">
+        지원 마감 {formatKoreanDate(posting.values.deadline)} · {formatKoreanDate(posting.submittedDate)} 냄
+        {posting.reviewedDate && ` · ${formatKoreanDate(posting.reviewedDate)} 처리`}
+      </p>
+
+      {posting.status === "반려" && (
+        <p className="mt-3 rounded-control bg-warn/8 px-4 py-3 text-[14px] leading-relaxed text-warn">
+          <b>운영자가 이렇게 알려 왔어요:</b> {posting.reviewNote ?? "내용을 다시 확인해 주세요."}
+        </p>
+      )}
+      {posting.status === "검토 중" && (
+        <p className="mt-3 text-[14px] leading-relaxed text-muted">운영자가 내용을 확인하고 있어요. 승인되면 공고 목록에 올라가요.</p>
+      )}
+      {posting.status === "승인" && !posting.closed && (
+        <p className="mt-3 text-[14px] leading-relaxed text-muted">
+          공고 목록에 올라가 있어요. 지원은 강사잇다가 받아 이 화면의 추천 강사로 전달해 드려요. 내용을 고치려면 운영자에게 알려 주세요.
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {posting.status === "승인" && !posting.closed && (
+          <>
+            <Link href={`/jobs/${posting.jobId}`} className={`${linkClass} bg-brand/10 text-brand hover:bg-brand/15`}>
+              올라간 공고 보기
+            </Link>
+            <ClosePostingButton requestId={requestId} />
+          </>
+        )}
+        {posting.status !== "승인" && (
+          <Link href={writeHref} className={`${linkClass} bg-brand text-white hover:bg-brand/90`}>
+            {posting.status === "반려" ? "고쳐서 다시 내기" : "내용 고치기"}
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }
 

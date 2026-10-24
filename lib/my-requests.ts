@@ -31,6 +31,12 @@ export type MyRequest = {
   matchCount: number;
   chosenCount: number;
   confirmedCount: number;
+  /** 강사 모집 공고를 썼으면 그 상태 (검토 중 · 승인 · 반려). 안 썼으면 없음 */
+  postingStatus?: "검토 중" | "승인" | "반려";
+  /** 승인되어 올라간 공고 번호 */
+  postingJobId?: string;
+  /** 담당자가 모집을 마감했다 */
+  postingClosed: boolean;
 };
 
 type RequestRow = {
@@ -52,6 +58,9 @@ type RequestRow = {
   match_count: number;
   chosen_count: number;
   confirmed_count: number;
+  posting_status: string | null;
+  posting_job_id: number | null;
+  posting_closed: boolean;
 };
 
 /** 내가 보낸 의뢰 — 최근에 보낸 순 */
@@ -78,6 +87,10 @@ export async function getMyRequests(): Promise<MyRequest[]> {
     matchCount: r.match_count,
     chosenCount: r.chosen_count,
     confirmedCount: r.confirmed_count,
+    postingStatus:
+      r.posting_status === "검토 중" || r.posting_status === "승인" || r.posting_status === "반려" ? r.posting_status : undefined,
+    postingJobId: r.posting_job_id === null ? undefined : String(r.posting_job_id),
+    postingClosed: r.posting_closed,
   }));
 }
 
