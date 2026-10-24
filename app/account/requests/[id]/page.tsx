@@ -118,10 +118,10 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
       ) : (
         <>
           <h2 className="mt-8 text-[20px] font-bold tracking-tight text-ink">
-            추천 강사 <span className="nums text-brand">{open.length}</span>명
+            추천·지원 강사 <span className="nums text-brand">{open.length}</span>명
           </h2>
           <p className="mt-1 text-[14px] text-muted">
-            프로필과 강의계획서를 보고 마음에 드는 강사님을 골라 주세요. 여러 명 고를 수 있어요.
+            운영자가 추천한 강사님과 공고를 보고 직접 지원한 강사님이에요. 프로필과 강의계획서를 보고 마음에 드는 강사님을 골라 주세요. 여러 명 고를 수 있어요.
             <br />
             강사님 연락처는 섭외가 확정되면 보여요.
           </p>
@@ -237,14 +237,22 @@ function MatchCard({ requestId, match: m }: { requestId: string; match: MyMatch 
     <li className={`rounded-card bg-white p-5 md:p-6 ${closed ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[19px] font-bold tracking-tight text-ink">{m.name} 강사님</span>
+        {m.applied && <span className="rounded-badge bg-ok/10 px-2.5 py-0.5 text-[12px] font-semibold text-ok">직접 지원</span>}
         {m.chosen && !closed && <span className="rounded-badge bg-brand px-2.5 py-0.5 text-[12px] font-semibold text-white">내가 고른 강사</span>}
         {label && <span className={`rounded-badge px-2.5 py-0.5 text-[12px] font-semibold ${label.className}`}>{label.text}</span>}
       </div>
-      <p className="mt-1 text-[14px] text-ink">
-        {m.fields.join(" · ")}
-        <span className="mx-1.5 text-line">|</span>
-        <span className="text-muted">{m.regions.join(" · ")}</span>
-      </p>
+      {m.fields.length > 0 && (
+        <p className="mt-1 text-[14px] text-ink">
+          {m.fields.join(" · ")}
+          <span className="mx-1.5 text-line">|</span>
+          <span className="text-muted">{m.regions.join(" · ")}</span>
+        </p>
+      )}
+      {m.applyMessage && (
+        <p className="mt-2 rounded-control bg-ok/10 px-4 py-3 text-[14px] leading-relaxed text-ink">
+          <b className="text-ok">강사님의 한마디</b> &ldquo;{m.applyMessage}&rdquo;
+        </p>
+      )}
 
       {m.method === "form" ? (
         <div className="mt-4 flex flex-col gap-3 rounded-control bg-bg p-4 text-[14px] leading-relaxed text-ink">

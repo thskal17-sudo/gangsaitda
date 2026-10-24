@@ -54,11 +54,11 @@ export function RemoveMatchButton({ requestId, matchId, name }: { requestId: str
   );
 }
 
-/** 진행 상태: 추천 · 검토 중 · 연락 중 · 확정 · 불발. 지금 상태가 칠해져 있고, 다른 상태를 누르면 바뀐다. */
+/** 진행 상태: (지원) · 추천 · 검토 중 · 연락 중 · 확정 · 불발. 지금 상태가 칠해져 있고, 다른 상태를 누르면 바뀐다. '지원'은 처음 상태라 되돌릴 수 없다. */
 export function MatchStatusButtons({ requestId, matchId, status }: { requestId: string; matchId: string; status: MatchStatus }) {
   return (
     <div role="group" aria-label="진행 상태 바꾸기" className="flex gap-1 overflow-x-auto rounded-control bg-bg p-1">
-      {MATCH_STATUSES.map((s) => (
+      {MATCH_STATUSES.filter((s) => s !== "지원" || s === status).map((s) => (
         <form key={s} action={setMatchStatus.bind(null, requestId, matchId, s)} className="flex-1">
           <StatusButton label={s} current={s === status} />
         </form>

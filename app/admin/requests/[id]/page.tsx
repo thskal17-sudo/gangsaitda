@@ -10,7 +10,7 @@ import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import NotFoundCard from "@/components/not-found-card";
 import { checkAdmin } from "@/lib/admin";
 import { getAllProfiles } from "@/lib/admin-profiles";
-import { getMatches, getPosting, getRequest } from "@/lib/admin-requests";
+import { getMatches, getMemberNames, getPosting, getRequest } from "@/lib/admin-requests";
 import { formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { MATCH_STATUS_STYLE } from "@/lib/match-status";
 import { PROFILE_FIELDS, PROFILE_REGIONS } from "@/lib/profile-schema";
@@ -70,6 +70,8 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
 
   const [matches, profiles, posting] = await Promise.all([getMatches(request.id), getAllProfiles(), getPosting(request.id)]);
   const profileOf = new Map(profiles.map((p) => [p.memberId, p]));
+  // 프로필 없이 직접 지원한 강사는 이름을 회원 표에서 가져온다
+  const names = await getMemberNames(matches.filter((m) => m.applied && !profileOf.has(m.memberId)).map((m) => m.memberId));
   const matched = new Set(matches.map((m) => m.memberId));
   // 강사 고르기: 아직 추천하지 않은 강사만. 지역으로 거를 때 '전국구' 강사는 어느 지역에나 함께 나온다.
   const candidates = profiles.filter(
@@ -206,22 +208,28 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
           <ul className="mt-1 divide-y divide-line">
             {matches.map((m) => {
               const p = profileOf.get(m.memberId);
-              if (!p) return null; // 프로필을 지운 강사는 데이터베이스가 추천 줄도 함께 지운다
-              return (
-                <ProfileRow
-                  key={m.id}
-                  profile={p}
-                  badge={
-                    <>
-                      <span className={`rounded-badge px-2 py-0.5 text-[11px] font-semibold ${MATCH_STATUS_STYLE[m.status]}`}>
-                        {m.status}
-                      </span>
-                      {m.chosen && (
-                        <span className="rounded-badge bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">기관 선택</span>
-                      )}
-                    </>
-                  }
-                >
+              const badge = (
+                <>
+                  {m.applied && <span className="rounded-badge bg-ok/10 px-2 py-0.5 text-[11px] font-semibold text-ok">직접 지원</span>}
+                  <span className={`rounded-badge px-2 py-0.5 text-[11px] font-semibold ${MATCH_STATUS_STYLE[m.status]}`}>{m.status}</span>
+                  {m.chosen && <span className="rounded-badge bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">기관 선택</span>}
+                </>
+              );
+              const controls = (
+                <>
+                  {m.applyMessage && (
+                    <p className="mb-2 rounded-control bg-ok/10 px-3 py-2 text-[13px] leading-relaxed text-ink">
+                      <b className="text-ok">지원하며 남긴 말</b> &ldquo;{m.applyMessage}&rdquo;
+                    </p>
+                  )}
+                  {m.applyProfileName && (
+                    <p className="mb-2 flex flex-wrap items-center gap-2 rounded-control bg-bg px-3 py-2 text-[14px]">
+                      <span className="font-semibold text-muted">지원 프로필 파일</span>
+                      <a href={`${basePath}/plan/${m.id}?kind=profile`} className="min-w-0 max-w-[260px] truncate font-semibold text-brand hover:underline">
+                        {m.applyProfileName}
+                      </a>
+                    </p>
+                  )}
                   <PlanUpload requestId={request.id} matchId={m.id} planName={m.planName} />
                   <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center">
                     <div className="min-w-0 md:w-[420px]">
@@ -229,10 +237,29 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
                     </div>
                     <div className="flex items-center gap-3 md:ml-auto">
                       <span className="nums text-[12px] text-muted">{formatKoreanDate(m.updatedDate)} 바꿈</span>
-                      <RemoveMatchButton requestId={request.id} matchId={m.id} name={p.name} />
+                      <RemoveMatchButton requestId={request.id} matchId={m.id} name={p?.name ?? names.get(m.memberId) ?? "이"} />
                     </div>
                   </div>
-                </ProfileRow>
+                </>
+              );
+              if (p) {
+                return (
+                  <ProfileRow key={m.id} profile={p} badge={badge}>
+                    {controls}
+                  </ProfileRow>
+                );
+              }
+              // 프로필 없이 직접 지원한 강사 (올린 파일로 본다). 프로필을 지운 추천 강사는 데이터베이스가 줄도 함께 지운다.
+              if (!m.applied) return null;
+              return (
+                <li key={m.id} className="py-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[16px] font-bold text-ink">{names.get(m.memberId) ?? "이름 없음"}</span>
+                    <span className="rounded-badge bg-bg px-2 py-0.5 text-[11px] font-semibold text-muted">프로필 미등록 · 파일로 지원</span>
+                    {badge}
+                  </div>
+                  <div className="mt-3">{controls}</div>
+                </li>
               );
             })}
           </ul>

@@ -104,7 +104,9 @@ export default async function AdminRequestsPage({ searchParams }: PageProps<"/ad
                   >
                     추천 강사 관리
                     <span className="nums font-medium text-brand/80">
-                      {m ? `${m.total}명${m.chosen ? ` · 기관 선택 ${m.chosen}` : ""}${m.confirmed ? ` · 확정 ${m.confirmed}` : ""}` : "아직 없음"}
+                      {m
+                        ? `${m.total}명${m.applied ? ` · 지원 ${m.applied}` : ""}${m.chosen ? ` · 기관 선택 ${m.chosen}` : ""}${m.confirmed ? ` · 확정 ${m.confirmed}` : ""}`
+                        : "아직 없음"}
                     </span>
                     →
                   </Link>

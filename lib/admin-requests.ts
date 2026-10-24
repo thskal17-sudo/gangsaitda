@@ -108,8 +108,13 @@ export type AdminMatch = {
   updatedDate: string;
   /** 기관 담당자가 '이 강사님으로 할게요'를 눌렀다 */
   chosen: boolean;
-  /** 운영자가 올린 강의계획서 원래 이름. 없으면 없음 */
+  /** 강의계획서 원래 이름 (운영자가 올렸거나 지원자가 올림). 없으면 없음 */
   planName?: string;
+  /** 강사가 공고에서 직접 지원했다 */
+  applied: boolean;
+  applyMessage?: string;
+  /** 지원하면서 올린 프로필 파일 이름 */
+  applyProfileName?: string;
 };
 
 type MatchRow = {
@@ -122,6 +127,10 @@ type MatchRow = {
   org_chosen_at: string | null;
   plan_path: string | null;
   plan_name: string | null;
+  applied_at: string | null;
+  apply_message: string | null;
+  apply_profile_path: string | null;
+  apply_profile_name: string | null;
 };
 
 /** 의뢰 하나의 추천 강사 — 먼저 붙인 순 */
@@ -129,7 +138,7 @@ export async function getMatches(requestId: string): Promise<AdminMatch[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("request_matches")
-    .select("id, request_id, member_id, instructor_id, status, updated_at, org_chosen_at, plan_path, plan_name")
+    .select("id, request_id, member_id, instructor_id, status, updated_at, org_chosen_at, plan_path, plan_name, applied_at, apply_message, apply_profile_path, apply_profile_name")
     .eq("request_id", Number(requestId))
     .order("id");
   if (error) throw new Error(`추천 강사를 불러오지 못했습니다: ${error.message}`);
@@ -140,21 +149,36 @@ export async function getMatches(requestId: string): Promise<AdminMatch[]> {
     updatedDate: seoulDateOf(m.updated_at),
     chosen: Boolean(m.org_chosen_at),
     planName: m.plan_path ? m.plan_name || "강의계획서" : undefined,
+    applied: m.applied_at !== null,
+    applyMessage: m.apply_message?.trim() || undefined,
+    applyProfileName: m.apply_profile_path ? m.apply_profile_name || "프로필 파일" : undefined,
   }));
 }
 
-/** 의뢰 번호 → 추천 강사 수 (목록 카드에 '추천 3명 · 확정 1명'으로 보여 준다) */
-export async function getMatchCounts(): Promise<Map<string, { total: number; confirmed: number; chosen: number }>> {
+/** 회원번호 → 이름 (프로필 없이 직접 지원한 강사의 이름을 보여 줄 때). 관리자만 회원 정보를 읽을 수 있다. */
+export async function getMemberNames(ids: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (ids.length === 0) return map;
   const supabase = await createClient();
-  const { data, error } = await supabase.from("request_matches").select("request_id, status, org_chosen_at");
+  const { data, error } = await supabase.from("members").select("id, name").in("id", ids);
+  if (error) throw new Error(`회원 이름을 불러오지 못했습니다: ${error.message}`);
+  for (const r of data as { id: string; name: string }[]) map.set(r.id, r.name);
+  return map;
+}
+
+/** 의뢰 번호 → 추천·지원 강사 수 (목록 카드에 '3명 · 지원 1 · 확정 1'로 보여 준다) */
+export async function getMatchCounts(): Promise<Map<string, { total: number; confirmed: number; chosen: number; applied: number }>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("request_matches").select("request_id, status, org_chosen_at, applied_at");
   if (error) throw new Error(`추천 강사를 불러오지 못했습니다: ${error.message}`);
-  const counts = new Map<string, { total: number; confirmed: number; chosen: number }>();
-  for (const m of data as Pick<MatchRow, "request_id" | "status" | "org_chosen_at">[]) {
+  const counts = new Map<string, { total: number; confirmed: number; chosen: number; applied: number }>();
+  for (const m of data as Pick<MatchRow, "request_id" | "status" | "org_chosen_at" | "applied_at">[]) {
     const key = String(m.request_id);
-    const c = counts.get(key) ?? { total: 0, confirmed: 0, chosen: 0 };
+    const c = counts.get(key) ?? { total: 0, confirmed: 0, chosen: 0, applied: 0 };
     c.total += 1;
     if (m.status === "확정") c.confirmed += 1;
     if (m.org_chosen_at) c.chosen += 1;
+    if (m.applied_at) c.applied += 1;
     counts.set(key, c);
   }
   return counts;
@@ -166,17 +190,33 @@ export function formatPhone(digits: string): string {
   return digits.replace(/^(0\d{2})(\d{3,4})(\d{4})$/, "$1-$2-$3");
 }
 
-/** 강의계획서를 잠깐(1분)만 열리는 주소로. 내려받을 때 '강사이름_원래이름'. 관리자가 아니면 저장소가 내주지 않아 null. */
-export async function getPlanFileUrl(requestId: string, matchId: string): Promise<string | null> {
+/**
+ * 추천·지원 강사의 파일(강의계획서, 또는 지원하면서 올린 프로필 파일)을 잠깐(1분)만 열리는 주소로.
+ * 내려받을 때 '강사이름_원래이름'. 관리자가 아니면 저장소가 내주지 않아 null.
+ */
+export async function getPlanFileUrl(requestId: string, matchId: string, kind: "plan" | "profile" = "plan"): Promise<string | null> {
   if (!/^\d{1,15}$/.test(requestId) || !/^\d{1,15}$/.test(matchId)) return null;
   const supabase = await createClient();
   const { data: row } = await supabase
     .from("request_matches")
-    .select("plan_path, plan_name, member_id, instructor_id")
+    .select("plan_path, plan_name, apply_profile_path, apply_profile_name, member_id, instructor_id")
     .eq("id", Number(matchId))
     .eq("request_id", Number(requestId))
     .maybeSingle();
-  const r = row as { plan_path: string | null; plan_name: string | null; member_id: string | null; instructor_id: string | null } | null;
+  const raw = row as {
+    plan_path: string | null;
+    plan_name: string | null;
+    apply_profile_path: string | null;
+    apply_profile_name: string | null;
+    member_id: string | null;
+    instructor_id: string | null;
+  } | null;
+  const r = raw && {
+    plan_path: kind === "plan" ? raw.plan_path : raw.apply_profile_path,
+    plan_name: kind === "plan" ? raw.plan_name : raw.apply_profile_name,
+    member_id: raw.member_id,
+    instructor_id: raw.instructor_id,
+  };
   if (!r?.plan_path) return null;
   const { data: member } = r.member_id
     ? await supabase.from("members").select("name").eq("id", r.member_id).maybeSingle()
@@ -186,7 +226,7 @@ export async function getPlanFileUrl(requestId: string, matchId: string): Promis
     console.error("[admin] 강의계획서 주소 만들기 실패", error?.message);
     return null;
   }
-  const downloadName = `${(member as { name: string } | null)?.name ?? "강사"}_${r.plan_name ?? "강의계획서"}`;
+  const downloadName = `${(member as { name: string } | null)?.name ?? "강사"}_${r.plan_name ?? (kind === "plan" ? "강의계획서" : "프로필")}`;
   return `${data.signedUrl}&download=${encodeURIComponent(downloadName)}`;
 }
 
