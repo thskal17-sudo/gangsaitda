@@ -32,7 +32,7 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
 /** 어디서 가입하러 왔는지에 따라 회원 종류를 미리 골라 둔다. 예) 강사섭외 화면에서 왔으면 '기관'. 바꿀 수 있다. */
 function typeFor(next: string): MemberType | undefined {
   const path = next.split(/[?#]/)[0];
-  if (path === "/request" || path.startsWith("/account/requests")) return "기관";
+  if (path === "/request" || path === "/guide" || path.startsWith("/account/requests")) return "기관";
   if (path === "/account/profile") return "강사";
   return undefined;
 }
