@@ -37,3 +37,8 @@ export function formatKoreanDate(date: string): string {
 export function seoulDateOf(timestamp: string): string {
   return new Date(Date.parse(timestamp) + KST_OFFSET_MS).toISOString().slice(0, 10);
 }
+
+/** date 가 속한 주의 월요일. 예: "2026-10-29"(목) → "2026-10-26" */
+export function mondayOf(date: string): string {
+  return addDays(date, -((new Date(toUtcMs(date)).getUTCDay() + 6) % 7));
+}

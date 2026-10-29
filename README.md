@@ -68,6 +68,8 @@ npm run dev
 | `supabase/jobs-change-2.sql` | 지원 방법을 선택 사항으로 (jobs.sql 을 이미 실행한 경우) |
 | `app/admin/`, `lib/admin.ts`, `components/admin-shell.tsx` | 관리자 화면 (`/admin`, 관리자 명단에 있는 회원만) |
 | `supabase/admins.sql` | 관리자 명단 표와 '관리자인가?' 확인 함수 |
+| `app/admin/page.tsx`, `lib/admin-stats.ts` | 관리자 · 현황(대시보드, 관리자 첫 화면). 공고 관리는 `app/admin/jobs/page.tsx` (`/admin/jobs`) |
+| `components/page-view-tracker.tsx`, `app/api/pv/`, `lib/page-view.ts`, `supabase/page-views.sql` | 화면 열람 수 세기 (누가 왔는지는 적지 않음, 화면 주소·들어온 경로만) |
 | `app/admin/jobs/new/`, `lib/admin-job-schema.ts`, `lib/admin-job-actions.ts` | 관리자 · 공고 등록 화면과 저장 |
 | `supabase/admin-job-create.sql` | 관리자만 공고를 올릴 수 있는 함수 (제목·상세를 한 번에 저장) |
 | `app/admin/jobs/[id]/edit/`, `components/admin-job-form.tsx`, `components/admin-hide-button.tsx` | 관리자 · 공고 수정 화면, 등록·수정 공용 양식, 숨기기 버튼 |

@@ -105,13 +105,13 @@ export async function updateJob(id: string, input: unknown): Promise<{ id: strin
  * 성공하면 보던 목록이 그대로 새로 그려지고, 실패하면 목록 위에 안내를 띄운다.
  */
 export async function setJobHidden(id: string, hidden: boolean): Promise<void> {
-  if ((await getAdminStatus()) !== "admin" || !/^\d{1,15}$/.test(id)) redirect("/admin?failed=hide");
+  if ((await getAdminStatus()) !== "admin" || !/^\d{1,15}$/.test(id)) redirect("/admin/jobs?failed=hide");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_set_job_hidden", { p_id: Number(id), p_hidden: hidden });
   if (error) {
     console.error("[admin] 숨기기 실패", error.code, error.message);
-    redirect("/admin?failed=hide");
+    redirect("/admin/jobs?failed=hide");
   }
 
   refreshSite();
