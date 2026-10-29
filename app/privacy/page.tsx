@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Bullets, LinkText, Section, Table } from "@/components/legal-text";
 import { OPERATOR, PRIVACY } from "@/lib/site";
 
 export const metadata: Metadata = { title: "개인정보처리방침" };
@@ -206,66 +206,3 @@ export default function PrivacyPage() {
   );
 }
 
-function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
-  return (
-    <section className="border-b border-line pb-5 last:border-b-0 last:pb-0">
-      <h2 className="mb-2 text-[17px] font-bold tracking-tight text-ink">
-        <span className="nums">{n}.</span> {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function Bullets({ items }: { items: ReactNode[] }) {
-  return (
-    <ul className="mt-2 list-disc space-y-1 pl-5 text-ink">
-      {items.map((item, i) => (
-        <li key={i}>{item}</li>
-      ))}
-    </ul>
-  );
-}
-
-/** 휴대폰에서는 옆으로 밀어서 보는 표 */
-function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
-  return (
-    <div className="mt-2 overflow-x-auto">
-      <table className="w-full min-w-[480px] border-collapse text-left text-[14px]">
-        <thead>
-          <tr className="border-b border-line bg-bg">
-            {head.map((h) => (
-              <th key={h} scope="col" className="px-3 py-2 font-semibold whitespace-nowrap text-muted">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-b border-line align-top last:border-b-0">
-              {row.map((cell, j) => (
-                <td key={j} className={`px-3 py-2.5 ${j === 0 ? "font-semibold whitespace-nowrap" : ""}`}>
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function LinkText({ href, children }: { href: string; children: ReactNode }) {
-  const external = href.startsWith("http");
-  return (
-    <a
-      href={href}
-      className="text-brand underline-offset-2 hover:underline"
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-    >
-      {children}
-    </a>
-  );
-}

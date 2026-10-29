@@ -43,6 +43,8 @@ export async function signup(input: unknown, next: unknown): Promise<AuthResult>
         member_type: memberType,
         ...(memberType === "기관" ? { org_name: orgName } : {}),
         privacy_agreed: true,
+        // 이용약관 동의. 가입 처리 함수는 보지 않지만, 동의했다는 기록으로 계정 정보에 남는다.
+        terms_agreed: true,
         sms_agreed: smsAgreed,
       },
     },

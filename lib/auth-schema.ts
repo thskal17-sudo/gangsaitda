@@ -43,6 +43,7 @@ export const signupSchema = z
     phone,
     email,
     password,
+    termsAgreed: z.literal(true, "서비스 이용약관에 동의해야 가입할 수 있습니다."),
     privacyAgreed: z.literal(true, "개인정보 수집·이용에 동의해야 가입할 수 있습니다."),
     /** [선택] 교육·강의 섭외 소식 문자 수신 동의 */
     smsAgreed: z.boolean(),

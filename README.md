@@ -51,6 +51,8 @@ npm run dev
 | `supabase/admin-reset-password.sql` | [운영자용] 회원에게 임시 비밀번호 정해 주기 |
 | `lib/request-schema.ts`, `lib/request-actions.ts` | 강사섭외 의뢰서 입력 규칙·보내기 |
 | `components/privacy-consent.tsx` | 개인정보 동의 칸 (가입·의뢰서 함께 씀) |
+| `components/terms-consent.tsx` | 이용약관 동의 칸 (가입) |
+| `app/terms/`, `app/privacy/` | 서비스 이용약관, 개인정보처리방침 (긴 글 조각은 `components/legal-text.tsx`) |
 | `lib/site.ts` | 운영 정보 (문의처 등) |
 | `supabase/instructor-requests.sql` | 강사섭외 의뢰 표 (보내기만 되고 사이트에서는 못 읽음) |
 | `supabase/instructor-requests-change-1.sql` | 의뢰 표에서 담당자 이메일을 필수로 (위 파일을 이미 실행한 경우) |

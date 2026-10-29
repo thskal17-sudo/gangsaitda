@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Field, FormError, SubmitButton } from "@/components/auth-form";
 import PrivacyConsent, { SIGNUP_TERMS, SMS_LABEL, SMS_TERMS } from "@/components/privacy-consent";
+import TermsConsent from "@/components/terms-consent";
 import { signup } from "@/lib/auth-actions";
 import { type MemberType, type SignupInput, signupSchema } from "@/lib/auth-schema";
 
@@ -95,6 +96,7 @@ export default function SignupForm({ next, defaultType }: { next: string; defaul
         {...register("password")}
       />
 
+      <TermsConsent error={errors.termsAgreed?.message} {...register("termsAgreed")} />
       <PrivacyConsent terms={SIGNUP_TERMS} error={errors.privacyAgreed?.message} {...register("privacyAgreed")} />
       <PrivacyConsent terms={SMS_TERMS} label={SMS_LABEL} optional {...register("smsAgreed")} />
 
