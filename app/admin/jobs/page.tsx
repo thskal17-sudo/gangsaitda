@@ -53,11 +53,11 @@ function matchesSearch(job: AdminJob, q: string): boolean {
 }
 
 /** 관리자 · 공고 관리. 마감된 공고, 숨긴 공고까지 모든 공고를 보고 수정·숨기기를 한다. */
-export default async function AdminJobsPage({ searchParams }: PageProps<"/admin">) {
+export default async function AdminJobsPage({ searchParams }: PageProps<"/admin/jobs">) {
   await connection();
 
   // 로그인 안 했으면 로그인 화면으로, 관리자가 아니면 안내만 보여준다.
-  if (!(await checkAdmin("/admin"))) return <NotAdminCard />;
+  if (!(await checkAdmin("/admin/jobs"))) return <NotAdminCard />;
 
   const params = await searchParams;
   const filter = toFilter(params.filter);
@@ -87,7 +87,7 @@ export default async function AdminJobsPage({ searchParams }: PageProps<"/admin"
     if (key !== "all") sp.set("filter", key);
     if (q) sp.set("q", q);
     const s = sp.toString();
-    return s ? `/admin?${s}` : "/admin";
+    return s ? `/admin/jobs?${s}` : "/admin/jobs";
   };
 
   return (
@@ -117,7 +117,7 @@ export default async function AdminJobsPage({ searchParams }: PageProps<"/admin"
 
       <div className="mt-6 rounded-card bg-white p-4 md:p-5">
         {/* 검색: 제목·기관·지역에서 찾는다. 걸러 보기 상태는 유지한다. */}
-        <form action="/admin" className="flex gap-2">
+        <form action="/admin/jobs" className="flex gap-2">
           {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
           <input
             type="search"

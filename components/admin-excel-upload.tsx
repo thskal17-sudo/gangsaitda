@@ -209,7 +209,7 @@ function Done({ rows, results, onAgain }: { rows: ExcelRow[]; results: BulkResul
       )}
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <Link
-          href="/admin?filter=today"
+          href="/admin/jobs?filter=today"
           className="flex h-14 items-center justify-center rounded-control bg-brand px-6 text-[16px] font-semibold text-white transition-colors hover:bg-brand/90 sm:flex-1"
         >
           오늘 올린 공고 보기

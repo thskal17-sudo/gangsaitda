@@ -3,7 +3,8 @@ import NotFoundCard from "@/components/not-found-card";
 
 /** 관리자 메뉴 */
 const MENU = [
-  { key: "jobs", label: "공고 관리", href: "/admin" },
+  { key: "dashboard", label: "현황", href: "/admin" },
+  { key: "jobs", label: "공고 관리", href: "/admin/jobs" },
   { key: "new", label: "공고 등록", href: "/admin/jobs/new" },
   { key: "upload", label: "엑셀로 올리기", href: "/admin/jobs/upload" },
   { key: "requests", label: "강사섭외 의뢰", href: "/admin/requests" },

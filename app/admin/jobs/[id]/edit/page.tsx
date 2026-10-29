@@ -20,7 +20,7 @@ export default async function AdminEditJobPage({ params }: PageProps<"/admin/job
     <AdminShell active="jobs">
       {job ? (
         <>
-          <Link href="/admin" className="text-sm font-semibold text-muted hover:text-ink">
+          <Link href="/admin/jobs" className="text-sm font-semibold text-muted hover:text-ink">
             ← 공고 관리
           </Link>
           <h1 className="mt-2 text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">공고 수정</h1>
@@ -36,7 +36,7 @@ export default async function AdminEditJobPage({ params }: PageProps<"/admin/job
         <NotFoundCard
           title="공고를 찾을 수 없어요"
           description="주소가 틀렸거나 지워진 공고예요."
-          primary={{ href: "/admin", label: "공고 관리로" }}
+          primary={{ href: "/admin/jobs", label: "공고 관리로" }}
         />
       )}
     </AdminShell>

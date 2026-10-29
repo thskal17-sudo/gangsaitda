@@ -50,7 +50,7 @@ export default function JobForm({ job }: { job?: { id: string; values: JobInput 
       throw new Error(result.error); // 저장 실패는 '성공'으로 치지 않는다 (버튼 다시 누를 수 있게).
     }
     // 목록으로 돌아가 방금 올리거나 고친 공고를 알려준다.
-    router.push(job ? `/admin?updated=${result.id}` : `/admin?created=${result.id}`);
+    router.push(job ? `/admin/jobs?updated=${result.id}` : `/admin/jobs?created=${result.id}`);
   });
 
   return (

@@ -32,7 +32,7 @@ export async function reviewPosting(requestId: string, approve: boolean, formDat
   if (approve) {
     revalidatePath("/jobs");
     revalidatePath("/");
-    revalidatePath("/admin");
+    revalidatePath("/admin/jobs");
   }
   redirect(`${page}?done=${approve ? `approved&job=${data ?? ""}` : "rejected"}`);
 }
