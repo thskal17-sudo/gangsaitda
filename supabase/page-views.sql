@@ -36,6 +36,7 @@ grant execute on function public.record_page_view(text, text) to anon, authentic
 
 -- 3) 운영자 현황 숫자 (관리자만) --------------------------------------------
 -- p_from(한국 날짜)부터 오늘까지의 숫자를 한 번에 돌려준다.
+-- 열람 기록은 계속 쌓이므로, 날짜 칸(viewed_at)의 찾아보기 목록(index)을 쓰도록 '시각 범위'로 거른다.
 --   daily:    날짜별 열람 수 · 새 가입자 수 · 새 강사섭외 의뢰 수
 --   sources:  들어온 경로별 수 (사이트 안 이동은 빼고, 처음 들어온 화면만)
 --   top_jobs: 가장 많이 열린 공고 5개 (제목 포함)
@@ -58,7 +59,9 @@ begin
       select jsonb_agg(jsonb_build_object('date', d.day, 'views', d.views, 'members', d.members, 'requests', d.requests) order by d.day)
       from (
         select g.day::date as day,
-               (select count(*) from public.page_views v where (v.viewed_at at time zone 'Asia/Seoul')::date = g.day::date) as views,
+               (select count(*) from public.page_views v
+                 where v.viewed_at >= (g.day::date)::timestamp at time zone 'Asia/Seoul'
+                   and v.viewed_at < (g.day::date + 1)::timestamp at time zone 'Asia/Seoul') as views,
                (select count(*) from public.members m where (m.created_at at time zone 'Asia/Seoul')::date = g.day::date) as members,
                (select count(*) from public.instructor_requests r where (r.created_at at time zone 'Asia/Seoul')::date = g.day::date) as requests
         from generate_series(p_from, (now() at time zone 'Asia/Seoul')::date, interval '1 day') as g(day)
@@ -69,7 +72,7 @@ begin
       from (
         select v.source, count(*) as n
         from public.page_views v
-        where (v.viewed_at at time zone 'Asia/Seoul')::date >= p_from and v.source <> 'internal'
+        where v.viewed_at >= p_from::timestamp at time zone 'Asia/Seoul' and v.source <> 'internal'
         group by v.source
       ) s
     ), '[]'::jsonb),
@@ -78,7 +81,7 @@ begin
       from (
         select substring(v.path from 7)::bigint as job_id, count(*) as n
         from public.page_views v
-        where (v.viewed_at at time zone 'Asia/Seoul')::date >= p_from and v.path ~ '^/jobs/[0-9]{1,15}$'
+        where v.viewed_at >= p_from::timestamp at time zone 'Asia/Seoul' and v.path ~ '^/jobs/[0-9]{1,15}$'
         group by 1
         order by n desc, job_id desc
         limit 5
