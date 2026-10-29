@@ -32,6 +32,12 @@ export const OPERATOR = {
   email: "thskal17@gmail.com",
 };
 
+/** 서비스 이용약관(/terms)에 들어가는 값 */
+export const TERMS = {
+  /** 시행일. 약관을 고치면 새 시행일로 바꾸고, 시행 7일 전(회원에게 불리한 변경은 30일 전)부터 사이트에 알린다. */
+  effectiveDate: "2026년 10월 29일",
+};
+
 /** 개인정보처리방침(/privacy)에 들어가는 값 */
 export const PRIVACY = {
   /** 개인정보 보호책임자 (대표자가 맡음) */

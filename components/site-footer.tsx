@@ -36,6 +36,9 @@ export default function SiteFooter({ isMember, memberType }: { isMember: boolean
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <span>© 강사잇다</span>
+        <Link href="/terms" className="hover:text-ink hover:underline">
+          이용약관
+        </Link>
         <Link href="/privacy" className="font-semibold text-ink hover:underline">
           개인정보처리방침
         </Link>
