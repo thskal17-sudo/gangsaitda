@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import AdminBarChart, { type Bar } from "@/components/admin-bar-chart";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin } from "@/lib/admin";
-import { type DailyStat, getSiteStats, type SiteStats, STATS_DAYS } from "@/lib/admin-stats";
+import { type DailyStat, type Growth, type GrowthBucket, getGrowth, getSiteStats, type SiteStats, STATS_DAYS } from "@/lib/admin-stats";
 import { formatKoreanDate, mondayOf, todayInSeoul } from "@/lib/date";
 
 // 관리자 화면은 검색 결과에 나오지 않게 한다.
@@ -19,7 +20,7 @@ export default async function AdminDashboardPage() {
   if (!(await checkAdmin("/admin"))) return <NotAdminCard />;
 
   const today = todayInSeoul();
-  const stats = await getSiteStats(today);
+  const [stats, growth] = await Promise.all([getSiteStats(today), getGrowth(today)]);
 
   return (
     <AdminShell active="dashboard">
@@ -27,6 +28,7 @@ export default async function AdminDashboardPage() {
       <p className="nums mt-1 text-sm text-muted">{formatKoreanDate(today)} 기준</p>
 
       {stats ? <Dashboard stats={stats} today={today} /> : <SetupNotice />}
+      {growth && <GrowthCharts growth={growth} />}
     </AdminShell>
   );
 }
@@ -122,10 +124,9 @@ function Dashboard({ stats, today }: { stats: SiteStats; today: string }) {
   );
 }
 
-/** 최근 14일 날짜별 열람 수 막대그래프. 막대에 손가락·마우스를 올리면 그날 숫자가 보인다. */
+/** 최근 14일 날짜별 열람 수 막대그래프 */
 function ViewsChart({ days, today }: { days: DailyStat[]; today: string }) {
   const peak = Math.max(0, ...days.map((d) => d.views));
-  const max = Math.max(1, peak);
   const total = sum(days, "views");
 
   return (
@@ -137,38 +138,84 @@ function ViewsChart({ days, today }: { days: DailyStat[]; today: string }) {
         </p>
       </div>
 
-      <ul className="mt-10 flex h-40 items-end gap-1 border-b border-line md:gap-2" aria-label="날짜별 열람 수">
-        {days.map((d) => (
-          <li key={d.date} tabIndex={0} className="group relative flex h-full flex-1 items-end outline-none">
-            <span
-              className={`w-full rounded-t-[4px] ${d.date === today ? "bg-brand" : "bg-brand/55"} group-hover:bg-brand group-focus:bg-brand`}
-              style={{ height: d.views > 0 ? `max(3px, ${(d.views / max) * 100}%)` : 0 }}
-            />
-            {/* 막대에 올렸을 때 보이는 숫자 */}
-            <span
-              role="tooltip"
-              className="nums pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-control bg-ink px-2.5 py-1.5 text-[12px] font-semibold text-white group-hover:block group-focus:block"
-            >
-              {formatKoreanDate(d.date)} {d.views.toLocaleString("ko-KR")}회
-            </span>
-            <span className="sr-only">
-              {formatKoreanDate(d.date)} {d.views}회
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="nums mt-2 flex gap-1 text-center text-[11px] text-muted md:gap-2" aria-hidden="true">
-        {days.map((d, i) => {
+      <AdminBarChart
+        label="날짜별 열람 수"
+        bars={days.map((d, i) => {
           const [, month, day] = d.date.split("-").map(Number);
-          return (
-            <span key={d.date} className={`flex-1 ${d.date === today ? "font-bold text-ink" : ""}`}>
-              {i === 0 || day === 1 ? `${month}/${day}` : day}
-            </span>
-          );
+          return {
+            key: d.date,
+            value: d.views,
+            tooltip: `${formatKoreanDate(d.date)} ${d.views.toLocaleString("ko-KR")}회`,
+            axisLabel: i === 0 || day === 1 ? `${month}/${day}` : String(day),
+            current: d.date === today,
+          };
         })}
-      </div>
+      />
     </section>
   );
+}
+
+const UNIT_LABEL = { day: "하루", week: "한 주", month: "한 달" } as const;
+
+/** 가입자·강사섭외 의뢰 추이 (첫 기록부터 지금까지). 두 숫자는 크기가 달라 그래프를 따로 그린다. */
+function GrowthCharts({ growth }: { growth: Growth }) {
+  const charts = [
+    { title: "가입자 추이", key: "members", unit: "명", total: growth.totalMembers, href: "/admin/members" },
+    { title: "강사섭외 의뢰 추이", key: "requests", unit: "건", total: growth.totalRequests, href: "/admin/requests" },
+  ] as const;
+
+  return (
+    <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
+      {charts.map((c) => (
+        <section key={c.key} className="rounded-card bg-white p-5 md:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <h2 className="text-[18px] font-bold tracking-tight">
+              <Link href={c.href} className="hover:underline">
+                {c.title}
+              </Link>
+            </h2>
+            <p className="nums text-[13px] text-muted">
+              누적 <span className="font-semibold text-ink">{c.total.toLocaleString("ko-KR")}</span>
+              {c.unit}
+            </p>
+          </div>
+          <p className="mt-0.5 text-[13px] text-muted">처음부터 지금까지 · 막대 하나가 {UNIT_LABEL[growth.unit]}</p>
+          <AdminBarChart
+            label={c.title}
+            bars={growth.buckets.map((b, i) => growthBar(b, i, growth, b[c.key], c.unit))}
+          />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function growthBar(b: GrowthBucket, i: number, growth: Growth, value: number, unit: string): Bar {
+  const [year, month, day] = b.start.split("-").map(Number);
+  const isLast = i === growth.buckets.length - 1;
+  const count = `${value.toLocaleString("ko-KR")}${unit}`;
+
+  if (growth.unit === "day") {
+    return {
+      key: b.start,
+      value,
+      tooltip: `${formatKoreanDate(b.start)} ${count}`,
+      axisLabel: i === 0 || day === 1 ? `${month}/${day}` : undefined,
+      current: isLast,
+    };
+  }
+  if (growth.unit === "week") {
+    // 그달의 첫 월요일이 시작인 주(또는 첫 막대) 아래에 달 이름을 적는다.
+    const label = i === 0 ? `${month}/${day}` : day <= 7 ? `${month}월` : undefined;
+    return { key: b.start, value, tooltip: `${month}월 ${day}일부터 한 주 ${count}`, axisLabel: label, current: isLast };
+  }
+  return {
+    key: b.start,
+    value,
+    tooltip: `${year}년 ${month}월 ${count}`,
+    axisLabel: i === 0 || month === 1 ? `${year % 100}.${month}` : `${month}월`,
+    current: isLast,
+  };
 }
 
 function SourceBars({ sources }: { sources: { label: string; count: number }[] }) {
