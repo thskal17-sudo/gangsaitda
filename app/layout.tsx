@@ -6,6 +6,7 @@ import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
 import HeaderAuth from "@/components/header-auth";
+import PageViewTracker from "@/components/page-view-tracker";
 import SiteFooter from "@/components/site-footer";
 import TopNav from "@/components/top-nav";
 import { getCurrentMember, getMemberType } from "@/lib/member";
@@ -88,6 +89,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </main>
 
         <BottomNav isMember={member !== null} />
+        {/* 화면 열람 수 세기 (운영자 현황용, 누가 왔는지는 적지 않음) */}
+        <PageViewTracker />
       </body>
     </html>
   );
