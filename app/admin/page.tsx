@@ -157,6 +157,9 @@ function ViewsChart({ days, today }: { days: DailyStat[]; today: string }) {
 
 const UNIT_LABEL = { day: "하루", week: "한 주", month: "한 달" } as const;
 
+/** 추이 그래프 아래에 적는 날짜 글씨 수 (대략) */
+const AXIS_LABELS = 6;
+
 /** 가입자·강사섭외 의뢰 추이 (첫 기록부터 지금까지). 두 숫자는 크기가 달라 그래프를 따로 그린다. */
 function GrowthCharts({ growth }: { growth: Growth }) {
   const charts = [
@@ -194,26 +197,33 @@ function growthBar(b: GrowthBucket, i: number, growth: Growth, value: number, un
   const [year, month, day] = b.start.split("-").map(Number);
   const isLast = i === growth.buckets.length - 1;
   const count = `${value.toLocaleString("ko-KR")}${unit}`;
+  // 날짜 글씨는 막대 몇 개마다 하나씩, 맨 끝(오늘)부터 거꾸로 세어 고르게 적는다 (6개 안팎).
+  const n = growth.buckets.length;
+  const labeled = (n - 1 - i) % Math.ceil(n / AXIS_LABELS) === 0;
 
   if (growth.unit === "day") {
     return {
       key: b.start,
       value,
       tooltip: `${formatKoreanDate(b.start)} ${count}`,
-      axisLabel: i === 0 || day === 1 ? `${month}/${day}` : undefined,
+      axisLabel: labeled ? `${month}/${day}` : undefined,
       current: isLast,
     };
   }
   if (growth.unit === "week") {
-    // 그달의 첫 월요일이 시작인 주(또는 첫 막대) 아래에 달 이름을 적는다.
-    const label = i === 0 ? `${month}/${day}` : day <= 7 ? `${month}월` : undefined;
-    return { key: b.start, value, tooltip: `${month}월 ${day}일부터 한 주 ${count}`, axisLabel: label, current: isLast };
+    return {
+      key: b.start,
+      value,
+      tooltip: `${month}월 ${day}일부터 한 주 ${count}`,
+      axisLabel: labeled ? `${month}/${day}` : undefined,
+      current: isLast,
+    };
   }
   return {
     key: b.start,
     value,
     tooltip: `${year}년 ${month}월 ${count}`,
-    axisLabel: i === 0 || month === 1 ? `${year % 100}.${month}` : `${month}월`,
+    axisLabel: labeled ? `${year % 100}.${month}` : undefined,
     current: isLast,
   };
 }
