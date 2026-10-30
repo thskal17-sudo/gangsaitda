@@ -22,7 +22,7 @@ export default function AdminBarChart({ bars, label }: { bars: Bar[]; label: str
   return (
     <>
       <ul className={`mt-10 flex h-40 items-end border-b border-line ${gap}`} aria-label={label}>
-        {bars.map((b) => (
+        {bars.map((b, i) => (
           <li key={b.key} tabIndex={0} className="group relative flex h-full min-w-0 flex-1 items-end outline-none">
             <span
               className={`w-full rounded-t-[4px] ${b.current ? "bg-brand" : "bg-brand/55"} group-hover:bg-brand group-focus:bg-brand`}
@@ -30,7 +30,7 @@ export default function AdminBarChart({ bars, label }: { bars: Bar[]; label: str
             />
             <span
               role="tooltip"
-              className="nums pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-control bg-ink px-2.5 py-1.5 text-[12px] font-semibold text-white group-hover:block group-focus:block"
+              className={`nums pointer-events-none absolute bottom-full z-10 mb-1 hidden whitespace-nowrap ${tooltipPosition(i, bars.length)} rounded-control bg-ink px-2.5 py-1.5 text-[12px] font-semibold text-white group-hover:block group-focus:block`}
             >
               {b.tooltip}
             </span>
@@ -48,4 +48,11 @@ export default function AdminBarChart({ bars, label }: { bars: Bar[]; label: str
       </div>
     </>
   );
+}
+
+/** 숫자 풍선이 그래프 밖으로 잘리지 않게: 왼쪽 끝 막대는 왼쪽에 맞추고, 오른쪽 끝 막대는 오른쪽에 맞춘다. */
+function tooltipPosition(index: number, count: number): string {
+  if (index < count / 4) return "left-0";
+  if (index >= (count * 3) / 4) return "right-0";
+  return "left-1/2 -translate-x-1/2";
 }
