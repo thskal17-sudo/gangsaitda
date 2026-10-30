@@ -2404,7 +2404,7 @@ create table if not exists public.page_views (
   viewed_at timestamptz not null default now(),
   -- 열린 화면 주소. 예: "/jobs/123" (물음표 뒤 검색어 등은 적지 않음)
   path text not null check (char_length(path) between 1 and 200),
-  -- 들어온 경로 종류. 사이트 안에서 다른 화면으로 옮겨 간 경우는 'internal' (lib/page-view.ts 의 SOURCES)
+  -- 들어온 경로 종류 (lib/page-view.ts 의 SOURCE_LABELS). 사이트 안에서 다른 화면으로 옮겨 간 경우는 'internal'
   source text not null
 );
 
