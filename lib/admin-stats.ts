@@ -1,22 +1,33 @@
-import { SOURCE_LABELS, type Source } from "@/lib/page-view";
 import { addDays, daysBetween, mondayOf, seoulDateOf } from "@/lib/date";
+import { classifySource, SOURCE_LABELS } from "@/lib/page-view";
 import { createClient } from "@/lib/supabase/server";
 
 /*
  * 관리자 · 현황(대시보드) 숫자. 데이터베이스 함수 admin_site_stats 가 관리자인지 확인하고
- * 날짜별 열람 수·새 가입자 수·새 의뢰 수, 들어온 경로, 많이 본 공고를 한 번에 돌려준다 (supabase/page-views.sql).
+ * 날짜별 열람 수·새 가입자 수·새 의뢰 수, 들어온 경로·사이트·홍보 링크, 많이 본 공고를 한 번에 돌려준다 (supabase/page-views.sql).
  */
 
-/** 그래프·경로·많이 본 공고를 보는 기간 (오늘 포함) */
-export const STATS_DAYS = 14;
+/** 고를 수 있는 기간 (오늘 포함 날 수). 첫째 값이 아니라 DEFAULT_DAYS 가 기본. */
+export const PERIODS = [7, 14, 30, 90] as const;
+export type Period = (typeof PERIODS)[number];
+export const DEFAULT_DAYS: Period = 14;
+
+export function toPeriod(value: string | string[] | undefined): Period {
+  const n = Number(value);
+  return (PERIODS as readonly number[]).includes(n) ? (n as Period) : DEFAULT_DAYS;
+}
 
 export type DailyStat = { date: string; views: number; members: number; requests: number };
 
 export type SiteStats = {
   /** 오래된 날부터 오늘까지, 하루도 빠짐없이 */
   daily: DailyStat[];
-  /** 들어온 경로 — 많은 순 */
+  /** 들어온 경로 종류 — 많은 순 */
   sources: { label: string; count: number }[];
+  /** 들어온 사이트 이름 — 많은 순, 최대 20개. kind 는 그 사이트의 경로 종류 이름 */
+  hosts: { host: string; kind: string; count: number }[];
+  /** 홍보 링크 이름표 — 많은 순, 최대 20개 */
+  campaigns: { name: string; count: number }[];
   /** 많이 열린 공고 — 많은 순, 최대 5개 */
   topJobs: { id: string; title: string; count: number }[];
 };
@@ -24,13 +35,16 @@ export type SiteStats = {
 type Raw = {
   daily: { date: string; views: number; members: number; requests: number }[];
   sources: { source: string; count: number }[];
+  // 예전 판 SQL 에는 없다.
+  hosts?: { host: string; count: number }[];
+  campaigns?: { name: string; count: number }[];
   top_jobs: { id: number; title: string; count: number }[];
 };
 
-/** 현황 숫자. 아직 supabase/page-views.sql 을 실행하지 않았으면 null */
-export async function getSiteStats(today: string): Promise<SiteStats | null> {
+/** 현황 숫자 (오늘까지 days 일). 아직 supabase/page-views.sql 을 실행하지 않았으면 null */
+export async function getSiteStats(today: string, days: Period): Promise<SiteStats | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_site_stats", { p_from: addDays(today, -(STATS_DAYS - 1)) });
+  const { data, error } = await supabase.rpc("admin_site_stats", { p_from: addDays(today, -(days - 1)) });
   if (error) {
     console.error("현황 숫자를 불러오지 못했습니다:", error.message);
     return null;
@@ -38,10 +52,9 @@ export async function getSiteStats(today: string): Promise<SiteStats | null> {
   const raw = data as Raw;
   return {
     daily: raw.daily.map((d) => ({ date: d.date, views: d.views, members: d.members, requests: d.requests })),
-    sources: raw.sources.map((s) => ({
-      label: SOURCE_LABELS[s.source as Exclude<Source, "internal">] ?? s.source,
-      count: s.count,
-    })),
+    sources: raw.sources.map((s) => ({ label: SOURCE_LABELS[s.source] ?? s.source, count: s.count })),
+    hosts: (raw.hosts ?? []).map((h) => ({ host: h.host, kind: SOURCE_LABELS[classifySource(h.host, "", "")] ?? "", count: h.count })),
+    campaigns: raw.campaigns ?? [],
     topJobs: raw.top_jobs.map((j) => ({ id: String(j.id), title: j.title, count: j.count })),
   };
 }

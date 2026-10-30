@@ -4,7 +4,18 @@ import { connection } from "next/server";
 import AdminBarChart, { type Bar } from "@/components/admin-bar-chart";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin } from "@/lib/admin";
-import { type DailyStat, type Growth, type GrowthBucket, getGrowth, getSiteStats, type SiteStats, STATS_DAYS } from "@/lib/admin-stats";
+import {
+  DEFAULT_DAYS,
+  type DailyStat,
+  type Growth,
+  type GrowthBucket,
+  getGrowth,
+  getSiteStats,
+  type Period,
+  PERIODS,
+  type SiteStats,
+  toPeriod,
+} from "@/lib/admin-stats";
 import { formatKoreanDate, mondayOf, todayInSeoul } from "@/lib/date";
 
 // 관리자 화면은 검색 결과에 나오지 않게 한다.
@@ -13,27 +24,28 @@ export const metadata: Metadata = { title: "현황", robots: { index: false, fol
 const sum = (days: DailyStat[], key: "views" | "members" | "requests") => days.reduce((n, d) => n + d[key], 0);
 
 /** 관리자 · 현황(대시보드). 관리자 화면에 들어오면 가장 먼저 보이는 화면. */
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({ searchParams }: PageProps<"/admin">) {
   await connection();
 
   // 로그인 안 했으면 로그인 화면으로, 관리자가 아니면 안내만 보여준다.
   if (!(await checkAdmin("/admin"))) return <NotAdminCard />;
 
+  const period = toPeriod((await searchParams).days);
   const today = todayInSeoul();
-  const [stats, growth] = await Promise.all([getSiteStats(today), getGrowth(today)]);
+  const [stats, growth] = await Promise.all([getSiteStats(today, period), getGrowth(today)]);
 
   return (
     <AdminShell active="dashboard">
       <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[30px]">현황</h1>
       <p className="nums mt-1 text-sm text-muted">{formatKoreanDate(today)} 기준</p>
 
-      {stats ? <Dashboard stats={stats} today={today} /> : <SetupNotice />}
+      {stats ? <Dashboard stats={stats} today={today} period={period} /> : <SetupNotice />}
       {growth && <GrowthCharts growth={growth} />}
     </AdminShell>
   );
 }
 
-function Dashboard({ stats, today }: { stats: SiteStats; today: string }) {
+function Dashboard({ stats, today, period }: { stats: SiteStats; today: string; period: Period }) {
   const todayStat = stats.daily.find((d) => d.date === today);
   const yesterday = stats.daily.at(-2);
   const thisWeek = stats.daily.filter((d) => d.date >= mondayOf(today));
@@ -91,12 +103,29 @@ function Dashboard({ stats, today }: { stats: SiteStats; today: string }) {
         열람 수는 사이트 화면이 열린 횟수예요. 누가 왔는지는 적지 않아서, 한 사람이 여러 번 열면 여러 번 셉니다. 관리자 화면은 세지 않아요.
       </p>
 
-      <ViewsChart days={stats.daily} today={today} />
+      {/* 기간 고르기: 아래 그래프·많이 본 공고·들어온 경로·사이트·홍보 링크에 함께 적용 (위 숫자 네 칸은 그대로) */}
+      <nav aria-label="기간" className="mt-6 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[14px] font-semibold text-muted">최근</span>
+        {PERIODS.map((p) => (
+          <Link
+            key={p}
+            href={p === DEFAULT_DAYS ? "/admin" : `/admin?days=${p}`}
+            aria-current={p === period ? "true" : undefined}
+            className={`nums flex h-9 items-center rounded-badge px-4 text-[14px] font-semibold ${
+              p === period ? "bg-ink text-white" : "bg-white text-muted hover:text-ink"
+            }`}
+          >
+            {p}일
+          </Link>
+        ))}
+      </nav>
+
+      <ViewsChart days={stats.daily} />
 
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
         <section className="rounded-card bg-white p-5 md:p-6">
           <h2 className="text-[18px] font-bold tracking-tight">많이 본 공고</h2>
-          <p className="mt-0.5 text-[13px] text-muted">최근 {STATS_DAYS}일 · 공고 화면이 열린 횟수</p>
+          <p className="mt-0.5 text-[13px] text-muted">최근 {period}일 · 공고 화면이 열린 횟수</p>
           {stats.topJobs.length === 0 ? (
             <Empty />
           ) : (
@@ -116,41 +145,117 @@ function Dashboard({ stats, today }: { stats: SiteStats; today: string }) {
 
         <section className="rounded-card bg-white p-5 md:p-6">
           <h2 className="text-[18px] font-bold tracking-tight">들어온 경로</h2>
-          <p className="mt-0.5 text-[13px] text-muted">최근 {STATS_DAYS}일 · 사이트에 처음 들어온 곳</p>
+          <p className="mt-0.5 text-[13px] text-muted">최근 {period}일 · 사이트에 처음 들어온 곳의 종류</p>
           {stats.sources.length === 0 ? <Empty /> : <SourceBars sources={stats.sources} />}
         </section>
+
+        <section className="rounded-card bg-white p-5 md:p-6">
+          <h2 className="text-[18px] font-bold tracking-tight">들어온 사이트 자세히</h2>
+          <p className="mt-0.5 text-[13px] text-muted">최근 {period}일 · 바로 전에 보던 사이트 이름 (많은 순 20개)</p>
+          {stats.hosts.length === 0 ? (
+            <Empty />
+          ) : (
+            <ol className="mt-3 divide-y divide-line">
+              {stats.hosts.map((h) => (
+                <li key={h.host} className="flex items-center gap-3 py-2.5">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-ink">{h.host}</span>
+                    <span className="block text-[12px] text-muted">{h.kind}</span>
+                  </span>
+                  <span className="nums shrink-0 text-[14px] text-muted">{h.count.toLocaleString("ko-KR")}회</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="mt-3 text-[12px] leading-relaxed text-muted">
+            휴대폰 앱(카카오톡·인스타 등) 안에서 누른 링크는 사이트 이름이 남지 않아 여기에는 없고, 위 &lsquo;들어온 경로&rsquo;에만 셉니다.
+          </p>
+        </section>
+
+        <CampaignCard campaigns={stats.campaigns} period={period} />
       </div>
     </>
   );
 }
 
-/** 최근 14일 날짜별 열람 수 막대그래프 */
-function ViewsChart({ days, today }: { days: DailyStat[]; today: string }) {
+/** 날짜별 열람 수 막대그래프. 45일이 넘으면 한 주씩 묶는다. */
+function ViewsChart({ days }: { days: DailyStat[] }) {
   const peak = Math.max(0, ...days.map((d) => d.views));
   const total = sum(days, "views");
+  const weekly = days.length > 45;
+
+  // 한 주씩 묶기 (월요일 시작). 첫 주는 기간 첫날부터.
+  const points: { start: string; views: number }[] = [];
+  for (const d of days) {
+    const key = weekly ? mondayOf(d.date) : d.date;
+    const last = points.at(-1);
+    if (last && (weekly ? mondayOf(last.start) === key : last.start === key)) last.views += d.views;
+    else points.push({ start: d.date, views: d.views });
+  }
+  const n = points.length;
+  // 날짜 글씨: 하루씩 14개 이하면 막대마다, 그보다 많거나 한 주 단위면 6~7개만
+  const step = !weekly && n <= 14 ? 1 : Math.ceil(n / 7);
+
+  const bars: Bar[] = points.map((p, i) => {
+    const [, month, day] = p.start.split("-").map(Number);
+    const labeled = (n - 1 - i) % step === 0;
+    const count = `${p.views.toLocaleString("ko-KR")}회`;
+    return {
+      key: p.start,
+      value: p.views,
+      // 기간 첫날이 월요일이 아니면 첫 막대는 한 주가 다 차지 않는다.
+      tooltip: weekly
+        ? `${month}월 ${day}일부터 ${mondayOf(p.start) === p.start ? "한 주" : "그 주 일요일까지"} ${count}`
+        : `${formatKoreanDate(p.start)} ${count}`,
+      axisLabel: !labeled ? undefined : step === 1 && i !== 0 && day !== 1 ? String(day) : `${month}/${day}`,
+      current: i === n - 1,
+    };
+  });
 
   return (
     <section className="mt-4 rounded-card bg-white p-5 md:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-        <h2 className="text-[18px] font-bold tracking-tight">최근 {STATS_DAYS}일 열람 수</h2>
+        <h2 className="text-[18px] font-bold tracking-tight">최근 {days.length}일 열람 수</h2>
         <p className="nums text-[13px] text-muted">
           합계 <span className="font-semibold text-ink">{total.toLocaleString("ko-KR")}</span>회 · 하루 최대 {peak.toLocaleString("ko-KR")}회
         </p>
       </div>
+      {weekly && <p className="mt-0.5 text-[13px] text-muted">막대 하나가 한 주 (월~일)</p>}
+      <AdminBarChart label="날짜별 열람 수" bars={bars} />
+    </section>
+  );
+}
 
-      <AdminBarChart
-        label="날짜별 열람 수"
-        bars={days.map((d, i) => {
-          const [, month, day] = d.date.split("-").map(Number);
-          return {
-            key: d.date,
-            value: d.views,
-            tooltip: `${formatKoreanDate(d.date)} ${d.views.toLocaleString("ko-KR")}회`,
-            axisLabel: i === 0 || day === 1 ? `${month}/${day}` : String(day),
-            current: d.date === today,
-          };
-        })}
-      />
+/** 홍보 링크(?from=이름)별 들어온 수와 쓰는 법 */
+function CampaignCard({ campaigns, period }: { campaigns: SiteStats["campaigns"]; period: Period }) {
+  return (
+    <section className="rounded-card bg-white p-5 md:p-6">
+      <h2 className="text-[18px] font-bold tracking-tight">홍보 링크별</h2>
+      <p className="mt-0.5 text-[13px] text-muted">최근 {period}일 · 이름표를 붙인 링크로 들어온 수</p>
+      {campaigns.length === 0 ? (
+        <p className="mt-3 rounded-control bg-bg p-5 text-center text-sm text-muted">아직 이름표를 붙인 링크로 들어온 기록이 없어요.</p>
+      ) : (
+        <ol className="mt-3 divide-y divide-line">
+          {campaigns.map((c) => (
+            <li key={c.name} className="flex items-center gap-3 py-2.5">
+              <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">{c.name}</span>
+              <span className="nums shrink-0 text-[14px] text-muted">{c.count.toLocaleString("ko-KR")}회</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="mt-3 rounded-control bg-bg p-4 text-[13px] leading-relaxed text-muted">
+        <p className="font-semibold text-ink">쓰는 법</p>
+        <p className="mt-1">
+          블로그·카페·문자·카톡 채널에 사이트 주소를 올릴 때 끝에 <code className="whitespace-nowrap text-ink">?from=이름</code> 을 붙이세요. 그 링크로 들어온 수가
+          이름별로 여기에 쌓입니다.
+        </p>
+        <p className="mt-1 break-all">
+          예: <code className="text-ink">https://www.gangsaitda.com/?from=블로그1</code>
+          <br />
+          공고 링크도 됩니다: <code className="text-ink">https://www.gangsaitda.com/jobs/123?from=문자11월</code>
+        </p>
+      </div>
     </section>
   );
 }
