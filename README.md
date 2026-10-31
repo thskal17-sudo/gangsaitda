@@ -69,6 +69,7 @@ npm run dev
 | `app/admin/`, `lib/admin.ts`, `components/admin-shell.tsx` | 관리자 화면 (`/admin`, 관리자 명단에 있는 회원만) |
 | `supabase/admins.sql` | 관리자 명단 표와 '관리자인가?' 확인 함수 |
 | `app/admin/page.tsx`, `lib/admin-stats.ts`, `components/admin-bar-chart.tsx` | 관리자 · 현황(대시보드, 관리자 첫 화면). 공고 관리는 `app/admin/jobs/page.tsx` (`/admin/jobs`) |
+| `app/admin/ads/`, `components/admin-ad-form.tsx`, `lib/home-ads.ts`, `lib/home-ad-schema.ts`, `lib/admin-ad-actions.ts`, `supabase/home-ads.sql` | 관리자 · 광고 관리 (홈 교육과정 카드 3개를 코드 수정 없이 넣고 바꾸기, 사진 올리기) |
 | `components/page-view-tracker.tsx`, `app/api/pv/`, `lib/page-view.ts`, `supabase/page-views.sql` | 화면 열람 수 세기 (누가 왔는지는 적지 않음, 화면 주소·들어온 경로 종류·사이트 이름·홍보 링크 이름표만) |
 | `app/admin/jobs/new/`, `lib/admin-job-schema.ts`, `lib/admin-job-actions.ts` | 관리자 · 공고 등록 화면과 저장 |
 | `supabase/admin-job-create.sql` | 관리자만 공고를 올릴 수 있는 함수 (제목·상세를 한 번에 저장) |
