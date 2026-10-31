@@ -3,8 +3,9 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { URGENT_DAYS } from "@/components/job-card";
-import { AD_INQUIRY_HREF, type Course, coursesOn } from "@/lib/courses";
+import { AD_INQUIRY_HREF, type Course } from "@/lib/courses";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
+import { homeCourses } from "@/lib/home-ads";
 import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
 import { getCurrentMember, getMemberType } from "@/lib/member";
 import { countByRegion, parseRegionParam, regionGroupOfJob } from "@/lib/regions";
@@ -22,10 +23,11 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   // 공고 탭과 같은 규칙: 회원은 기관·지역·마감일까지, 비회원은 제목만 받는다.
   const member = await getCurrentMember();
-  const [openJobs, todayDeadlineCount, memberType] = await Promise.all([
+  const [openJobs, todayDeadlineCount, memberType, courses] = await Promise.all([
     member ? getOpenJobs(today) : getOpenJobTitles(today),
     getTodayDeadlineCount(today),
     getMemberType(),
+    homeCourses(today),
   ]);
   const params = await searchParams;
   // 지역 탭 (?region=부산): 표만 그 권역으로 줄인다. 위쪽 숫자(지원가능한 공고 N건)는 전체 기준.
@@ -118,7 +120,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <SectionHead id="courses-title" title="강사 경력에 더하는 교육과정" href="/certificates" />
         {/* 휴대폰: 옆으로 밀어 보는 한 줄 / PC: 3칸 */}
         <ul className="-mr-4 mt-3.5 flex snap-x gap-3 overflow-x-auto pr-4 pb-1 md:mr-0 md:mt-5 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:p-0">
-          {coursesOn(today).map((course, i) => (
+          {courses.map((course, i) => (
             <li key={i} className="w-60 shrink-0 snap-start md:w-auto">
               <CourseCard course={course} />
             </li>
@@ -252,6 +254,8 @@ function CourseCard({ course }: { course: Course }) {
             alt=""
             fill
             sizes="(min-width: 768px) 340px, 240px"
+            // 광고 관리에서 올린 사진(Supabase 저장소)은 그대로 띄운다
+            unoptimized={course.image.startsWith("http")}
             className={`object-cover transition-transform duration-300 ${ended ? "opacity-45 grayscale" : "group-hover:scale-[1.03]"}`}
           />
         ) : (
