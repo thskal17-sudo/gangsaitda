@@ -17,6 +17,8 @@ export type ImportSummary = {
   received: number;
   /** 새로 들어간 공고 수 */
   created: number;
+  /** 새로 들어간 공고 번호 (Threads 에 올릴 때 씀) */
+  createdIds: number[];
   /** 일부러 건너뛴 줄 (이미 있음, 제외·보류) */
   skipped: { title: string; reason: string }[];
   /** 넣지 못한 줄 (칸 확인 실패, 저장 실패) */
@@ -43,7 +45,7 @@ export async function importJobs(
   const supabase = createServiceClient();
   if (!supabase) return { error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
 
-  const summary: ImportSummary = { received: rows.length, created: 0, skipped: [], failed: [] };
+  const summary: ImportSummary = { received: rows.length, created: 0, createdIds: [], skipped: [], failed: [] };
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
 
@@ -67,13 +69,14 @@ export async function importJobs(
       summary.failed.push({ title, reason: row.problem });
       continue;
     }
-    const { error } = await supabase.rpc("import_job", { ...toRpcArgs(row.values), p_hidden: hidden });
+    const { data, error } = await supabase.rpc("import_job", { ...toRpcArgs(row.values), p_hidden: hidden });
     if (error) {
       console.error("[import] 공고 저장 실패", error.code, error.message);
       summary.failed.push({ title, reason: "저장하지 못했어요" });
       continue;
     }
     summary.created += 1;
+    if (data) summary.createdIds.push(Number(data));
   }
   return summary;
 }

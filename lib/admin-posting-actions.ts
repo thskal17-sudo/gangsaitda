@@ -2,13 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { getAdminStatus } from "@/lib/admin";
 import { createClient } from "@/lib/supabase/server";
+import { shareNewJobsOnThreads } from "@/lib/threads";
 
 /*
  * 관리자 · 기관이 낸 강사 모집 공고 승인 / 반려. 데이터베이스 함수 admin_review_posting 이 관리자인지,
  * 기관 확인이 됐는지 한 번 더 확인한다 (supabase/request-postings.sql).
- * 승인하면 공고 표에 들어가 공고 목록에 바로 보인다. 끝나면 의뢰 상세 화면으로 돌아간다.
+ * 승인하면 공고 표에 들어가 공고 목록에 바로 보인다 (Threads 를 연결했으면 거기에도 올린다). 끝나면 의뢰 상세 화면으로 돌아간다.
  */
 
 const ID = /^\d{1,15}$/;
@@ -33,6 +35,7 @@ export async function reviewPosting(requestId: string, approve: boolean, formDat
     revalidatePath("/jobs");
     revalidatePath("/");
     revalidatePath("/admin/jobs");
+    if (data) after(() => shareNewJobsOnThreads([data]));
   }
   redirect(`${page}?done=${approve ? `approved&job=${data ?? ""}` : "rejected"}`);
 }

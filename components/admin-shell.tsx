@@ -11,6 +11,7 @@ const MENU = [
   { key: "members", label: "회원", href: "/admin/members" },
   { key: "profiles", label: "강사 프로필", href: "/admin/profiles" },
   { key: "kakao", label: "카톡 알림", href: "/admin/kakao" },
+  { key: "threads", label: "Threads 게시", href: "/admin/threads" },
 ] as const;
 
 export type AdminMenuKey = (typeof MENU)[number]["key"];
