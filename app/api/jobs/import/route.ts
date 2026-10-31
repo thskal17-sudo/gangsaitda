@@ -1,8 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { MAX_ROWS } from "@/lib/job-excel";
 import { importJobs } from "@/lib/job-import";
+import { shareNewJobsOnThreads } from "@/lib/threads";
 
 /*
  * 수집 프로그램이 공고를 넣는 '받는 문'. 매일 새벽 GitHub Actions(울산 저장소의 오늘의 브리핑)가 부른다.
@@ -13,7 +14,8 @@ import { importJobs } from "@/lib/job-import";
  *
  * 비밀 열쇠(JOB_IMPORT_TOKEN)가 맞을 때만 받는다. 열쇠는 Vercel 환경 변수와 수집 저장소의 Secrets 두 곳에 같은 값을 둔다.
  * JOB_IMPORT_REVIEW=1 이면 '숨김' 상태로 넣어 관리자가 확인한 뒤 공개한다. 없으면 바로 공개.
- * 돌려주는 값: { received, created, skipped: [...], failed: [...] } (lib/job-import.ts)
+ * 돌려주는 값: { received, created, createdIds, skipped: [...], failed: [...] } (lib/job-import.ts)
+ * 바로 공개한 새 공고는 응답을 보낸 뒤 Threads 에도 한 글로 묶어 올린다 (lib/threads.ts, 연결했을 때만).
  */
 
 const MIN_TOKEN_LENGTH = 20;
@@ -46,10 +48,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `rows 는 공고 줄 목록(최대 ${MAX_ROWS}개)이어야 해요.` }, { status: 400 });
   }
 
-  const result = await importJobs(rows as Record<string, unknown>[], process.env.JOB_IMPORT_REVIEW === "1");
+  const review = process.env.JOB_IMPORT_REVIEW === "1";
+  const result = await importJobs(rows as Record<string, unknown>[], review);
   if ("error" in result) return NextResponse.json(result, { status: 500 });
 
   // 새 공고가 홈·공고 목록·관리자 목록에 바로 보이게
   if (result.created > 0) revalidatePath("/", "layout");
+  if (!review && result.createdIds.length > 0) after(() => shareNewJobsOnThreads(result.createdIds));
   return NextResponse.json(result);
 }

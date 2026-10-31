@@ -2,14 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { getAdminStatus, getAllJobsForAdmin } from "@/lib/admin";
 import { jobSchema, newJobSchema, toRpcArgs } from "@/lib/admin-job-schema";
 import { MAX_ROWS, titleKey } from "@/lib/job-excel";
 import { createClient } from "@/lib/supabase/server";
+import { shareNewJobsOnThreads } from "@/lib/threads";
 
 /*
  * 관리자 · 공고 올리기·고치기·숨기기.
  * 데이터베이스 함수가 관리자인지 한 번 더 확인한다 (supabase/admin-job-create.sql, admin-job-edit.sql).
+ * 새로 보이게 된 공고(등록·엑셀·다시 올리기)는 응답을 보낸 뒤 Threads 에도 올린다 (lib/threads.ts, 연결했을 때만).
  */
 
 const NOT_ADMIN = "관리자만 할 수 있습니다. 다시 로그인해 주세요.";
@@ -33,6 +36,7 @@ export async function createJob(input: unknown): Promise<{ id: string } | { erro
   }
 
   refreshSite();
+  after(() => shareNewJobsOnThreads([data]));
   return { id: String(data) };
 }
 
@@ -77,6 +81,8 @@ export async function createJobsBulk(inputs: unknown[]): Promise<BulkResult[] | 
   }
 
   refreshSite();
+  const createdIds = results.flatMap((r) => (r.ok ? [r.id] : []));
+  if (createdIds.length > 0) after(() => shareNewJobsOnThreads(createdIds));
   return results;
 }
 
@@ -115,6 +121,7 @@ export async function setJobHidden(id: string, hidden: boolean): Promise<void> {
   }
 
   refreshSite();
+  if (!hidden) after(() => shareNewJobsOnThreads([id]));
 }
 
 /** 한꺼번에 숨기기 결과. 화면이 안내 문구를 띄우고 체크를 푼다. */
@@ -156,5 +163,7 @@ export async function setJobsHidden(_prev: BulkHiddenState, formData: FormData):
   }
 
   if (done > 0) refreshSite();
+  // 다시 올린 공고 중 아직 Threads 에 안 올린 것만 올라간다 (Threads 연결 전에 만든 공고는 빼고)
+  if (done > 0 && !hidden) after(() => shareNewJobsOnThreads(ids));
   return { done, failed, hidden, at };
 }
