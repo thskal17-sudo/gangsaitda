@@ -37,8 +37,11 @@ export type MyRequest = {
   postingJobId?: string;
   /** 담당자가 모집을 마감했다 */
   postingClosed: boolean;
-  /** 남긴 만족도 별점 (1~5). 안 남겼으면 없음 */
+  /** 예전 방식(의뢰별)으로 남긴 만족도 별점 (1~5). 안 남겼으면 없음 */
   feedbackRating?: number;
+  /** 만족도를 남길 수 있는(확정된) 강사 수와 그중 남긴 수 (supabase/match-feedback.sql) */
+  feedbackTargets: number;
+  feedbackDone: number;
 };
 
 type RequestRow = {
@@ -64,6 +67,8 @@ type RequestRow = {
   posting_job_id: number | null;
   posting_closed: boolean;
   feedback_rating: number | null;
+  feedback_targets: number | null;
+  feedback_done: number | null;
 };
 
 /** 내가 보낸 의뢰 — 최근에 보낸 순 */
@@ -95,6 +100,8 @@ export async function getMyRequests(): Promise<MyRequest[]> {
     postingJobId: r.posting_job_id === null ? undefined : String(r.posting_job_id),
     postingClosed: r.posting_closed,
     feedbackRating: r.feedback_rating ?? undefined,
+    feedbackTargets: r.feedback_targets ?? 0,
+    feedbackDone: r.feedback_done ?? 0,
   }));
 }
 
@@ -131,6 +138,10 @@ export type MyMatch = {
   /** 운영자가 확인한 배지 (supabase/profile-badges.sql). 확인한 뒤 내용이 바뀌었으면 false */
   profileChecked: boolean;
   planChecked: boolean;
+  /** 강사잇다 평가 요약 (다른 기관이 남긴 것 포함). 평가가 없으면 reviewCount 0 */
+  reviewCount: number;
+  reviewAverage?: number;
+  rehirePercent?: number;
 };
 
 type MatchRow = {
@@ -154,6 +165,9 @@ type MatchRow = {
   apply_message: string | null;
   profile_checked: boolean | null;
   plan_checked: boolean | null;
+  review_count: number | null;
+  review_avg: number | string | null;
+  rehire_percent: number | null;
 };
 
 /** 내 의뢰의 추천 강사. 기관 확인 전이거나 내 의뢰가 아니면 빈 목록 */
@@ -180,5 +194,9 @@ export async function getMyRequestMatches(requestId: string): Promise<MyMatch[]>
     applyMessage: m.apply_message?.trim() || undefined,
     profileChecked: m.profile_checked === true,
     planChecked: m.plan_checked === true,
+    reviewCount: m.review_count ?? 0,
+    // 소수(numeric)는 글자로 올 수 있어 숫자로 바꾼다
+    reviewAverage: m.review_avg === null ? undefined : Number(m.review_avg),
+    rehirePercent: m.rehire_percent ?? undefined,
   }));
 }
