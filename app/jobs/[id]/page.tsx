@@ -98,7 +98,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
 
       {detail && daysLeft !== null ? (
         /* 휴대폰: 요약 → 본문 순서로 한 줄. PC: 왼쪽 본문, 오른쪽 요약(스크롤해도 따라옴). */
-        <div className="mt-5 grid gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
+        <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
           <aside className="rounded-card bg-white p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
             <FactList
               facts={[

@@ -16,19 +16,23 @@ export function FactList({ facts }: { facts: Fact[] }) {
       {shown.map((fact) => (
         <Fragment key={fact.label}>
           <dt className="text-muted">{fact.label}</dt>
-          <dd className="nums font-medium text-ink">{fact.value}</dd>
+          <dd className="nums font-medium text-ink [overflow-wrap:anywhere]">{fact.value}</dd>
         </Fragment>
       ))}
     </dl>
   );
 }
 
-/** 제목이 있는 흰 카드 한 칸 (상세 내용, 지원 자격 등). */
+/**
+ * 제목이 있는 흰 카드 한 칸 (상세 내용, 지원 자격 등).
+ * 수집한 공고에는 원문 주소처럼 띄어쓰기 없이 아주 긴 글자가 들어 있어, 그런 글자는 아무 데서나 잘라 카드 안에서 줄을 바꾼다
+ * (overflow-wrap: anywhere — 휴대폰에서 긴 주소 때문에 화면이 옆으로 밀리지 않게).
+ */
 export function TextSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-card bg-white p-5 md:p-6">
       <h2 className="text-[17px] font-bold tracking-tight text-ink">{title}</h2>
-      <div className="mt-2.5 text-[15px] leading-relaxed text-ink">{children}</div>
+      <div className="mt-2.5 text-[15px] leading-relaxed text-ink [overflow-wrap:anywhere]">{children}</div>
     </section>
   );
 }
