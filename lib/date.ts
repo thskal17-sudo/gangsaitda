@@ -27,10 +27,13 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((toUtcMs(to) - toUtcMs(from)) / DAY_MS);
 }
 
-/** "2026-09-25" → "9월 25일(금)" */
+/** "2026-09-25" → "9월 25일(금)". 올해가 아니면 "2027년 2월 28일(일)" */
 export function formatKoreanDate(date: string): string {
   const d = new Date(toUtcMs(date));
-  return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일(${WEEKDAYS[d.getUTCDay()]})`;
+  // 올해가 아닌 날짜는 연도를 붙인다 (내년 2월 마감인데 "2월 28일"만 보이면 올해인지 헷갈린다). 예: "2027년 2월 28일(일)"
+  const year = d.getUTCFullYear();
+  const prefix = String(year) === todayInSeoul().slice(0, 4) ? "" : `${year}년 `;
+  return `${prefix}${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일(${WEEKDAYS[d.getUTCDay()]})`;
 }
 
 /** 데이터베이스의 시각(예: "2026-09-23T15:30:00+00:00")이 한국 날짜로 며칠인지. 예: "2026-09-24" */
