@@ -40,6 +40,17 @@ export async function getMySavedJobIds(): Promise<Set<string>> {
   return new Set((data as { job_id: number }[]).map((r) => String(r.job_id)));
 }
 
+/** 내가 담은 공고 수 (마이페이지). 읽지 못하면 null */
+export async function getMySavedCount(): Promise<number | null> {
+  const supabase = await createClient();
+  const { count, error } = await supabase.from("saved_jobs").select("job_id", { count: "exact", head: true });
+  if (error) {
+    console.error("[saved-jobs] 담은 공고 수 읽기 실패", error.code, error.message);
+    return null;
+  }
+  return count ?? 0;
+}
+
 /**
  * 내가 담은 공고 — 마감 전 공고는 마감 가까운 순, 마감이 지난 공고는 그 아래 최근 마감 순.
  * 표가 아직 없으면(SQL 실행 전) null
