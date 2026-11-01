@@ -128,6 +128,9 @@ export type MyMatch = {
   applied: boolean;
   /** 지원하면서 남긴 한마디 */
   applyMessage?: string;
+  /** 운영자가 확인한 배지 (supabase/profile-badges.sql). 확인한 뒤 내용이 바뀌었으면 false */
+  profileChecked: boolean;
+  planChecked: boolean;
 };
 
 type MatchRow = {
@@ -149,6 +152,8 @@ type MatchRow = {
   email: string | null;
   applied: boolean;
   apply_message: string | null;
+  profile_checked: boolean | null;
+  plan_checked: boolean | null;
 };
 
 /** 내 의뢰의 추천 강사. 기관 확인 전이거나 내 의뢰가 아니면 빈 목록 */
@@ -173,5 +178,7 @@ export async function getMyRequestMatches(requestId: string): Promise<MyMatch[]>
     email: m.email ?? undefined,
     applied: m.applied,
     applyMessage: m.apply_message?.trim() || undefined,
+    profileChecked: m.profile_checked === true,
+    planChecked: m.plan_checked === true,
   }));
 }

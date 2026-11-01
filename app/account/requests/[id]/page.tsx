@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { CHECK_BADGE_HELP, CheckBadge } from "@/components/check-badges";
 import FeedbackForm from "@/components/feedback-form";
 import { ChooseButton, ClosePostingButton, MoreForm } from "@/components/my-request-buttons";
 import NotFoundCard from "@/components/not-found-card";
@@ -289,6 +290,13 @@ function MatchCard({ requestId, match: m }: { requestId: string; match: MyMatch 
           <span className="mx-1.5 text-line">|</span>
           <span className="text-muted">{m.regions.join(" · ")}</span>
         </p>
+      )}
+      {(m.profileChecked || m.planChecked) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {m.profileChecked && <CheckBadge label="프로필 확인" />}
+          {m.planChecked && <CheckBadge label="강의계획서 확인" />}
+          <span className="text-[12px] text-muted">{CHECK_BADGE_HELP}</span>
+        </div>
       )}
       {m.applyMessage && (
         <p className="mt-2 rounded-control bg-ok/10 px-4 py-3 text-[14px] leading-relaxed text-ink">
