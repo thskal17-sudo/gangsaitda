@@ -12,6 +12,7 @@ import { countByRegion, parseRegionParam, regionGroupOfJob } from "@/lib/regions
 import { type SavedJob, getMySavedJobs } from "@/lib/saved-jobs";
 import { INSTRUCTOR_COUNT_LABEL } from "@/lib/site";
 import JobSearch from "@/components/job-search";
+import SaveJobButton from "@/components/save-job-button";
 import RegionTabs from "@/components/region-tabs";
 
 /** 홈 공고 표에 보여줄 개수 (마감 가까운 순) */
@@ -36,13 +37,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const regionJobs = region ? openJobs.filter((job) => regionGroupOfJob(job) === region) : openJobs;
   const homeJobs = regionJobs.slice(0, HOME_JOB_COUNT);
   // 강사 회원: 담아 둔 관심 공고 중 3일 안에 마감되고 아직 '지원했어요'를 안 누른 것 (알림 대신 홈에서 챙겨 줌)
-  const urgentSaved =
-    member && memberType !== "기관"
-      ? ((await getMySavedJobs(today)) ?? []).filter((j) => {
-          const left = daysBetween(today, j.deadline);
-          return left >= 0 && left <= URGENT_DAYS && !j.appliedDate;
-        })
-      : [];
+  const savedJobs = member && memberType !== "기관" ? ((await getMySavedJobs(today)) ?? []) : null;
+  const urgentSaved = (savedJobs ?? []).filter((j) => {
+    const left = daysBetween(today, j.deadline);
+    return left >= 0 && left <= URGENT_DAYS && !j.appliedDate;
+  });
+  // 공고 표의 ☆: 강사 회원은 담은 공고 표시, 비회원은 누르면 로그인, 기관 회원은 별 없음
+  const savedIds = savedJobs ? new Set(savedJobs.map((j) => j.jobId)) : null;
+  const rowSave = (jobId: string): RowSave | undefined =>
+    !member ? { loginNext: "/" } : savedIds ? { saved: savedIds.has(jobId) } : undefined;
+  const showStar = !member || savedIds !== null;
   // 회원 탈퇴를 마치고 홈으로 온 경우 (?deleted=1)
   const justDeleted = !member && params.deleted === "1";
 
@@ -151,7 +155,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <div className="mb-4 md:mb-6">
           <RegionTabs active={region} counts={countByRegion(openJobs)} total={openJobs.length} basePath="/" />
         </div>
-        <JobTableHead isMember={member !== null} />
+        <JobTableHead isMember={member !== null} withStar={showStar} />
         {homeJobs.length === 0 ? (
           <p className="border-b border-line py-8 text-center text-sm text-muted">
             {region ? `지금 ${region} 지역에는 지원할 수 있는 공고가 없습니다.` : "지금은 지원할 수 있는 공고가 없습니다."}
@@ -160,7 +164,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <ul>
             {homeJobs.map((job) => (
               <li key={job.id}>
-                <JobRow job={job} today={today} />
+                <JobRow job={job} today={today} save={rowSave(job.id)} />
               </li>
             ))}
           </ul>
@@ -325,8 +329,12 @@ function CourseCard({ course }: { course: Course }) {
 }
 
 /** 공고 표 머리줄. PC 회원은 칸 이름 네 개, 그 밖에는 '마감일 순' 한 줄. */
-function JobTableHead({ isMember }: { isMember: boolean }) {
-  const base = "border-b-2 border-ink pb-2.5 text-[13px] font-bold text-[#4E5968] md:py-3.5 md:text-[14px]";
+/** 공고 표 줄 끝의 ☆. 강사 회원: 담기/빼기, 비회원: 로그인하러 가기 */
+type RowSave = { saved: boolean } | { loginNext: string };
+
+function JobTableHead({ isMember, withStar }: { isMember: boolean; withStar: boolean }) {
+  // ☆ 칸만큼 오른쪽을 비워 아래 줄의 칸과 맞춘다
+  const base = `border-b-2 border-ink pb-2.5 text-[13px] font-bold text-[#4E5968] md:py-3.5 md:text-[14px] ${withStar ? "md:pr-11" : ""}`;
 
   if (!isMember) {
     return (
@@ -362,9 +370,27 @@ function dayClass(daysLeft: number): string {
   return "text-[#B0B8C1]";
 }
 
-function JobRow({ job, today }: { job: Job | JobTitle; today: string }) {
+/** 공고 표 한 줄. save 가 있으면 줄 끝에 ☆ (링크 바깥에 두어, 별을 눌러도 공고로 넘어가지 않게) */
+function JobRow({ job, today, save }: { job: Job | JobTitle; today: string; save?: RowSave }) {
+  return (
+    <div className="flex items-center border-b border-line">
+      <JobRowLink job={job} today={today} />
+      {save && (
+        <div className="shrink-0 pl-1">
+          {"loginNext" in save ? (
+            <SaveJobButton jobId={job.id} saved={false} size="small" loginNext={save.loginNext} />
+          ) : (
+            <SaveJobButton jobId={job.id} saved={save.saved} size="small" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function JobRowLink({ job, today }: { job: Job | JobTitle; today: string }) {
   const summary = "deadline" in job ? job : null;
-  const rowClass = "group flex gap-4 border-b border-line py-[18px] md:gap-6 md:py-[22px]";
+  const rowClass = "group flex min-w-0 flex-1 gap-4 py-[18px] md:gap-6 md:py-[22px]";
 
   // 비회원: 제목만
   if (!summary) {
