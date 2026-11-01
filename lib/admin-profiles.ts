@@ -30,6 +30,10 @@ export type AdminProfile = {
   /** 운영자 확인 배지 (supabase/profile-badges.sql). 아직 확인 안 했으면 없음 */
   profileCheck?: ProfileCheck;
   planCheck?: ProfileCheck;
+  /** 강사잇다 평가 요약 (supabase/match-feedback.sql). 평가가 없으면 reviewCount 0 */
+  reviewCount?: number;
+  reviewAverage?: number;
+  rehirePercent?: number;
   /** 마지막으로 저장한 날 (한국 날짜) */
   updatedDate: string;
   /** 운영자 등록 강사: 기관 전달 동의를 받았다고 확인한 날, 받은 방법 */
@@ -124,7 +128,7 @@ type Row = {
 /** 모든 강사 프로필 (강사가 낸 것 + 운영자 등록) — 최근에 저장한 순 */
 export async function getAllProfiles(): Promise<AdminProfile[]> {
   const supabase = await createClient();
-  const [members, admins, checks] = await Promise.all([
+  const [members, admins, checks, reviews] = await Promise.all([
     supabase
       .from("instructor_profiles")
       .select(
@@ -133,18 +137,36 @@ export async function getAllProfiles(): Promise<AdminProfile[]> {
       .order("updated_at", { ascending: false }),
     supabase.from("admin_instructors").select(INSTRUCTOR_COLUMNS).order("updated_at", { ascending: false }),
     supabase.rpc("admin_profile_checks"),
+    supabase.from("match_feedback").select("member_id, instructor_id, rating, rehire"),
   ]);
   if (members.error) throw new Error(`강사 프로필을 불러오지 못했습니다: ${members.error.message}`);
   if (admins.error) throw new Error(`등록 강사를 불러오지 못했습니다: ${admins.error.message}`);
   if (checks.error) throw new Error(`확인 배지를 불러오지 못했습니다: ${checks.error.message}`);
+  if (reviews.error) throw new Error(`만족도를 불러오지 못했습니다: ${reviews.error.message}`);
   const checkOf = new Map((checks.data as CheckRow[]).map((c) => [c.id, c]));
+  const reviewOf = new Map<string, { total: number; count: number; rehire: number }>();
+  for (const f of reviews.data as { member_id: string | null; instructor_id: string | null; rating: number; rehire: boolean }[]) {
+    const key = f.member_id ?? f.instructor_id ?? "";
+    const r = reviewOf.get(key) ?? { total: 0, count: 0, rehire: 0 };
+    r.total += f.rating;
+    r.count += 1;
+    if (f.rehire) r.rehire += 1;
+    reviewOf.set(key, r);
+  }
   const withChecks = (p: AdminProfile): AdminProfile => {
     const c = checkOf.get(p.memberId);
-    if (!c) return p;
+    const r = reviewOf.get(p.memberId);
     return {
       ...p,
-      profileCheck: toCheck(c.profile_status, c.profile_checked_at, c.profile_note),
-      planCheck: toCheck(c.plan_status, c.plan_checked_at, c.plan_note),
+      ...(c && {
+        profileCheck: toCheck(c.profile_status, c.profile_checked_at, c.profile_note),
+        planCheck: toCheck(c.plan_status, c.plan_checked_at, c.plan_note),
+      }),
+      ...(r && {
+        reviewCount: r.count,
+        reviewAverage: Math.round((r.total / r.count) * 10) / 10,
+        rehirePercent: Math.round((100 * r.rehire) / r.count),
+      }),
     };
   };
 

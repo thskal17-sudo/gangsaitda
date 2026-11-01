@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CheckControl } from "@/components/admin-check-buttons";
 import { CheckBadge } from "@/components/check-badges";
+import ReviewSummary from "@/components/review-summary";
 import type { AdminProfile, ProfileCheck } from "@/lib/admin-profiles";
 import { formatPhone } from "@/lib/admin-requests";
 import { formatKoreanDate } from "@/lib/date";
@@ -90,6 +91,7 @@ export function ProfileRow({
               <span className="nums text-[12px] text-muted">{formatKoreanDate(p.updatedDate)} 저장</span>
               <SummaryBadge label="프로필 확인" check={p.profileCheck} />
               <SummaryBadge label="강의계획서 확인" check={p.planCheck} />
+              <ReviewSummary count={p.reviewCount ?? 0} average={p.reviewAverage} rehirePercent={p.rehirePercent} small />
               {badge}
             </div>
             <p className="text-[14px] text-ink">
