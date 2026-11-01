@@ -100,7 +100,8 @@ npm run dev
 | `app/account/requests/[id]/posting/`, `lib/my-postings.ts`, `lib/my-posting-actions.ts`, `lib/posting-schema.ts` | 기관 담당자 · 강사 모집 공고 쓰기·고치기·모집 마감 (운영자 검토 뒤 공고 목록에 게시) |
 | `components/admin-posting-review.tsx`, `lib/admin-posting-actions.ts` | 관리자 · 모집 공고 승인(공고 올리기)/반려(사유) |
 | `supabase/request-postings.sql` | 모집 공고 표, jobs.request_id, 담당자·관리자 함수 |
-| `components/feedback-form.tsx`, `lib/my-feedback*.ts`, `supabase/request-feedback.sql` | 기관 담당자 · 완료된 의뢰의 강의 만족도 (별점·의견). 운영자만 봄 |
+| `components/feedback-form.tsx`, `lib/my-feedback*.ts`, `components/review-summary.tsx`, `supabase/match-feedback.sql` | 기관 담당자 · 확정된 강사마다 강의 만족도 (별점·다시 부르고 싶은지·의견). 다른 기관에는 요약(건수·평균·재섭외 비율)만, 의견은 운영자만 |
+| `supabase/request-feedback.sql` | 예전 의뢰별 만족도 표 (관리자 화면에서만 보임) |
 | `supabase/choose-auto-close.sql` | 기관이 필요한 강사 수만큼 고르면 모집 공고 자동 마감 |
 | `supabase/profile-badges.sql`, `components/check-badges.tsx`, `components/admin-check-buttons.tsx`, `lib/admin-check-actions.ts`, `app/admin/profiles/[id]/plan/` | 프로필 확인 배지 ('프로필 확인'·'강의계획서 확인'). 강사가 대표 강의계획서를 올리고, 운영자가 확인하면 기관 추천 강사 카드에 배지가 붙음. 내용을 고치면 배지가 저절로 내려감 |
 | `app/jobs/[id]/apply/`, `lib/apply*.ts`, `supabase/job-apply.sql` | 강사 회원 · 공고에서 바로 지원하기 (프로필·파일·한마디·전달 동의). 지원자는 기관 내 의뢰·관리자 의뢰 상세에 함께 보임 |
