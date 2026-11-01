@@ -35,7 +35,7 @@ export const OPERATOR = {
 /** 서비스 이용약관(/terms)에 들어가는 값 */
 export const TERMS = {
   /** 시행일. 약관을 고치면 새 시행일로 바꾸고, 시행 7일 전(회원에게 불리한 변경은 30일 전)부터 사이트에 알린다. */
-  effectiveDate: "2026년 11월 1일",
+  effectiveDate: "2026년 12월 1일",
 };
 
 /** 개인정보처리방침(/privacy)에 들어가는 값 */
@@ -45,7 +45,7 @@ export const PRIVACY = {
   /** 보호책임자 연락처 */
   officerEmail: OPERATOR.email,
   /** 시행일 */
-  effectiveDate: "2026년 11월 1일",
+  effectiveDate: "2026년 12월 1일",
   /**
    * 회원 정보가 저장되는 Supabase 데이터베이스의 위치 (Supabase → Project Settings → General → Region).
    * 사이트 서버(Vercel)도 같은 곳에서 돈다 (vercel.json 의 regions).
