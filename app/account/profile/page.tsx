@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { CheckBadge } from "@/components/check-badges";
 import MemberTypeNotice from "@/components/member-type-notice";
 import { formatKoreanDate, seoulDateOf } from "@/lib/date";
 import { getCurrentMember, getMemberType } from "@/lib/member";
-import { getMyProfile } from "@/lib/profile";
+import { getMyProfile, getMyProfileChecks } from "@/lib/profile";
 import ProfileForm from "./profile-form";
 
 export const metadata: Metadata = { title: "내 프로필", robots: { index: false, follow: false } };
@@ -26,6 +27,7 @@ export default async function ProfilePage() {
     );
   }
   const profile = await getMyProfile(member.id);
+  const checks = profile ? await getMyProfileChecks() : {};
 
   return (
     <section className="mx-auto w-full max-w-[560px]">
@@ -39,6 +41,21 @@ export default async function ProfilePage() {
         <p className="nums mt-4 inline-flex rounded-badge bg-ok/10 px-3 py-1 text-sm font-semibold text-ok">
           제출됨 · {formatKoreanDate(seoulDateOf(profile.updatedAt))} 저장
         </p>
+      )}
+      {profile && (
+        <div className="mt-3 rounded-card bg-white p-5">
+          <div className="flex flex-wrap gap-1.5">
+            <CheckBadge label="프로필 확인" state={checks.profile === "확인" ? "done" : "waiting"} />
+            {profile.samplePlanName && (
+              <CheckBadge label="강의계획서 확인" state={checks.plan === "확인" ? "done" : "waiting"} />
+            )}
+          </div>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted">
+            운영자가 내용을 확인하면 배지가 붙고, 기관에 추천될 때 함께 보여요.
+            <br />
+            경력·파일·강의계획서를 고치면 운영자가 다시 확인해요.
+          </p>
+        </div>
       )}
       <div className="mt-5">
         <ProfileForm profile={profile} />

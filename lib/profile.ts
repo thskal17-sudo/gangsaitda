@@ -21,6 +21,9 @@ export type Profile = {
   intro: string;
   filePath: string | null;
   fileName: string | null;
+  /** 대표 강의계획서 (선택). 운영자가 확인하면 '강의계획서 확인' 배지가 붙는다 */
+  samplePlanPath: string | null;
+  samplePlanName: string | null;
   updatedAt: string;
 };
 
@@ -34,6 +37,8 @@ type Row = {
   intro: string | null;
   file_path: string | null;
   file_name: string | null;
+  sample_plan_path: string | null;
+  sample_plan_name: string | null;
   updated_at: string;
 };
 
@@ -48,6 +53,8 @@ function toProfile(row: Row): Profile {
     intro: row.intro ?? "",
     filePath: row.file_path,
     fileName: row.file_name,
+    samplePlanPath: row.sample_plan_path ?? null,
+    samplePlanName: row.sample_plan_name ?? null,
     updatedAt: row.updated_at,
   };
 }
@@ -58,6 +65,25 @@ export async function getMyProfile(memberId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from("instructor_profiles").select("*").eq("member_id", memberId).maybeSingle();
   if (error) throw new Error(`프로필을 불러오지 못했습니다: ${error.message}`);
   return data ? toProfile(data as Row) : null;
+}
+
+/** 운영자 확인 배지 상태. 확인 = 배지 붙음, 다시 확인 = 확인한 뒤 내용이 바뀌어 배지가 내려감 (supabase/profile-badges.sql) */
+export type CheckStatus = "확인" | "다시 확인";
+
+export function toCheckStatus(value: unknown): CheckStatus | undefined {
+  return value === "확인" || value === "다시 확인" ? value : undefined;
+}
+
+/** 내 프로필의 배지 상태. 운영자가 아직 확인하지 않았으면 둘 다 없음 */
+export async function getMyProfileChecks(): Promise<{ profile?: CheckStatus; plan?: CheckStatus }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("my_profile_checks");
+  if (error) {
+    console.error("[profile] 배지 상태 불러오기 실패", error.message);
+    return {};
+  }
+  const row = (data as { profile_status: string | null; plan_status: string | null }[])[0];
+  return { profile: toCheckStatus(row?.profile_status), plan: toCheckStatus(row?.plan_status) };
 }
 
 /**

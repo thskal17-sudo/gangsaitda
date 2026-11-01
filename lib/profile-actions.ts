@@ -16,10 +16,14 @@ type Fail = { error: string };
 const notLoggedIn: Fail = { error: "로그인이 풀렸습니다. 다시 로그인한 뒤 시도해 주세요." };
 const notInstructor: Fail = { error: "강사 회원만 프로필을 낼 수 있어요." };
 
-/** 파일 올릴 자리 받기. 회원번호 폴더 안에 새 이름(시각.확장자)으로 둔다 (한글 파일 이름은 저장소가 받지 않아서). */
+/**
+ * 파일 올릴 자리 받기. 회원번호 폴더 안에 새 이름(시각.확장자)으로 둔다 (한글 파일 이름은 저장소가 받지 않아서).
+ * kind: profile = 프로필 파일, plan = 대표 강의계획서 (이름 앞에 plan- 을 붙인다)
+ */
 export async function prepareProfileUpload(
   fileName: unknown,
   size: unknown,
+  kind: "profile" | "plan" = "profile",
 ): Promise<{ path: string; signedUrl: string } | Fail> {
   const member = await getCurrentMember();
   if (!member) return notLoggedIn;
@@ -29,7 +33,7 @@ export async function prepareProfileUpload(
   if (!ext) return { error: "PDF, 파워포인트, 한글, 워드 파일만 올릴 수 있어요." };
   if (size <= 0 || size > PROFILE_FILE_MAX_BYTES) return { error: "파일은 10MB 까지 올릴 수 있어요." };
 
-  const path = `${member.id}/${Date.now()}.${ext}`;
+  const path = `${member.id}/${kind === "plan" ? "plan-" : ""}${Date.now()}.${ext}`;
   const supabase = await createClient();
   const { data, error } = await supabase.storage.from(PROFILE_BUCKET).createSignedUploadUrl(path);
   if (error || !data) {
@@ -39,10 +43,14 @@ export async function prepareProfileUpload(
   return { path, signedUrl: data.signedUrl };
 }
 
-/** 프로필 저장. 파일로 낼 때는 방금 올린 파일 자리(path)와 원래 파일 이름을 함께 받는다. */
+/**
+ * 프로필 저장. 파일로 낼 때는 방금 올린 파일 자리(path)와 원래 파일 이름을 함께 받는다.
+ * plan: 대표 강의계획서를 새로 올렸으면 그 자리와 이름, 빼려면 "remove", 그대로면 없음.
+ */
 export async function saveProfile(
   input: unknown,
   upload?: { path: string; fileName: string },
+  plan?: { path: string; fileName: string } | "remove",
 ): Promise<{ ok: true } | Fail> {
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -55,7 +63,7 @@ export async function saveProfile(
 
   const { data: before } = await supabase
     .from("instructor_profiles")
-    .select("file_path, file_name")
+    .select("file_path, file_name, sample_plan_path, sample_plan_name")
     .eq("member_id", member.id)
     .maybeSingle();
 
@@ -77,6 +85,20 @@ export async function saveProfile(
     }
   }
 
+  // 대표 강의계획서: 새로 올렸으면 그것, 빼기면 없음, 아니면 전에 올린 것을 그대로 쓴다.
+  let planPath: string | null = before?.sample_plan_path ?? null;
+  let planName: string | null = before?.sample_plan_name ?? null;
+  if (plan === "remove") {
+    planPath = null;
+    planName = null;
+  } else if (plan) {
+    if (typeof plan.path !== "string" || !plan.path.startsWith(`${member.id}/plan-`) || plan.path.includes("..")) {
+      return { error: "강의계획서를 다시 올려 주세요." };
+    }
+    planPath = plan.path;
+    planName = String(plan.fileName ?? "").slice(0, 200) || "강의계획서";
+  }
+
   const row = {
     member_id: member.id,
     consent_at: new Date().toISOString(),
@@ -88,6 +110,8 @@ export async function saveProfile(
     intro: v.method === "form" && v.intro ? v.intro : null,
     file_path: filePath,
     file_name: fileName,
+    sample_plan_path: planPath,
+    sample_plan_name: planName,
     updated_at: new Date().toISOString(),
   };
   const { error } = await supabase.from("instructor_profiles").upsert(row);
@@ -96,10 +120,11 @@ export async function saveProfile(
     return { error: "프로필을 저장하지 못했습니다. 잠시 뒤에 다시 시도해 주세요." };
   }
 
-  // 전에 올린 파일이 더는 쓰이지 않으면 지운다 (새 파일로 바꿨거나 양식으로 바꾼 경우).
-  if (before?.file_path && before.file_path !== filePath) {
-    await supabase.storage.from(PROFILE_BUCKET).remove([before.file_path]);
-  }
+  // 전에 올린 파일이 더는 쓰이지 않으면 지운다 (새 파일로 바꿨거나 양식으로 바꿨거나 강의계획서를 뺀 경우).
+  const unused = [before?.file_path, before?.sample_plan_path].filter(
+    (p): p is string => Boolean(p) && p !== filePath && p !== planPath,
+  );
+  if (unused.length > 0) await supabase.storage.from(PROFILE_BUCKET).remove(unused);
 
   revalidatePath("/account/profile");
   revalidatePath("/");

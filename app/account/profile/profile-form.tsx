@@ -23,6 +23,9 @@ export default function ProfileForm({ profile }: { profile: Profile | null }) {
   const [serverError, setServerError] = useState<string>();
   const [fileError, setFileError] = useState<string>();
   const [file, setFile] = useState<File | null>(null);
+  const [planError, setPlanError] = useState<string>();
+  const [planFile, setPlanFile] = useState<File | null>(null);
+  const [removePlan, setRemovePlan] = useState(false);
   const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -53,6 +56,29 @@ export default function ProfileForm({ profile }: { profile: Profile | null }) {
     setFile(picked);
   };
 
+  const onPickPlan = (picked: File | undefined) => {
+    setPlanError(undefined);
+    setPlanFile(null);
+    if (!picked) return;
+    if (!profileFileExtension(picked.name)) return setPlanError("PDF, 파워포인트, 한글, 워드 파일만 올릴 수 있어요.");
+    if (picked.size > PROFILE_FILE_MAX_BYTES) return setPlanError("파일은 10MB 까지 올릴 수 있어요.");
+    setRemovePlan(false);
+    setPlanFile(picked);
+  };
+
+  /** 1) 올릴 자리 받기 → 2) 브라우저가 저장소에 바로 올리기. 실패하면 안내 문구 */
+  const uploadFile = async (picked: File, kind: "profile" | "plan"): Promise<{ path: string; fileName: string } | string> => {
+    const ticket = await prepareProfileUpload(picked.name, picked.size, kind);
+    if ("error" in ticket) return ticket.error;
+    const res = await fetch(ticket.signedUrl, {
+      method: "PUT",
+      headers: { "content-type": picked.type || "application/octet-stream", "x-upsert": "false" },
+      body: picked,
+    }).catch(() => null);
+    if (!res?.ok) return "파일을 올리지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.";
+    return { path: ticket.path, fileName: picked.name };
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     setServerError(undefined);
     setSaved(false);
@@ -61,23 +87,27 @@ export default function ProfileForm({ profile }: { profile: Profile | null }) {
     if (values.method === "file") {
       if (!file && !profile?.filePath) return setFileError("프로필 파일을 골라 주세요.");
       if (file) {
-        // 1) 올릴 자리 받기 → 2) 브라우저가 저장소에 바로 올리기
-        const ticket = await prepareProfileUpload(file.name, file.size);
-        if ("error" in ticket) return setServerError(ticket.error);
-        const res = await fetch(ticket.signedUrl, {
-          method: "PUT",
-          headers: { "content-type": file.type || "application/octet-stream", "x-upsert": "false" },
-          body: file,
-        }).catch(() => null);
-        if (!res?.ok) return setServerError("파일을 올리지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.");
-        upload = { path: ticket.path, fileName: file.name };
+        const uploaded = await uploadFile(file, "profile");
+        if (typeof uploaded === "string") return setServerError(uploaded);
+        upload = uploaded;
       }
     }
 
+    let plan: { path: string; fileName: string } | "remove" | undefined;
+    if (planFile) {
+      const uploaded = await uploadFile(planFile, "plan");
+      if (typeof uploaded === "string") return setServerError(uploaded);
+      plan = uploaded;
+    } else if (removePlan) {
+      plan = "remove";
+    }
+
     // 3) 프로필 저장
-    const result = await saveProfile(values, upload);
+    const result = await saveProfile(values, upload, plan);
     if ("error" in result) return setServerError(result.error);
     setFile(null);
+    setPlanFile(null);
+    setRemovePlan(false);
     setSaved(true);
     window.scrollTo({ top: 0 });
   });
@@ -185,6 +215,50 @@ export default function ProfileForm({ profile }: { profile: Profile | null }) {
         <p className="rounded-control bg-accent/10 px-4 py-3 text-sm leading-relaxed text-ink">
           <b>전화번호·이메일은 빼고</b> 작성해 주세요. 연락처는 섭외가 확정된 뒤에만 기관에 알려 드려요.
         </p>
+      </Section>
+
+      <Section title="대표 강의계획서 (선택)">
+        <p className="-mt-2 text-sm leading-relaxed text-muted">
+          자주 하는 강의의 계획서를 하나 올려 주세요. 운영자가 확인하면 프로필에 <b className="text-ok">강의계획서 확인</b> 배지가
+          붙어요.
+        </p>
+        {profile?.samplePlanName && !planFile && !removePlan && (
+          <div className="flex items-center gap-2 rounded-control bg-bg px-4 py-3 text-sm text-ink">
+            <span className="min-w-0 flex-1">
+              지금 올라가 있는 파일: <b className="break-all">{profile.samplePlanName}</b>
+            </span>
+            <button
+              type="button"
+              onClick={() => setRemovePlan(true)}
+              className="shrink-0 text-[13px] font-semibold text-muted hover:text-warn"
+            >
+              빼기
+            </button>
+          </div>
+        )}
+        {removePlan && (
+          <p className="flex items-center gap-2 rounded-control bg-bg px-4 py-3 text-sm text-muted">
+            <span className="flex-1">저장하면 강의계획서가 빠져요.</span>
+            <button type="button" onClick={() => setRemovePlan(false)} className="shrink-0 text-[13px] font-semibold text-brand">
+              되돌리기
+            </button>
+          </p>
+        )}
+        <div>
+          <label htmlFor="planFile" className="sr-only">
+            대표 강의계획서 파일
+          </label>
+          <input
+            id="planFile"
+            type="file"
+            accept={ACCEPT}
+            onChange={(e) => onPickPlan(e.target.files?.[0])}
+            aria-invalid={planError ? true : undefined}
+            className="block w-full rounded-control bg-bg p-3 text-sm text-ink file:mr-3 file:rounded-control file:border-0 file:bg-brand file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+          />
+          <p className="mt-1.5 text-xs text-muted">PDF·파워포인트·한글·워드, 10MB 까지</p>
+          {planError && <p className="mt-1.5 text-sm text-warn">{planError}</p>}
+        </div>
       </Section>
 
       <PrivacyConsent
