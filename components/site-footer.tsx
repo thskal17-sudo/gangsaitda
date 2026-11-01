@@ -49,6 +49,11 @@ export default function SiteFooter({ isMember, memberType }: { isMember: boolean
                 내 프로필
               </Link>
             )}
+            {memberType === "강사" && (
+              <Link href="/account/applications" className="hover:text-ink hover:underline">
+                내 지원 현황
+              </Link>
+            )}
             {memberType !== "강사" && (
               <>
                 <Link href="/account/requests" className="hover:text-ink hover:underline">

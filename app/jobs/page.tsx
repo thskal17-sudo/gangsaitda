@@ -7,7 +7,8 @@ import RegionTabs from "@/components/region-tabs";
 import { todayInSeoul } from "@/lib/date";
 import { matchesQuery, parseQueryParam, queryWords } from "@/lib/job-search";
 import { type Job, type JobTitle, getOpenJobTitles, getOpenJobs, getTodayJobTitles } from "@/lib/jobs";
-import { getCurrentMember } from "@/lib/member";
+import { getCurrentMember, getMemberType } from "@/lib/member";
+import { getMySavedJobIds } from "@/lib/saved-jobs";
 import { countByRegion, parseRegionParam, regionGroupOfJob } from "@/lib/regions";
 
 export const metadata: Metadata = { title: "공고" };
@@ -29,6 +30,9 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
   // 회원은 기관·지역·마감일까지, 비회원은 제목만 받는다.
   const member = await getCurrentMember();
   let jobs: (Job | JobTitle)[] = member ? await getOpenJobs(today) : await getOpenJobTitles(today);
+  // 관심 공고 별: 강사 회원은 담은 공고 표시, 비회원은 누르면 로그인, 기관 회원은 별 없음
+  const memberType = member ? await getMemberType() : null;
+  const savedIds = member && memberType !== "기관" ? await getMySavedJobIds() : null;
 
   if (onlyToday) {
     const todayIds = new Set((await getTodayJobTitles(today)).map((job) => job.id));
@@ -90,7 +94,11 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
         <ul className="mt-4 grid grid-cols-1 gap-3 md:mt-6 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
           {jobs.map((job) => (
             <li key={job.id}>
-              <JobCard job={job} today={today} />
+              <JobCard
+                job={job}
+                today={today}
+                save={!member ? { loginNext: "/jobs" } : savedIds ? { saved: savedIds.has(job.id) } : undefined}
+              />
             </li>
           ))}
         </ul>
