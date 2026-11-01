@@ -1,9 +1,19 @@
 -- 강사잇다 · Threads 자동 게시 (새 공고가 사이트에 올라가면 운영자 Threads 계정에 제목 + 링크를 올림)
 -- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
 --
--- 표 두 개. 둘 다 사이트 서버(service_role)만 읽고 씁니다. 회원·비회원·관리자 화면 모두 직접 읽을 수 없습니다.
---   1) threads_tokens : 운영자가 관리자 화면(/admin/threads)에서 'Threads 연결'을 누르면 Meta 가 준 열쇠(토큰)를 한 줄로 보관
---   2) threads_posts  : 어떤 공고를 Threads 에 올렸는지 (같은 공고를 두 번 올리지 않게)
+-- 표 세 개. 모두 사이트 서버(service_role)만 읽고 씁니다. 회원·비회원·관리자 화면 모두 직접 읽을 수 없습니다.
+--   1) threads_app_keys : 운영자가 관리자 화면(/admin/threads)에 넣은 Threads 앱 ID·시크릿 (Meta 개발자 앱의 값)
+--   2) threads_tokens   : 운영자가 'Threads 연결'을 누르면 Meta 가 준 열쇠(토큰)를 한 줄로 보관
+--   3) threads_posts    : 어떤 공고를 Threads 에 올렸는지 (같은 공고를 두 번 올리지 않게)
+
+create table if not exists public.threads_app_keys (
+  id          integer primary key default 1 check (id = 1),  -- 항상 한 줄
+  app_id      text not null,
+  app_secret  text not null,
+  updated_at  timestamptz not null default now()
+);
+
+comment on table public.threads_app_keys is 'Threads 앱 ID·시크릿 (관리자 화면에서 입력). 사이트 서버만 읽고 쓴다.';
 
 create table if not exists public.threads_tokens (
   id            integer primary key default 1 check (id = 1),  -- 항상 한 줄
@@ -31,10 +41,13 @@ create table if not exists public.threads_posts (
 comment on table public.threads_posts is 'Threads 에 올린 공고. 공고마다 한 줄이라 같은 공고는 다시 올리지 않는다.';
 create index if not exists threads_posts_created_idx on public.threads_posts (created_at desc);
 
+alter table public.threads_app_keys enable row level security;
 alter table public.threads_tokens enable row level security;
 alter table public.threads_posts enable row level security;
+revoke all on public.threads_app_keys from public, anon, authenticated;
 revoke all on public.threads_tokens from public, anon, authenticated;
 revoke all on public.threads_posts from public, anon, authenticated;
+grant all on public.threads_app_keys to service_role;
 grant all on public.threads_tokens to service_role;
 grant all on public.threads_posts to service_role;
 -- 읽기 규칙(policy)을 하나도 만들지 않으므로 service_role 말고는 아무도 못 읽는다.

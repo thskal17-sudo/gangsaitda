@@ -2625,6 +2625,15 @@ create policy "관리자는 광고 사진을 지운다" on storage.objects
 -- threads-post.sql
 -- ============================================================
 
+create table if not exists public.threads_app_keys (
+  id          integer primary key default 1 check (id = 1),  -- 항상 한 줄
+  app_id      text not null,
+  app_secret  text not null,
+  updated_at  timestamptz not null default now()
+);
+
+comment on table public.threads_app_keys is 'Threads 앱 ID·시크릿 (관리자 화면에서 입력). 사이트 서버만 읽고 쓴다.';
+
 create table if not exists public.threads_tokens (
   id            integer primary key default 1 check (id = 1),  -- 항상 한 줄
   access_token  text not null,               -- 장기 토큰 (60일). 공고를 올릴 때 하루 한 번 자동으로 늘림
@@ -2651,10 +2660,13 @@ create table if not exists public.threads_posts (
 comment on table public.threads_posts is 'Threads 에 올린 공고. 공고마다 한 줄이라 같은 공고는 다시 올리지 않는다.';
 create index if not exists threads_posts_created_idx on public.threads_posts (created_at desc);
 
+alter table public.threads_app_keys enable row level security;
 alter table public.threads_tokens enable row level security;
 alter table public.threads_posts enable row level security;
+revoke all on public.threads_app_keys from public, anon, authenticated;
 revoke all on public.threads_tokens from public, anon, authenticated;
 revoke all on public.threads_posts from public, anon, authenticated;
+grant all on public.threads_app_keys to service_role;
 grant all on public.threads_tokens to service_role;
 grant all on public.threads_posts to service_role;
 -- 읽기 규칙(policy)을 하나도 만들지 않으므로 service_role 말고는 아무도 못 읽는다.

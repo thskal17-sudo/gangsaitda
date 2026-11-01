@@ -524,7 +524,9 @@
      - 실패해도 공고 저장은 그대로 됩니다 (응답을 보낸 뒤 `after` 로 올림). 실패한 글은 다시 올리지 않으니, 필요하면 Threads 앱에서 직접 올립니다.
      - 준비물: Meta 개발자 앱(사용 사례 'Threads API 액세스', 권한 `threads_basic`·`threads_content_publish`, 리디렉션 콜백 URL `https://www.gangsaitda.com/api/threads/callback`),
        앱 역할에 운영자 Threads 계정을 **Threads 테스터**로 추가하고 Threads 앱에서 수락(본인 계정에만 올리므로 앱 심사는 필요 없음),
-       사이트 환경 변수 `THREADS_APP_ID`·`THREADS_APP_SECRET`(서버 전용, Secret 으로), `SUPABASE_SECRET_KEY`. Threads API 는 무료입니다.
+       Threads 앱 ID·시크릿(이용 사례 'Threads API 액세스' → 설정의 값. 앱 설정의 '앱 ID'와 다름)은 **이 화면의 'Threads 앱 열쇠' 칸에 넣어 저장**합니다
+       (`threads_app_keys` 표, 사이트 서버만 읽음. 시크릿은 다시 보여주지 않음). 사이트 환경 변수 `THREADS_APP_ID`·`THREADS_APP_SECRET` 이 있으면 그쪽을 먼저 씁니다.
+       `SUPABASE_SECRET_KEY` 는 사이트 환경 변수에 있어야 합니다. Threads API 는 무료입니다.
   5. 회원 목록 ✅ (`/admin/members`) — 회원 종류만 바꿀 수 있습니다 (다른 고치기·탈퇴 처리 없음).
      - 최근에 가입한 순. 숫자 요약(전체 회원(강사·기관 수)·오늘 가입·최근 7일 가입), 이름·기관명·이메일·연락처 검색.
      - 가입일·이름(기관 회원은 아래에 기관명)·이메일·연락처·종류·등급. 이메일·연락처를 누르면 메일·전화가 열립니다.

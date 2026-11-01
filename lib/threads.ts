@@ -6,8 +6,10 @@ import { SITE_URL } from "@/lib/site";
  * Threads 자동 게시 — 새 공고가 사이트에 올라가면 운영자 Threads 계정에 '제목 + 링크'를 올린다.
  * 운영자가 관리자 화면(/admin/threads)에서 Threads 계정을 한 번 연결해 두면 된다.
  *
- * 준비물 (사이트 환경 변수, 서버 전용): THREADS_APP_ID, THREADS_APP_SECRET (Meta 개발자 앱의 Threads 앱 ID·시크릿),
- *   SUPABASE_SECRET_KEY (토큰 표를 읽고 쓰려고).
+ * 준비물: Threads 앱 ID·시크릿 (Meta 개발자 앱 → 이용 사례 'Threads API 액세스' → 설정).
+ *   운영자가 관리자 화면(/admin/threads)에 입력하면 threads_app_keys 표에 보관한다 (사이트 서버만 읽음).
+ *   사이트 환경 변수 THREADS_APP_ID·THREADS_APP_SECRET 이 있으면 그 값을 먼저 쓴다.
+ *   SUPABASE_SECRET_KEY (표를 읽고 쓰려고)는 사이트 환경 변수에 있어야 한다.
  * Meta 개발자 앱 설정: 사용 사례 'Threads API 액세스', 권한 threads_basic + threads_content_publish,
  *   리디렉션 콜백 URL = SITE_URL + /api/threads/callback, 앱 역할에 운영자 Threads 계정을 'Threads 테스터'로 추가하고 수락.
  *   (본인 계정에만 올리므로 Meta 앱 심사는 필요 없다.)
@@ -36,16 +38,31 @@ const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;
 export const THREADS_CALLBACK_PATH = "/api/threads/callback";
 export const THREADS_STATE_COOKIE = "gs-threads-state";
 
-function appId(): string | null {
-  return process.env.THREADS_APP_ID?.trim() || null;
+type AppKeys = { id: string; secret: string; source: "env" | "admin" };
+
+/** Threads 앱 ID·시크릿. 환경 변수가 있으면 그것을, 없으면 관리자 화면에서 넣은 값(threads_app_keys 표)을 쓴다. 없으면 null. */
+async function appKeys(): Promise<AppKeys | null> {
+  const envId = process.env.THREADS_APP_ID?.trim();
+  const envSecret = process.env.THREADS_APP_SECRET?.trim();
+  if (envId && envSecret) return { id: envId, secret: envSecret, source: "env" };
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("threads_app_keys").select("app_id, app_secret").eq("id", 1).maybeSingle();
+  if (error || !data) return null;
+  const row = data as { app_id: string; app_secret: string };
+  return row.app_id && row.app_secret ? { id: row.app_id, secret: row.app_secret, source: "admin" } : null;
 }
 
-function appSecret(): string | null {
-  return process.env.THREADS_APP_SECRET?.trim() || null;
+export async function threadsKeysConfigured(): Promise<boolean> {
+  return (await appKeys()) !== null;
 }
 
-export function threadsKeysConfigured(): boolean {
-  return appId() !== null && appSecret() !== null;
+/** 관리자 화면에서 Threads 앱 ID·시크릿을 저장한다. 값 확인은 부르는 쪽(lib/threads-actions.ts)에서 한다. */
+export async function saveThreadsAppKeys(appId: string, appSecret: string): Promise<void> {
+  const { error } = await serviceClient()
+    .from("threads_app_keys")
+    .upsert({ id: 1, app_id: appId, app_secret: appSecret, updated_at: new Date().toISOString() });
+  if (error) throw new Error(`Threads 앱 열쇠를 저장하지 못했어요: ${error.message}`);
 }
 
 function redirectUri() {
@@ -53,11 +70,11 @@ function redirectUri() {
 }
 
 /** 운영자를 Threads 로그인(권한 동의) 화면으로 보낼 주소 */
-export function threadsAuthorizeUrl(state: string): string | null {
-  const id = appId();
-  if (!id || !appSecret()) return null;
+export async function threadsAuthorizeUrl(state: string): Promise<string | null> {
+  const keys = await appKeys();
+  if (!keys) return null;
   const params = new URLSearchParams({
-    client_id: id,
+    client_id: keys.id,
     redirect_uri: redirectUri(),
     scope: SCOPE,
     response_type: "code",
@@ -115,9 +132,9 @@ type LongToken = { access_token: string; expires_in: number };
 
 /** Threads 로그인 뒤 돌아온 code 로 토큰을 받아(짧은 것 → 60일짜리로 바꿔) 저장한다 (연결 완료). */
 export async function connectThreads(rawCode: string): Promise<void> {
-  const id = appId();
-  const secret = appSecret();
-  if (!id || !secret) throw new Error("THREADS_APP_ID·THREADS_APP_SECRET 환경 변수가 없어요.");
+  const keys = await appKeys();
+  if (!keys) throw new Error("Threads 앱 ID·시크릿이 없어요. 관리자 화면에서 먼저 저장해 주세요.");
+  const { id, secret } = keys;
   const code = rawCode.replace(/#_$/, "");
 
   // 1) code → 짧은 토큰 (1시간)
@@ -299,7 +316,7 @@ type JobRow = { id: number; title: string; created_at: string; hidden_at: string
 export async function shareNewJobsOnThreads(jobIds: (number | string)[]): Promise<void> {
   const ids = [...new Set(jobIds.map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))];
   // Threads 앱 열쇠를 넣지 않았으면 이 기능을 안 쓰는 것 → 아무것도 하지 않는다
-  if (ids.length === 0 || !threadsKeysConfigured()) return;
+  if (ids.length === 0 || !(await threadsKeysConfigured())) return;
   const supabase = createServiceClient();
   if (!supabase) return;
 
@@ -348,8 +365,12 @@ export async function shareNewJobsOnThreads(jobIds: (number | string)[]): Promis
 }
 
 export type ThreadsStatus = {
-  /** 앱 ID·시크릿이 사이트 환경 변수에 들어 있는가 */
+  /** 앱 ID·시크릿이 있는가 (환경 변수 또는 관리자 화면에서 저장) */
   keysConfigured: boolean;
+  /** 어디에 들어 있나: 환경 변수(env) / 관리자 화면(admin) */
+  keysSource: "env" | "admin" | null;
+  /** 저장된 앱 ID (화면에 보여줌. 시크릿은 보여주지 않는다) */
+  appId: string | null;
   /** 연결 정보 표를 읽을 수 있는가 (SUPABASE_SECRET_KEY 와 표가 있는가) */
   storageReady: boolean;
   connected: boolean;
@@ -362,7 +383,9 @@ export type ThreadsStatus = {
 /** 관리자 화면에 보여줄 연결 상태 */
 export async function getThreadsStatus(): Promise<ThreadsStatus> {
   const status: ThreadsStatus = {
-    keysConfigured: threadsKeysConfigured(),
+    keysConfigured: false,
+    keysSource: null,
+    appId: null,
     storageReady: false,
     connected: false,
     username: null,
@@ -371,6 +394,10 @@ export async function getThreadsStatus(): Promise<ThreadsStatus> {
     lastError: null,
   };
   try {
+    const keys = await appKeys();
+    status.keysConfigured = keys !== null;
+    status.keysSource = keys?.source ?? null;
+    status.appId = keys?.id ?? null;
     const row = await readRow();
     status.storageReady = true;
     if (row) {
