@@ -18,6 +18,8 @@ import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getJobDetail, getJobTitle } from "@/lib/jobs";
 import { getMyApplication } from "@/lib/apply";
 import { getCurrentMember, getMemberType } from "@/lib/member";
+import { getMySavedJobIds } from "@/lib/saved-jobs";
+import SaveJobButton from "@/components/save-job-button";
 
 export async function generateMetadata({ params }: PageProps<"/jobs/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -45,6 +47,9 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
   // 기관이 직접 올린 공고는 지원 방법이 다르다 (강사잇다에서 바로 지원). 강사·기관 회원에 따라 안내가 다르고, 이미 지원했으면 그 상태를 보여 준다.
   const [memberType, application] = detail?.fromRequest ? await Promise.all([getMemberType(), getMyApplication(detail.id)]) : [null, null];
   const justApplied = (await searchParams).applied === "1" && application !== null;
+  // 관심 공고 담기: 강사 회원은 담기 버튼, 비회원은 로그인하러 가기, 기관 회원은 버튼 없음
+  const canSave = member ? (await getMemberType()) !== "기관" : true;
+  const saved = member && canSave ? (await getMySavedJobIds()).has(job.id) : false;
 
   return (
     <article>
@@ -84,6 +89,11 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
           </div>
         )}
         <h1 className="text-[24px] leading-snug font-bold tracking-tight md:text-[30px]">{job.title}</h1>
+        {canSave && (
+          <div className="mt-3">
+            <SaveJobButton jobId={job.id} saved={saved} size="large" loginNext={member ? undefined : `/jobs/${job.id}`} />
+          </div>
+        )}
       </header>
 
       {detail && daysLeft !== null ? (

@@ -108,7 +108,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               />
             )}
             {memberType === "강사" && (
-              <ShortcutBox href="/account/applications" title="내 지원 현황" description="지원한 공고와 추천받은 의뢰 진행 보기" />
+              <ShortcutBox href="/account/applications" title="내 지원 현황" description="담아 둔 관심 공고와 지원·추천 진행 보기" />
             )}
             {memberType !== "강사" && (
               <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
