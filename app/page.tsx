@@ -82,7 +82,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       </section>
 
       {/* ② 바로가기. PC 에서는 나란히
-          비회원: 강사 가입 + 강사섭외 / 강사 회원: 내 프로필 / 기관 회원: 강사섭외 의뢰 + 내 의뢰
+          비회원: 강사 가입 + 강사섭외 / 강사 회원: 내 프로필 + 내 지원 현황 / 기관 회원: 강사섭외 의뢰 + 내 의뢰
           (회원 종류를 모르면 예전처럼 내 프로필 + 강사섭외) */}
       <div className="mt-5 grid grid-cols-1 gap-3 md:mt-12 md:grid-cols-2 md:gap-6">
         {memberType === "기관" ? (
@@ -98,7 +98,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 title="섭외받을 프로필을 등록해보세요"
                 description="기관 의뢰가 오면 운영자가 골라 전달해 드려요"
                 highlight
-                wide={memberType === "강사"}
               />
             ) : (
               <ShortcutBox
@@ -107,6 +106,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 description="무료 가입하면 기관·마감일·지원 방법까지 볼 수 있어요"
                 highlight
               />
+            )}
+            {memberType === "강사" && (
+              <ShortcutBox href="/account/applications" title="내 지원 현황" description="지원한 공고와 추천받은 의뢰 진행 보기" />
             )}
             {memberType !== "강사" && (
               <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />
