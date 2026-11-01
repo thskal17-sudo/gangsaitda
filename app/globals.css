@@ -39,6 +39,10 @@ body {
   color: var(--ink);
   /* 한글은 단어 중간에서 줄바꿈되지 않게 한다. */
   word-break: keep-all;
+  /* 다만 줄을 바꿀 자리가 없을 만큼 긴 글자(원문 공고 주소 등)는 칸을 넘칠 때 그 자리에서 잘라 다음 줄로 보낸다.
+     (break-word 는 표 칸 너비 계산은 그대로 둔다. 'anywhere' 를 사이트 전체에 걸면 개인정보처리방침 표 칸이 한 글자 폭으로 줄어든다.
+      공고 상세처럼 긴 주소가 칸 너비를 밀어내는 곳은 그 칸에만 overflow-wrap: anywhere 를 따로 건다 — components/job-detail.tsx) */
+  overflow-wrap: break-word;
 }
 
 /* 숫자가 나열되는 곳은 자릿수를 맞춘다. */
