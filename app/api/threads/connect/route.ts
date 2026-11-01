@@ -14,7 +14,7 @@ export async function GET() {
     return NextResponse.redirect(`${SITE_URL}/admin/threads?failed=admin`);
   }
   const state = randomBytes(16).toString("hex");
-  const url = threadsAuthorizeUrl(state);
+  const url = await threadsAuthorizeUrl(state);
   if (!url) return NextResponse.redirect(`${SITE_URL}/admin/threads?failed=key`);
 
   const cookieStore = await cookies();

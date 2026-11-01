@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
-import { CheckButton, DisconnectButton } from "@/components/threads-buttons";
+import { AppKeysForm, CheckButton, DisconnectButton } from "@/components/threads-buttons";
 import { checkAdmin } from "@/lib/admin";
 import { formatKoreanDate, seoulDateOf } from "@/lib/date";
 import { getRecentThreadsPosts, getThreadsStatus } from "@/lib/threads";
@@ -13,9 +13,13 @@ export const metadata: Metadata = { title: "Threads 게시", robots: { index: fa
 const NOTICES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   connected: { tone: "ok", text: "Threads 연결이 끝났어요. 이제 새 공고가 올라가면 Threads 에도 자동으로 올라가요." },
   checked: { tone: "ok", text: "연결이 잘 되어 있어요. (확인만 했고 글은 올리지 않았어요)" },
+  keys: { tone: "ok", text: "Threads 앱 ID·시크릿을 저장했어요. 이제 아래 'Threads 연결'을 눌러 주세요." },
+  "failed=appid": { tone: "warn", text: "Threads 앱 ID는 숫자만 넣어 주세요. Meta 화면의 'Threads 앱 ID'(앱 ID 아님)를 그대로 복사해 주세요." },
+  "failed=secret": { tone: "warn", text: "Threads 앱 시크릿 코드가 올바르지 않아요. Meta 화면에서 '보기'를 눌러 나온 값을 앞뒤 빈칸 없이 넣어 주세요." },
+  "failed=savekeys": { tone: "warn", text: "저장하지 못했어요. supabase/threads-post.sql 을 실행했는지 확인해 주세요." },
   disconnected: { tone: "ok", text: "연결을 끊었어요. 새 공고가 Threads 에 올라가지 않아요. 다시 쓰려면 'Threads 연결'을 눌러 주세요." },
   "failed=admin": { tone: "warn", text: "관리자만 할 수 있어요. 다시 로그인해 주세요." },
-  "failed=key": { tone: "warn", text: "Threads 앱 ID·시크릿(THREADS_APP_ID, THREADS_APP_SECRET)이 사이트 환경 변수에 없어요." },
+  "failed=key": { tone: "warn", text: "Threads 앱 ID·시크릿이 아직 없어요. 아래 'Threads 앱 열쇠'에 먼저 저장해 주세요." },
   "failed=state": { tone: "warn", text: "연결 확인값이 맞지 않아요. 'Threads 연결'을 다시 눌러 주세요." },
   "failed=denied": { tone: "warn", text: "Threads 화면에서 허용을 취소했어요. 다시 시도하면서 '허용'을 눌러 주세요." },
   "failed=connect": {
@@ -36,7 +40,9 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
     ? "connected"
     : params.checked
       ? "checked"
-      : params.disconnected
+      : params.keys
+        ? "keys"
+        : params.disconnected
         ? "disconnected"
         : params.failed
           ? `failed=${params.failed}`
@@ -51,7 +57,9 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
   const rows: { label: string; value: string; tone?: "ok" | "warn" }[] = [
     {
       label: "앱 ID·시크릿",
-      value: status.keysConfigured ? "설정됨" : "없음 — 사이트 환경 변수 THREADS_APP_ID, THREADS_APP_SECRET",
+      value: status.keysConfigured
+        ? `설정됨 (앱 ID ${status.appId}${status.keysSource === "env" ? " · 사이트 환경 변수" : ""})`
+        : "없음 — 아래 'Threads 앱 열쇠'에 넣어 주세요",
       tone: status.keysConfigured ? "ok" : "warn",
     },
     {
@@ -121,6 +129,20 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
         </div>
       </div>
 
+      {status.keysSource !== "env" && (
+        <div className="mt-5 rounded-card bg-white p-5 md:p-6">
+          <h2 className="text-[17px] font-bold">Threads 앱 열쇠</h2>
+          <p className="mt-1 text-[14px] text-muted">
+            Meta 개발자 화면 → 이용 사례 &lsquo;Threads API 액세스&rsquo; → 설정에 있는 값이에요. 앱 설정의 &lsquo;앱 ID&rsquo;와는 달라요. 시크릿은 저장 뒤 다시 보여주지 않아요.
+          </p>
+          {status.storageReady ? (
+            <AppKeysForm savedAppId={status.keysSource === "admin" ? status.appId : null} />
+          ) : (
+            <p className="mt-3 text-[14px] text-warn">먼저 Supabase SQL Editor 에서 supabase/threads-post.sql 을 실행해 주세요.</p>
+          )}
+        </div>
+      )}
+
       <div className="mt-5 rounded-card bg-white p-5 md:p-6">
         <h2 className="text-[17px] font-bold">최근에 올린 공고</h2>
         {posts.length === 0 ? (
@@ -148,8 +170,8 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
           <li>Meta 개발자 사이트에서 앱 만들기 → 사용 사례 &lsquo;Threads API 액세스&rsquo; → 권한 threads_basic, threads_content_publish 추가.</li>
           <li>Threads 설정의 리디렉션 콜백 URL 에 이 사이트 주소 + /api/threads/callback 입력.</li>
           <li>앱 역할에서 운영자 Threads 계정을 &lsquo;Threads 테스터&rsquo;로 추가 → Threads 앱(설정 → 계정 → 웹사이트 권한 → 초대)에서 수락.</li>
-          <li>사이트 환경 변수에 THREADS_APP_ID, THREADS_APP_SECRET 을 넣고 다시 배포.</li>
           <li>Supabase SQL Editor 에서 supabase/threads-post.sql 실행.</li>
+          <li>위 &lsquo;Threads 앱 열쇠&rsquo;에 Threads 앱 ID·시크릿을 넣고 저장.</li>
           <li>위 &lsquo;Threads 연결&rsquo; → Threads 로그인 → 허용 → 돌아오면 &lsquo;연결 확인&rsquo;.</li>
         </ol>
         <p className="mt-2">

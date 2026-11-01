@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { checkThreadsAction, disconnectThreadsAction } from "@/lib/threads-actions";
+import { checkThreadsAction, disconnectThreadsAction, saveThreadsKeysAction } from "@/lib/threads-actions";
 
 /** 관리자 · Threads 자동 게시 화면의 '연결 확인' 버튼 (글은 올리지 않음) */
 export function CheckButton({ disabled }: { disabled?: boolean }) {
@@ -17,6 +17,42 @@ export function DisconnectButton() {
   return (
     <form action={disconnectThreadsAction}>
       <Submit label="연결 끊기" pendingLabel="끊는 중…" />
+    </form>
+  );
+}
+
+/**
+ * 관리자 · Threads 앱 ID·시크릿 입력 칸. 시크릿은 저장된 값을 다시 보여주지 않는다 (새로 넣을 때만 입력).
+ */
+export function AppKeysForm({ savedAppId }: { savedAppId: string | null }) {
+  return (
+    <form action={saveThreadsKeysAction} className="mt-3 flex flex-col gap-3">
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[14px] font-medium text-ink">Threads 앱 ID</span>
+        <input
+          name="appId"
+          inputMode="numeric"
+          autoComplete="off"
+          defaultValue={savedAppId ?? ""}
+          placeholder="예) 1421076040227380"
+          required
+          className="h-14 rounded-control bg-bg px-4 text-[16px] tabular-nums outline-none focus:ring-2 focus:ring-brand"
+        />
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[14px] font-medium text-ink">Threads 앱 시크릿 코드</span>
+        <input
+          name="appSecret"
+          type="password"
+          autoComplete="new-password"
+          placeholder={savedAppId ? "저장돼 있어요. 바꿀 때만 다시 넣어 주세요" : "Meta 화면에서 '보기'를 눌러 나온 값"}
+          required
+          className="h-14 rounded-control bg-bg px-4 text-[16px] outline-none focus:ring-2 focus:ring-brand"
+        />
+      </label>
+      <div>
+        <Submit label="저장" pendingLabel="저장하는 중…" primary />
+      </div>
     </form>
   );
 }
