@@ -1,5 +1,5 @@
 import { seoulDateOf } from "@/lib/date";
-import { PROFILE_BUCKET } from "@/lib/profile";
+import { type CheckStatus, PROFILE_BUCKET, toCheckStatus } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 /*
@@ -25,12 +25,41 @@ export type AdminProfile = {
   intro: string;
   fileName: string | null;
   hasFile: boolean;
+  /** 강사가 올린 대표 강의계획서 이름 (가입 강사만, 선택) */
+  samplePlanName?: string;
+  /** 운영자 확인 배지 (supabase/profile-badges.sql). 아직 확인 안 했으면 없음 */
+  profileCheck?: ProfileCheck;
+  planCheck?: ProfileCheck;
   /** 마지막으로 저장한 날 (한국 날짜) */
   updatedDate: string;
   /** 운영자 등록 강사: 기관 전달 동의를 받았다고 확인한 날, 받은 방법 */
   consentDate?: string;
   consentNote?: string;
 };
+
+export type ProfileCheck = {
+  /** 확인 = 배지 붙음, 다시 확인 = 확인한 뒤 내용이 바뀌어 배지가 내려감 */
+  status: CheckStatus;
+  /** 확인한 날 (한국 날짜) */
+  date: string;
+  note?: string;
+};
+
+type CheckRow = {
+  id: string;
+  profile_status: string | null;
+  profile_checked_at: string | null;
+  profile_note: string | null;
+  plan_status: string | null;
+  plan_checked_at: string | null;
+  plan_note: string | null;
+};
+
+function toCheck(status: string | null, at: string | null, note: string | null): ProfileCheck | undefined {
+  const s = toCheckStatus(status);
+  if (!s || !at) return undefined;
+  return { status: s, date: seoulDateOf(at), note: note?.trim() || undefined };
+}
 
 type AdminInstructorRow = {
   id: string;
@@ -87,6 +116,7 @@ type Row = {
   intro: string | null;
   file_path: string | null;
   file_name: string | null;
+  sample_plan_name: string | null;
   updated_at: string;
   members: { name: string; phone: string; email: string } | null;
 };
@@ -94,15 +124,29 @@ type Row = {
 /** 모든 강사 프로필 (강사가 낸 것 + 운영자 등록) — 최근에 저장한 순 */
 export async function getAllProfiles(): Promise<AdminProfile[]> {
   const supabase = await createClient();
-  const [members, admins] = await Promise.all([
+  const [members, admins, checks] = await Promise.all([
     supabase
       .from("instructor_profiles")
-      .select("member_id, fields, regions, method, career, certificates, intro, file_path, file_name, updated_at, members(name, phone, email)")
+      .select(
+        "member_id, fields, regions, method, career, certificates, intro, file_path, file_name, sample_plan_name, updated_at, members(name, phone, email)",
+      )
       .order("updated_at", { ascending: false }),
     supabase.from("admin_instructors").select(INSTRUCTOR_COLUMNS).order("updated_at", { ascending: false }),
+    supabase.rpc("admin_profile_checks"),
   ]);
   if (members.error) throw new Error(`강사 프로필을 불러오지 못했습니다: ${members.error.message}`);
   if (admins.error) throw new Error(`등록 강사를 불러오지 못했습니다: ${admins.error.message}`);
+  if (checks.error) throw new Error(`확인 배지를 불러오지 못했습니다: ${checks.error.message}`);
+  const checkOf = new Map((checks.data as CheckRow[]).map((c) => [c.id, c]));
+  const withChecks = (p: AdminProfile): AdminProfile => {
+    const c = checkOf.get(p.memberId);
+    if (!c) return p;
+    return {
+      ...p,
+      profileCheck: toCheck(c.profile_status, c.profile_checked_at, c.profile_note),
+      planCheck: toCheck(c.plan_status, c.plan_checked_at, c.plan_note),
+    };
+  };
 
   const fromMembers: AdminProfile[] = (members.data as unknown as Row[]).map((row) => ({
     memberId: row.member_id,
@@ -118,10 +162,11 @@ export async function getAllProfiles(): Promise<AdminProfile[]> {
     intro: row.intro ?? "",
     fileName: row.file_name,
     hasFile: row.method === "file" && Boolean(row.file_path),
+    samplePlanName: row.sample_plan_name ?? undefined,
     updatedDate: seoulDateOf(row.updated_at),
   }));
   const fromAdmins = (admins.data as AdminInstructorRow[]).map(fromInstructor);
-  return [...fromMembers, ...fromAdmins].sort((a, b) => b.updatedDate.localeCompare(a.updatedDate));
+  return [...fromMembers, ...fromAdmins].map(withChecks).sort((a, b) => b.updatedDate.localeCompare(a.updatedDate));
 }
 
 /**
@@ -152,5 +197,26 @@ export async function getProfileFileUrl(memberId: string): Promise<string | null
     return null;
   }
   // 내려받을 이름은 직접 붙인다. 라이브러리의 download 옵션은 한글 이름을 두 번 바꿔(인코딩) 깨뜨린다.
+  return `${data.signedUrl}&download=${encodeURIComponent(downloadName)}`;
+}
+
+/** 강사가 올린 대표 강의계획서를 잠깐(1분)만 열리는 주소로 만든다. 관리자가 아니거나 없으면 null */
+export async function getSamplePlanUrl(memberId: string): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(memberId)) return null;
+  const supabase = await createClient();
+  const { data: row } = await supabase
+    .from("instructor_profiles")
+    .select("sample_plan_path, sample_plan_name, members(name)")
+    .eq("member_id", memberId)
+    .maybeSingle();
+  const r = row as unknown as { sample_plan_path: string | null; sample_plan_name: string | null; members: { name: string } | null } | null;
+  if (!r?.sample_plan_path) return null;
+
+  const downloadName = `${r.members?.name ?? "강사"}_${r.sample_plan_name ?? "강의계획서"}`;
+  const { data, error } = await supabase.storage.from(PROFILE_BUCKET).createSignedUrl(r.sample_plan_path, 60);
+  if (error || !data) {
+    console.error("[admin] 대표 강의계획서 주소 만들기 실패", error?.message);
+    return null;
+  }
   return `${data.signedUrl}&download=${encodeURIComponent(downloadName)}`;
 }
