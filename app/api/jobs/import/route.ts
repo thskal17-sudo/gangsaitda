@@ -2,7 +2,9 @@ import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse, after } from "next/server";
 import { MAX_ROWS } from "@/lib/job-excel";
-import { importJobs } from "@/lib/job-import";
+import { importJobs, reviewKakaoText } from "@/lib/job-import";
+import { sendKakaoToMe } from "@/lib/kakao";
+import { SITE_URL } from "@/lib/site";
 import { shareNewJobsOnThreads } from "@/lib/threads";
 
 /*
@@ -14,8 +16,9 @@ import { shareNewJobsOnThreads } from "@/lib/threads";
  *
  * 비밀 열쇠(JOB_IMPORT_TOKEN)가 맞을 때만 받는다. 열쇠는 Vercel 환경 변수와 수집 저장소의 Secrets 두 곳에 같은 값을 둔다.
  * JOB_IMPORT_REVIEW=1 이면 '숨김' 상태로 넣어 관리자가 확인한 뒤 공개한다. 없으면 바로 공개.
- * 돌려주는 값: { received, created, createdIds, skipped: [...], failed: [...] } (lib/job-import.ts)
+ * 돌려주는 값: { received, created, createdIds, skipped: [...], failed: [...], review: [...] } (lib/job-import.ts)
  * 바로 공개한 새 공고는 응답을 보낸 뒤 Threads 에도 한 글로 묶어 올린다 (lib/threads.ts, 연결했을 때만).
+ * 마감일을 믿기 어려워 숨김으로 넣은 공고(review, 수시 접수 등)는 Threads 에 올리지 않고 운영자 카톡으로 알린다.
  */
 
 const MIN_TOKEN_LENGTH = 20;
@@ -54,6 +57,10 @@ export async function POST(request: Request) {
 
   // 새 공고가 홈·공고 목록·관리자 목록에 바로 보이게
   if (result.created > 0) revalidatePath("/", "layout");
-  if (!review && result.createdIds.length > 0) after(() => shareNewJobsOnThreads(result.createdIds));
+  const held = new Set(result.review.map((r) => r.id));
+  const shared = result.createdIds.filter((id) => !held.has(id));
+  if (!review && shared.length > 0) after(() => shareNewJobsOnThreads(shared));
+  if (result.review.length > 0) after(() => sendKakaoToMe(reviewKakaoText(result.review), `${SITE_URL}/admin/jobs?filter=hidden`, "숨긴 공고 보기"));
   return NextResponse.json(result);
 }
+
