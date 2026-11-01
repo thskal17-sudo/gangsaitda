@@ -101,6 +101,7 @@ npm run dev
 | `components/admin-posting-review.tsx`, `lib/admin-posting-actions.ts` | 관리자 · 모집 공고 승인(공고 올리기)/반려(사유) |
 | `supabase/request-postings.sql` | 모집 공고 표, jobs.request_id, 담당자·관리자 함수 |
 | `components/feedback-form.tsx`, `lib/my-feedback*.ts`, `supabase/request-feedback.sql` | 기관 담당자 · 완료된 의뢰의 강의 만족도 (별점·의견). 운영자만 봄 |
+| `supabase/choose-auto-close.sql` | 기관이 필요한 강사 수만큼 고르면 모집 공고 자동 마감 |
 | `supabase/profile-badges.sql`, `components/check-badges.tsx`, `components/admin-check-buttons.tsx`, `lib/admin-check-actions.ts`, `app/admin/profiles/[id]/plan/` | 프로필 확인 배지 ('프로필 확인'·'강의계획서 확인'). 강사가 대표 강의계획서를 올리고, 운영자가 확인하면 기관 추천 강사 카드에 배지가 붙음. 내용을 고치면 배지가 저절로 내려감 |
 | `app/jobs/[id]/apply/`, `lib/apply*.ts`, `supabase/job-apply.sql` | 강사 회원 · 공고에서 바로 지원하기 (프로필·파일·한마디·전달 동의). 지원자는 기관 내 의뢰·관리자 의뢰 상세에 함께 보임 |
 | `app/account/sms/`, `lib/sms-consent*.ts`, `supabase/sms-consent.sql` | 교육·강의 섭외 소식 문자 수신 동의 (선택). 가입 때 체크, 회원이 직접 켜고 끔, 관리자 회원 목록에서 동의한 회원만 걸러 보기 |

@@ -19,6 +19,10 @@ export const metadata: Metadata = { title: "추천 강사", robots: { index: fal
 /** 버튼을 누르고 돌아왔을 때(?done=… / ?failed=…) 띄울 안내 */
 const NOTICES: Record<string, { ok: boolean; text: string }> = {
   "done=chosen": { ok: true, text: "강사님을 골랐어요. 운영자가 강사님과 일정을 맞춘 뒤 연락드릴게요." },
+  "done=chosen-closed": {
+    ok: true,
+    text: "강사님을 골랐어요. 필요한 인원을 다 고르셔서 모집 공고를 자동으로 마감했어요. 운영자가 일정을 맞춘 뒤 연락드릴게요.",
+  },
   "done=unchosen": { ok: true, text: "선택을 취소했어요." },
   "done=more": { ok: true, text: "다른 강사를 찾아 달라고 전했어요. 새 강사님이 추천되면 이 화면에 보여요." },
   "failed=choose": { ok: false, text: "강사님을 고르지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
