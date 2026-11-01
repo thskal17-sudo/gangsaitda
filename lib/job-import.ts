@@ -1,5 +1,5 @@
 import { toRpcArgs } from "@/lib/admin-job-schema";
-import { MAX_ROWS, REQUIRED_COLUMN_NAMES, jobKeySet, parseJobSheet } from "@/lib/job-excel";
+import { MAX_ROWS, REQUIRED_COLUMN_NAMES, SAME_JOB_EXISTS, jobKeySet, jobKeys, parseJobSheet } from "@/lib/job-excel";
 import { createServiceClient } from "@/lib/supabase/service";
 import { deadlineReviewReasons } from "@/lib/deadline-review";
 
@@ -25,6 +25,11 @@ export type ImportSummary = {
   skipped: { title: string; reason: string }[];
   /** 넣지 못한 줄 (칸 확인 실패, 저장 실패) */
   failed: { title: string; reason: string }[];
+  /**
+   * 이미 있는 공고인데 지역이 시도만('경남') 있어서, 새로 받은 더 자세한 지역('경남 창녕군')으로 바꾼 공고 수.
+   * 수집 프로그램이 나중에 시군을 알아내도 같은 공고는 건너뛰므로, 지역만은 여기서 고친다.
+   */
+  regionUpdated: number;
   /**
    * 마감일을 믿기 어려워 '숨김'으로 넣은 공고 (수시 접수 등, lib/deadline-review.ts).
    * 운영자가 원문을 보고 마감일을 고친 뒤 관리자 공고 관리의 '숨김'에서 '다시 올리기'로 공개한다. 받는 문이 운영자 카톡으로 알린다.
@@ -52,21 +57,30 @@ export async function importJobs(
   const supabase = createServiceClient();
   if (!supabase) return { error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
 
-  const summary: ImportSummary = { received: rows.length, created: 0, createdIds: [], skipped: [], failed: [], review: [] };
+  const summary: ImportSummary = { received: rows.length, created: 0, createdIds: [], skipped: [], failed: [], review: [], regionUpdated: 0 };
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
 
-  const { data: existingRows, error: readError } = await supabase.from("jobs").select("title, job_details(organization)");
+  const { data: existingRows, error: readError } = await supabase
+    .from("jobs")
+    .select("id, title, request_id, job_details(organization, region)");
   if (readError) {
     console.error("[import] 기존 공고 제목 읽기 실패", readError.code, readError.message);
     return { error: "기존 공고를 읽지 못했어요." };
   }
-  const existing = jobKeySet(
-    (existingRows as unknown as { title: string; job_details: { organization: string } | null }[]).map((job) => ({
-      title: job.title,
-      organization: job.job_details?.organization,
-    })),
-  );
+  type ExistingRow = { id: number; title: string; request_id: number | null; job_details: { organization: string; region: string } | null };
+  const existingJobs = (existingRows as unknown as ExistingRow[]).map((job) => ({
+    id: job.id,
+    title: job.title,
+    organization: job.job_details?.organization,
+    region: job.job_details?.region ?? "",
+    fromRequest: job.request_id !== null,
+  }));
+  const existing = jobKeySet(existingJobs);
+  // 같은 공고 찾기용: 열쇠 → 이미 있는 공고 (지역 고치기에 씀)
+  const byKey = new Map<string, (typeof existingJobs)[number]>();
+  for (const job of existingJobs) for (const k of jobKeys(job.title, job.organization)) if (!byKey.has(k)) byKey.set(k, job);
+  const regionFixed = new Set<number>();
 
   const parsed = parseJobSheet(toSheet(rows), existing);
   if ("error" in parsed) return { error: parsed.error };
@@ -75,6 +89,19 @@ export async function importJobs(
     const title = row.values.title || `(${row.line - 1}번째 줄)`;
     if (row.skipped) {
       summary.skipped.push({ title, reason: row.problem ?? "건너뜀" });
+      // 이미 있는 공고: 지역이 '경남'뿐이고 새로 받은 지역이 '경남 창녕군'처럼 더 자세하면 지역만 고친다
+      if (row.problem === SAME_JOB_EXISTS) {
+        const job = jobKeys(row.values.title, row.values.organization).map((k) => byKey.get(k)).find(Boolean);
+        const region = row.values.region.trim();
+        if (job && !job.fromRequest && !regionFixed.has(job.id) && betterRegion(job.region, region)) {
+          const { error } = await supabase.from("job_details").update({ region }).eq("job_id", job.id);
+          if (error) console.error("[import] 지역 고치기 실패", error.code, error.message);
+          else {
+            regionFixed.add(job.id);
+            summary.regionUpdated += 1;
+          }
+        }
+      }
       continue;
     }
     if (row.problem) {
@@ -94,6 +121,12 @@ export async function importJobs(
     if (data && reasons.length > 0) summary.review.push({ id: Number(data), title, reasons });
   }
   return summary;
+}
+
+/** 지금 지역이 시도만('경남')이고 새 지역이 그 시도의 시군·구('경남 창녕군')면 true */
+export function betterRegion(current: string, incoming: string): boolean {
+  const now = current.trim();
+  return now !== "" && !now.includes(" ") && incoming.startsWith(`${now} `) && incoming.length > now.length + 1;
 }
 
 /**
