@@ -102,19 +102,95 @@ export async function importJobs(
  *     • 2026학년도 2학기 대덕여자고등학교 푸른꿈… (수시 접수)
  */
 export function reviewKakaoText(items: ImportSummary["review"]): string {
-  const head = `[강사잇다] 마감일 확인이 필요한 공고 ${items.length}건을 숨김으로 받았어요`;
-  const tail = "\n원문에서 마감일을 확인해 고친 뒤 '다시 올리기'를 눌러 주세요.";
+  return kakaoListText(
+    `[강사잇다] 마감일 확인이 필요한 공고 ${items.length}건을 숨김으로 받았어요`,
+    items.map((item) => `${shortTitle(item.title)} (${item.reasons.join(", ")})`),
+    "원문에서 마감일을 확인해 고친 뒤 '다시 올리기'를 눌러 주세요.",
+  );
+}
+
+/**
+ * 원문에서 내려가 숨긴 공고 카톡 문구.
+ * 예) [강사잇다] 원문에서 내려간 공고 1건을 숨겼어요
+ *     • 11월 전일제 강사 모집 공고 (동포초등학교)
+ */
+export function hiddenKakaoText(items: HiddenJob[]): string {
+  return kakaoListText(
+    `[강사잇다] 원문에서 내려간 공고 ${items.length}건을 숨겼어요`,
+    items.map((item) => `${shortTitle(item.title)} (${item.organization})`),
+    "학교·기관이 원문 공고를 내려 사이트에서도 숨겼어요. 다시 올라오면 '다시 올리기'를 눌러 주세요.",
+  );
+}
+
+function shortTitle(title: string): string {
+  return title.length > 24 ? `${title.slice(0, 24)}…` : title;
+}
+
+/** 카카오 글 메시지(200자까지): 머리말 + "• 줄" 목록 + 꼬리말. 넘치는 줄은 "외 N건"으로 묶는다. */
+function kakaoListText(head: string, items: string[], tail: string): string {
+  const end = `\n${tail}`;
   const lines: string[] = [];
   for (const [i, item] of items.entries()) {
-    const title = item.title.length > 24 ? `${item.title.slice(0, 24)}…` : item.title;
-    const line = `\n• ${title} (${item.reasons.join(", ")})`;
+    const line = `\n• ${item}`;
     const rest = items.length - i - 1;
     const more = rest > 0 ? `\n외 ${rest}건` : "";
-    if ((head + lines.join("") + line + more + tail).length > 200) {
+    if ((head + lines.join("") + line + more + end).length > 200) {
       lines.push(`\n외 ${items.length - i}건`);
       break;
     }
     lines.push(line);
   }
-  return head + lines.join("") + tail;
+  return head + lines.join("") + end;
+}
+
+/** 원문에서 내려가 사이트에서 숨긴 공고 */
+export type HiddenJob = { id: number; title: string; organization: string };
+
+/** 수집 프로그램이 한 번에 보내는 '원문에서 내려간 공고' 주소 수 한도 */
+export const MAX_REMOVED = 100;
+
+/**
+ * 원문에서 내려간 공고 숨기기. 수집 프로그램이 받는 문에 removed(원문 주소 목록)로 보낸다.
+ *
+ * 학교가 원문 공고를 지우면 원문 링크는 '사이트 오류'가 되는데, 사이트에는 마감일까지 남아 있었다
+ * (2026-11-01 동포초 11월 전일제 강사). 경남 수집 프로그램이 목록에서 사라지고 상세도 열리지 않는 공고를 찾아
+ * removed.json 으로 알리면, 울산 브리핑이 그 원문 주소를 여기로 보낸다.
+ *
+ * 원문 링크가 같고, 아직 숨기지 않았고, 마감 전이고, 기관이 강사잇다에 직접 올린 공고가 아닌 것만 숨긴다
+ * (지우지 않는다. 관리자 공고 관리의 '숨김'에서 '다시 올리기'로 되돌릴 수 있다). 이미 숨긴 공고는 그대로라 여러 번 받아도 된다.
+ */
+export async function hideRemovedJobs(urls: string[], today: string): Promise<HiddenJob[] | { error: string }> {
+  const wanted = [...new Set(urls.map((u) => u.trim()).filter((u) => /^https:\/\//i.test(u)))].slice(0, MAX_REMOVED);
+  if (wanted.length === 0) return [];
+  const supabase = createServiceClient();
+  if (!supabase) return { error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
+
+  const { data, error } = await supabase
+    .from("job_details")
+    .select("job_id, organization, deadline, source_url, jobs!inner(title, hidden_at, request_id)")
+    .in("source_url", wanted);
+  if (error) {
+    console.error("[import] 내려간 공고 찾기 실패", error.code, error.message);
+    return { error: "내려간 공고를 찾지 못했어요." };
+  }
+  type Row = { job_id: number; organization: string; deadline: string; jobs: { title: string; hidden_at: string | null; request_id: number | null } | null };
+  const targets = (data as unknown as Row[]).filter(
+    (r) => r.jobs && r.jobs.hidden_at === null && r.jobs.request_id === null && r.deadline >= today,
+  );
+  if (targets.length === 0) return [];
+
+  const { data: updated, error: updateError } = await supabase
+    .from("jobs")
+    .update({ hidden_at: new Date().toISOString() })
+    .in("id", targets.map((r) => r.job_id))
+    .is("hidden_at", null)
+    .select("id");
+  if (updateError) {
+    console.error("[import] 내려간 공고 숨기기 실패", updateError.code, updateError.message);
+    return { error: "내려간 공고를 숨기지 못했어요." };
+  }
+  const done = new Set((updated as { id: number }[]).map((r) => r.id));
+  return targets
+    .filter((r) => done.has(r.job_id))
+    .map((r) => ({ id: r.job_id, title: r.jobs?.title ?? "", organization: r.organization }));
 }
