@@ -9,6 +9,7 @@ import { homeCourses } from "@/lib/home-ads";
 import { getOpenJobTitles, getOpenJobs, getTodayDeadlineCount, type Job, type JobTitle } from "@/lib/jobs";
 import { getCurrentMember, getMemberType } from "@/lib/member";
 import { countByRegion, parseRegionParam, regionGroupOfJob } from "@/lib/regions";
+import { type SavedJob, getMySavedJobs } from "@/lib/saved-jobs";
 import { INSTRUCTOR_COUNT_LABEL } from "@/lib/site";
 import JobSearch from "@/components/job-search";
 import RegionTabs from "@/components/region-tabs";
@@ -34,6 +35,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const region = parseRegionParam(params.region);
   const regionJobs = region ? openJobs.filter((job) => regionGroupOfJob(job) === region) : openJobs;
   const homeJobs = regionJobs.slice(0, HOME_JOB_COUNT);
+  // 강사 회원: 담아 둔 관심 공고 중 3일 안에 마감되고 아직 '지원했어요'를 안 누른 것 (알림 대신 홈에서 챙겨 줌)
+  const urgentSaved =
+    member && memberType !== "기관"
+      ? ((await getMySavedJobs(today)) ?? []).filter((j) => {
+          const left = daysBetween(today, j.deadline);
+          return left >= 0 && left <= URGENT_DAYS && !j.appliedDate;
+        })
+      : [];
   // 회원 탈퇴를 마치고 홈으로 온 경우 (?deleted=1)
   const justDeleted = !member && params.deleted === "1";
 
@@ -80,6 +89,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           {!member && <ButtonLink href="/signup">무료 회원가입</ButtonLink>}
         </div>
       </section>
+
+      {/* ①-1 관심 공고 마감 임박 (강사 회원, 해당 공고가 있을 때만) */}
+      {urgentSaved.length > 0 && <SavedDeadlineBox jobs={urgentSaved} today={today} />}
 
       {/* ② 바로가기. PC 에서는 나란히
           비회원: 강사 가입 + 강사섭외 / 강사 회원: 내 프로필 + 내 지원 현황 / 기관 회원: 강사섭외 의뢰 + 내 의뢰
@@ -178,6 +190,36 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
 
 /** 홈 바로가기 상자. highlight 는 옅은 남색 바탕(주요 바로가기), 아니면 흰 바탕에 테두리. wide 는 PC 에서 두 칸을 다 쓴다. */
+/** 홈 · 관심 공고 마감 임박 상자. 마감 가까운 3건까지 보여 주고, 나머지는 관심 공고 탭으로 */
+function SavedDeadlineBox({ jobs, today }: { jobs: SavedJob[]; today: string }) {
+  const shown = jobs.slice(0, 3);
+  return (
+    <section aria-labelledby="saved-deadline-title" className="mt-5 rounded-card border border-accent/30 bg-accent/5 px-5 py-[18px] md:mt-12 md:px-8 md:py-7">
+      <h2 id="saved-deadline-title" className="text-[16px] font-bold tracking-tight text-ink md:text-[20px]">
+        관심 공고 중 <span className="nums text-accent">{jobs.length}</span>건이 곧 마감돼요
+      </h2>
+      <ul className="mt-3 flex flex-col gap-2 md:mt-4">
+        {shown.map((j) => {
+          const left = daysBetween(today, j.deadline);
+          return (
+            <li key={j.jobId}>
+              <Link href={`/jobs/${j.jobId}`} className="group flex items-center gap-2.5 rounded-control bg-white px-4 py-3">
+                <span className="nums shrink-0 rounded-badge bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
+                  {left === 0 ? "D-day" : `D-${left}`}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink group-hover:text-brand md:text-[15px]">{j.title}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <Link href="/account/applications" className="mt-3 inline-block text-[14px] font-semibold text-accent hover:underline md:mt-4">
+        {jobs.length > shown.length ? `${jobs.length - shown.length}건 더 · ` : ""}관심 공고 보기 →
+      </Link>
+    </section>
+  );
+}
+
 function ShortcutBox({
   href,
   title,
