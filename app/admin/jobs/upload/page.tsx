@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import ExcelUpload from "@/components/admin-excel-upload";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
 import { checkAdmin, getAllJobsForAdmin } from "@/lib/admin";
-import { titleKey } from "@/lib/job-excel";
+import { jobKeySet } from "@/lib/job-excel";
 
 export const metadata: Metadata = { title: "엑셀로 올리기", robots: { index: false, follow: false } };
 
@@ -12,8 +12,8 @@ export default async function AdminExcelUploadPage() {
   await connection();
   if (!(await checkAdmin("/admin/jobs/upload"))) return <NotAdminCard />;
 
-  // 이미 있는 제목은 미리보기에서 '건너뜀'으로 보여준다.
-  const existingTitles = (await getAllJobsForAdmin()).map((job) => titleKey(job.title));
+  // 이미 있는 공고(제목이 같거나, 기관명이 같고 기관 이름을 뺀 제목이 같음)는 미리보기에서 '건너뜀'으로 보여준다.
+  const existingKeys = [...jobKeySet(await getAllJobsForAdmin())];
 
   return (
     <AdminShell active="upload">
@@ -22,7 +22,7 @@ export default async function AdminExcelUploadPage() {
         양식에 공고를 한 줄에 하나씩 적어 올리면, 확인을 통과한 줄만 한꺼번에 사이트에 올라가요.
       </p>
       <div className="mt-5">
-        <ExcelUpload existingTitles={existingTitles} />
+        <ExcelUpload existingKeys={existingKeys} />
       </div>
     </AdminShell>
   );

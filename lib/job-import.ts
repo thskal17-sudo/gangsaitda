@@ -1,5 +1,5 @@
 import { toRpcArgs } from "@/lib/admin-job-schema";
-import { MAX_ROWS, REQUIRED_COLUMN_NAMES, parseJobSheet, titleKey } from "@/lib/job-excel";
+import { MAX_ROWS, REQUIRED_COLUMN_NAMES, jobKeySet, parseJobSheet } from "@/lib/job-excel";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /*
@@ -7,7 +7,8 @@ import { createServiceClient } from "@/lib/supabase/service";
  *
  * 들어오는 모양은 엑셀 '공고' 시트와 같다: 줄마다 { "제목": "...", "기관명": "...", ... }.
  * 엑셀 올리기와 같은 규칙(lib/job-excel.ts)으로 확인하므로 결과도 같다:
- *   - 사이트에 같은 제목이 이미 있으면 건너뜀 (같은 공고가 매일 다시 와도 한 번만 들어감)
+ *   - 사이트에 같은 공고가 이미 있으면 건너뜀 (같은 공고가 매일 다시 와도, 다른 곳에서 기관 이름을 붙인 제목으로 와도 한 번만 들어감.
+ *     같은 공고인지는 lib/job-excel.ts 의 jobKeys: 제목이 같거나, 기관명이 같고 기관 이름을 뺀 제목이 같음)
  *   - '처리' 칸이 제외·보류면 건너뜀
  *   - 꼭 있어야 하는 칸이 비었거나 마감이 지났으면 넣지 않음 (이유를 돌려줌)
  */
@@ -49,12 +50,17 @@ export async function importJobs(
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
 
-  const { data: existingRows, error: readError } = await supabase.from("jobs").select("title");
+  const { data: existingRows, error: readError } = await supabase.from("jobs").select("title, job_details(organization)");
   if (readError) {
     console.error("[import] 기존 공고 제목 읽기 실패", readError.code, readError.message);
     return { error: "기존 공고를 읽지 못했어요." };
   }
-  const existing = new Set(existingRows.map((job) => titleKey(job.title)));
+  const existing = jobKeySet(
+    (existingRows as unknown as { title: string; job_details: { organization: string } | null }[]).map((job) => ({
+      title: job.title,
+      organization: job.job_details?.organization,
+    })),
+  );
 
   const parsed = parseJobSheet(toSheet(rows), existing);
   if ("error" in parsed) return { error: parsed.error };

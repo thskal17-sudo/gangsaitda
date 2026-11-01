@@ -16,8 +16,8 @@ type Stage =
  * 엑셀 올리기: ① 파일 고르기 → ② 미리보기(줄마다 확인 결과) → ③ 올리기 결과.
  * 파일은 이 컴퓨터 안(브라우저)에서만 읽고, 확인을 통과한 줄의 내용만 서버로 보낸다.
  */
-export default function ExcelUpload({ existingTitles }: { existingTitles: string[] }) {
-  const existing = useMemo(() => new Set(existingTitles), [existingTitles]);
+export default function ExcelUpload({ existingKeys }: { existingKeys: string[] }) {
+  const existing = useMemo(() => new Set(existingKeys), [existingKeys]);
   const [stage, setStage] = useState<Stage>({ step: "pick" });
   const [busy, setBusy] = useState(false);
 
@@ -136,7 +136,7 @@ export default function ExcelUpload({ existingTitles }: { existingTitles: string
       <section className="rounded-card bg-white p-5 md:p-6">
         <h2 className="text-[17px] font-bold tracking-tight text-ink">2. 파일 고르기</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          고르면 바로 올라가지 않고, 먼저 줄마다 확인한 결과를 보여줘요. 같은 제목의 공고가 이미 있으면 건너뛰어요.
+          고르면 바로 올라가지 않고, 먼저 줄마다 확인한 결과를 보여줘요. 같은 공고가 이미 있으면(제목이 같거나, 기관명이 같고 기관 이름을 뺀 제목이 같으면) 건너뛰어요.
         </p>
         <label className="mt-4 flex h-14 cursor-pointer items-center justify-center rounded-control bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand/90">
           {busy ? "읽는 중…" : "엑셀 파일 고르기"}

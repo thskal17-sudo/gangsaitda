@@ -32,6 +32,9 @@ const REQUIRED_COLUMNS: (keyof JobInput)[] = ["title", "organization", "region",
 /** 꼭 있어야 하는 칸의 엑셀 이름 (제목, 기관명, 지역, 마감일, 수업 일정, 상세 내용) */
 export const REQUIRED_COLUMN_NAMES: string[] = REQUIRED_COLUMNS.map((key) => COLUMN_NAMES[key][0]);
 
+/** 이미 있는 공고와 같을 때 보여 주는 이유 */
+export const SAME_JOB_EXISTS = "같은 공고가 이미 있어요 (제목, 또는 기관명과 기관 이름을 뺀 제목이 같음)";
+
 /** 한 번에 올릴 수 있는 줄 수 */
 export const MAX_ROWS = 200;
 
@@ -68,11 +71,44 @@ export function titleKey(title: string): string {
   return squash(title).toLowerCase();
 }
 
+/** 법인 표시. 기관명·제목 어디에 있든 비교할 때는 뺀다. */
+const LEGAL_MARKS = /\((사|재|주|복)\)|사단법인|재단법인|사회복지법인|주식회사/g;
+
+/** 기관명 비교용: 띄어쓰기·대소문자, 법인 표시((사)·(재)·사단법인 등)는 무시한다. */
+function orgKey(organization: string): string {
+  return squash(organization).toLowerCase().replace(LEGAL_MARKS, "");
+}
+
+/** 제목에서 비교에 상관없는 괄호·문장부호 */
+const TITLE_MARKS = /[[\]()【】<>〈〉《》「」『』{}:·\-_,.|/~'"]/g;
+
+/**
+ * 같은 공고인지 볼 때 쓰는 열쇠들. 둘 중 하나라도 이미 있으면 같은 공고로 보고 건너뛴다.
+ *  1) 제목이 같음 (띄어쓰기 무시) — 예전부터 쓰던 규칙
+ *  2) 기관명이 같고, 제목에서 기관 이름과 괄호·문장부호를 뺀 나머지가 같음
+ *     예) "운봉종합사회복지관 오이소지킴이단 … 모집" 과 "오이소지킴이단 … 모집" (기관 운봉종합사회복지관) → 같은 공고
+ * 수집 프로그램은 같은 공고를 여러 곳에서 모으는데, 곳마다 제목 앞에 기관 이름을 붙이기도 하고 안 붙이기도 해서 2)가 필요하다.
+ */
+export function jobKeys(title: string, organization: string | undefined): string[] {
+  const keys = [`t:${titleKey(title)}`];
+  const org = orgKey(organization ?? "");
+  if (org) {
+    const core = titleKey(title).replace(LEGAL_MARKS, "").split(org).join("").replace(TITLE_MARKS, "");
+    if (core) keys.push(`o:${org}|${core}`);
+  }
+  return keys;
+}
+
+/** 이미 있는 공고들의 열쇠를 한데 모은다 (jobKeys 참고). */
+export function jobKeySet(jobs: { title: string; organization?: string }[]): Set<string> {
+  return new Set(jobs.flatMap((job) => jobKeys(job.title, job.organization)));
+}
+
 /**
  * 엑셀 한 장(줄 목록)을 공고 줄로 바꾸고 확인한다.
- * existingTitles: 이미 사이트에 있는 공고 제목들 (titleKey 로 바꾼 것). 같은 제목은 건너뛴다.
+ * existingKeys: 이미 사이트에 있는 공고들의 열쇠 (jobKeySet). 같은 공고(jobKeys 참고)는 건너뛴다.
  */
-export function parseJobSheet(sheet: unknown[][], existingTitles: Set<string>): ExcelParseResult {
+export function parseJobSheet(sheet: unknown[][], existingKeys: Set<string>): ExcelParseResult {
   // 칸 이름 줄: 맨 위 5줄 중 '제목' 칸이 있는 첫 줄
   const headerIndex = sheet.slice(0, 5).findIndex((row) => row.some((c) => squash(cellText(c)) === "제목"));
   if (headerIndex === -1) return { error: "첫 줄에서 '제목' 칸을 찾지 못했어요. 양식의 칸 이름을 그대로 써 주세요." };
@@ -106,16 +142,16 @@ export function parseJobSheet(sheet: unknown[][], existingTitles: Set<string>): 
       return;
     }
 
-    const key = titleKey(values.title);
-    if (key && existingTitles.has(key)) {
-      rows.push({ line, values, skipped: true, problem: "같은 제목의 공고가 이미 있어요" });
+    const keys = titleKey(values.title) ? jobKeys(values.title, values.organization) : [];
+    if (keys.some((k) => existingKeys.has(k))) {
+      rows.push({ line, values, skipped: true, problem: SAME_JOB_EXISTS });
       return;
     }
-    if (key && seen.has(key)) {
-      rows.push({ line, values, skipped: true, problem: "엑셀 안에 같은 제목이 또 있어요" });
+    if (keys.some((k) => seen.has(k))) {
+      rows.push({ line, values, skipped: true, problem: "엑셀 안에 같은 공고가 또 있어요 (제목, 또는 기관명과 기관 이름을 뺀 제목이 같음)" });
       return;
     }
-    if (key) seen.add(key);
+    for (const k of keys) seen.add(k);
 
     const parsed = newJobSchema.safeParse(values);
     rows.push(parsed.success ? { line, values: parsed.data } : { line, values, problem: parsed.error.issues[0].message });
