@@ -79,6 +79,12 @@ export async function logout(): Promise<void> {
   refreshAllScreens();
 }
 
+/** 마이페이지의 로그아웃. 마이페이지는 회원 전용이라 그 자리에 머물지 않고 홈으로 간다. */
+export async function logoutToHome(): Promise<void> {
+  await logout();
+  redirect("/");
+}
+
 /**
  * 회원 탈퇴. 비밀번호로 본인인지 한 번 더 확인한 뒤, 데이터베이스 함수(supabase/delete-account.sql)로
  * 자기 계정을 지운다. 회원 정보(members)도 함께 지워진다. 성공하면 로그아웃된 채 홈으로 간다.
