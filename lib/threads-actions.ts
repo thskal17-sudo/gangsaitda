@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getAdminStatus } from "@/lib/admin";
-import { checkThreadsConnection, disconnectThreads, saveThreadsAppKeys } from "@/lib/threads";
+import { checkThreadsConnection, disconnectThreads, retryFailedThreadsPosts, saveThreadsAppKeys } from "@/lib/threads";
 
 /* 관리자 · Threads 자동 게시 화면의 버튼들. 결과는 주소 끝(?checked=1 등)으로 알려 화면이 안내를 띄운다. */
 
@@ -46,4 +46,12 @@ export async function saveThreadsKeysAction(formData: FormData): Promise<void> {
     redirect("/admin/threads?failed=savekeys");
   }
   redirect("/admin/threads?keys=1");
+}
+
+/** 실패한 공고 다시 올리기 (관리자 화면 버튼). 결과 수를 주소 끝에 붙여 화면이 안내를 띄운다. */
+export async function retryFailedThreadsAction(): Promise<void> {
+  if ((await getAdminStatus()) !== "admin") redirect("/admin/threads?failed=admin");
+  const result = await retryFailedThreadsPosts();
+  if (result.error) redirect("/admin/threads?failed=retry");
+  redirect(`/admin/threads?retried=${result.posted}&of=${result.failed}`);
 }

@@ -1,13 +1,22 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { checkThreadsAction, disconnectThreadsAction, saveThreadsKeysAction } from "@/lib/threads-actions";
+import { checkThreadsAction, disconnectThreadsAction, retryFailedThreadsAction, saveThreadsKeysAction } from "@/lib/threads-actions";
 
 /** 관리자 · Threads 자동 게시 화면의 '연결 확인' 버튼 (글은 올리지 않음) */
 export function CheckButton({ disabled }: { disabled?: boolean }) {
   return (
     <form action={checkThreadsAction}>
       <Submit label="연결 확인" pendingLabel="확인하는 중…" disabled={disabled} primary />
+    </form>
+  );
+}
+
+/** 관리자 · '실패한 공고 다시 올리기' 버튼. 누르면 실패한 공고를 글 하나로 묶어 바로 올린다. */
+export function RetryFailedButton({ count, disabled }: { count: number; disabled?: boolean }) {
+  return (
+    <form action={retryFailedThreadsAction}>
+      <Submit label={`실패한 공고 다시 올리기 (${count}건)`} pendingLabel="올리는 중… (10초쯤 걸려요)" disabled={disabled} primary />
     </form>
   );
 }

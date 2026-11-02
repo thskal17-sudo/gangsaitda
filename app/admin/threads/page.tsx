@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
-import { AppKeysForm, CheckButton, DisconnectButton } from "@/components/threads-buttons";
+import { AppKeysForm, CheckButton, DisconnectButton, RetryFailedButton } from "@/components/threads-buttons";
 import { checkAdmin } from "@/lib/admin";
 import { formatKoreanDate, seoulDateOf } from "@/lib/date";
-import { getRecentThreadsPosts, getThreadsStatus } from "@/lib/threads";
+import { countFailedThreadsPosts, getRecentThreadsPosts, getThreadsStatus } from "@/lib/threads";
 
 export const metadata: Metadata = { title: "Threads 게시", robots: { index: false, follow: false } };
 
@@ -26,6 +26,7 @@ const NOTICES: Record<string, { tone: "ok" | "warn"; text: string }> = {
     tone: "warn",
     text: "Threads 에서 열쇠를 받지 못했어요. 앱 시크릿 값, 리디렉션 콜백 URL, 운영자 계정이 'Threads 테스터'로 수락됐는지 확인해 주세요.",
   },
+  "failed=retry": { tone: "warn", text: "다시 올리지 못했어요. 아래 '마지막 오류'를 확인해 주세요." },
   "failed=check": { tone: "warn", text: "연결 확인에 실패했어요. 아래 '마지막 오류'를 확인해 주세요." },
   "failed=disconnect": { tone: "warn", text: "연결을 끊지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
 };
@@ -47,12 +48,23 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
         : params.failed
           ? `failed=${params.failed}`
           : null;
-  const notice = noticeKey ? NOTICES[noticeKey] : null;
+  // 다시 올리기 결과 (?retried=올린 수&of=실패였던 수)
+  const retried = typeof params.retried === "string" ? Number(params.retried) : null;
+  const retriedOf = typeof params.of === "string" ? Number(params.of) : 0;
+  const notice =
+    retried !== null && Number.isFinite(retried)
+      ? retried > 0
+        ? { tone: "ok" as const, text: `실패했던 공고 ${retried}건을 Threads 에 글 하나로 다시 올렸어요.` }
+        : { tone: "ok" as const, text: `다시 올릴 공고가 없었어요 (실패 ${retriedOf}건이 숨김·마감이라 기록만 지웠어요).` }
+      : noticeKey
+        ? NOTICES[noticeKey]
+        : null;
   // 연결 실패 이유 (callback 이 붙여 보냄). 글자만 보여주고 링크·코드로 해석하지 않는다.
   const why = typeof params.why === "string" ? params.why.slice(0, 160) : "";
 
   const [status, posts] = await Promise.all([getThreadsStatus(), getRecentThreadsPosts()]);
   const ready = status.keysConfigured && status.storageReady;
+  const failedCount = await countFailedThreadsPosts();
 
   const rows: { label: string; value: string; tone?: "ok" | "warn" }[] = [
     {
@@ -126,6 +138,7 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
           </a>
           <CheckButton disabled={!status.connected} />
           {status.connected && <DisconnectButton />}
+          {failedCount > 0 && <RetryFailedButton count={failedCount} disabled={!status.connected} />}
         </div>
       </div>
 
