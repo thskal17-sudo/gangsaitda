@@ -27,22 +27,30 @@ export async function chooseMatch(requestId: string, matchId: string, chosen: bo
   if (!(await getCurrentMember())) redirect(`/login?next=${encodeURIComponent(pagePath(requestId))}`);
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("choose_match", { p_match_id: Number(matchId), p_chosen: chosen });
+  // 필요한 인원만큼 고르면 데이터베이스가 모집 공고를 자동으로 마감하고 true 를 돌려준다 (supabase/choose-auto-close.sql)
+  const { data: closed, error } = await supabase.rpc("choose_match", { p_match_id: Number(matchId), p_chosen: chosen });
   if (error) {
     console.error("[my-request] 강사 고르기 실패", error.code, error.message);
     redirect(`${pagePath(requestId)}?failed=choose`);
   }
+  const autoClosed = closed === true;
 
   if (chosen) {
     // 알림 글은 지금(로그인 정보가 있을 때) 만들고, 보내기만 응답 뒤로 미룬다
     const [request, matches] = await Promise.all([getMyRequest(requestId), getMyRequestMatches(requestId)]);
     const name = matches.find((m) => m.id === matchId)?.name ?? "";
-    const text = `[강사잇다] 기관이 강사를 골랐어요\n기관: ${request?.orgName ?? ""}\n분야: ${request?.subject ?? ""}\n고른 강사: ${name}`;
+    const text =
+      `[강사잇다] 기관이 강사를 골랐어요\n기관: ${request?.orgName ?? ""}\n분야: ${request?.subject ?? ""}\n고른 강사: ${name}` +
+      (autoClosed ? "\n(필요한 인원을 다 골라 모집 공고를 자동으로 마감했어요)" : "");
     after(() => sendKakaoToMe(text, `${SITE_URL}/admin/requests/${requestId}`, "추천 강사 관리 열기"));
   }
   revalidatePath(pagePath(requestId));
   revalidatePath("/account/requests");
-  redirect(`${pagePath(requestId)}?done=${chosen ? "chosen" : "unchosen"}`);
+  if (autoClosed) {
+    revalidatePath("/jobs");
+    revalidatePath("/");
+  }
+  redirect(`${pagePath(requestId)}?done=${!chosen ? "unchosen" : autoClosed ? "chosen-closed" : "chosen"}`);
 }
 
 /** '다른 강사를 원해요' (한 줄 의견, 300자까지) */

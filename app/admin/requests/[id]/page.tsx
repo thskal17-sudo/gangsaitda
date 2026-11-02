@@ -217,6 +217,16 @@ export default async function AdminRequestMatchPage({ params, searchParams }: Pa
               );
               const controls = (
                 <>
+                  {m.feedback && (
+                    <p className="mb-2 rounded-control bg-accent/10 px-3 py-2 text-[13px] leading-relaxed text-ink">
+                      <b className="text-accent">
+                        기관 만족도 <span className="nums">{"★".repeat(m.feedback.rating)}{"☆".repeat(5 - m.feedback.rating)}</span>
+                      </b>
+                      <span className="ml-2 font-semibold">{m.feedback.rehire ? "다시 부르고 싶어요" : "다시 부르지 않을래요"}</span>
+                      <span className="nums ml-2 text-[12px] text-muted">{formatKoreanDate(m.feedback.date)}</span>
+                      {m.feedback.comment && <span className="mt-0.5 block">&ldquo;{m.feedback.comment}&rdquo;</span>}
+                    </p>
+                  )}
                   {m.applyMessage && (
                     <p className="mb-2 rounded-control bg-ok/10 px-3 py-2 text-[13px] leading-relaxed text-ink">
                       <b className="text-ok">지원하며 남긴 말</b> &ldquo;{m.applyMessage}&rdquo;

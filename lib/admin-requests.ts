@@ -115,6 +115,17 @@ export type AdminMatch = {
   applyMessage?: string;
   /** 지원하면서 올린 프로필 파일 이름 */
   applyProfileName?: string;
+  /** 확정된 강사에 기관 담당자가 남긴 만족도 (supabase/match-feedback.sql) */
+  feedback?: AdminMatchFeedback;
+};
+
+export type AdminMatchFeedback = {
+  rating: number;
+  /** 다시 부르고 싶은지 */
+  rehire: boolean;
+  comment?: string;
+  /** 마지막으로 남긴 날 (한국 날짜) */
+  date: string;
 };
 
 type MatchRow = {
@@ -142,7 +153,25 @@ export async function getMatches(requestId: string): Promise<AdminMatch[]> {
     .eq("request_id", Number(requestId))
     .order("id");
   if (error) throw new Error(`추천 강사를 불러오지 못했습니다: ${error.message}`);
-  return (data as MatchRow[]).map((m) => ({
+  const rows = data as MatchRow[];
+
+  // 확정 강사에 남긴 만족도 (관리자만 읽을 수 있다)
+  const feedbackOf = new Map<number, AdminMatchFeedback>();
+  if (rows.length > 0) {
+    const { data: fb, error: fbError } = await supabase
+      .from("match_feedback")
+      .select("match_id, rating, rehire, comment, updated_at")
+      .in(
+        "match_id",
+        rows.map((m) => m.id),
+      );
+    if (fbError) throw new Error(`만족도를 불러오지 못했습니다: ${fbError.message}`);
+    for (const f of fb as { match_id: number; rating: number; rehire: boolean; comment: string | null; updated_at: string }[]) {
+      feedbackOf.set(f.match_id, { rating: f.rating, rehire: f.rehire, comment: f.comment?.trim() || undefined, date: seoulDateOf(f.updated_at) });
+    }
+  }
+
+  return rows.map((m) => ({
     id: String(m.id),
     memberId: m.member_id ?? m.instructor_id ?? "",
     status: isMatchStatus(m.status) ? m.status : "추천",
@@ -152,6 +181,7 @@ export async function getMatches(requestId: string): Promise<AdminMatch[]> {
     applied: m.applied_at !== null,
     applyMessage: m.apply_message?.trim() || undefined,
     applyProfileName: m.apply_profile_path ? m.apply_profile_name || "프로필 파일" : undefined,
+    feedback: feedbackOf.get(m.id),
   }));
 }
 
@@ -308,18 +338,50 @@ export async function getPostingStatuses(): Promise<Map<string, Pick<AdminPostin
   return map;
 }
 
-/* ---- 강의 만족도 (supabase/request-feedback.sql, 관리자만 읽음) --------------------------------- */
+/* ---- 강의 만족도 (관리자만 읽음) ---------------------------------------------------------------
+ * 지금은 확정 강사마다 남긴다 (supabase/match-feedback.sql). 예전에 의뢰별로 남긴 것(request_feedback)도 함께 보여 준다.
+ */
 
-export type AdminFeedback = { rating: number; comment?: string; /** 마지막으로 남긴 날 (한국 날짜) */ date: string };
+export type AdminFeedback = {
+  /** 강사가 여럿이면 평균을 반올림한 별점 */
+  rating: number;
+  /** 평가한 강사 수 (예전 의뢰별 만족도는 1) */
+  count: number;
+  /** 다시 부르고 싶다고 한 강사 수 (예전 의뢰별 만족도는 없음) */
+  rehireCount?: number;
+  /** 예전 의뢰별 만족도의 한 줄 의견 (강사별 의견은 의뢰 상세의 강사 줄에 보인다) */
+  comment?: string;
+  /** 마지막으로 남긴 날 (한국 날짜) */
+  date: string;
+};
 
 /** 의뢰 번호 → 담당자가 남긴 만족도 */
 export async function getFeedbacks(): Promise<Map<string, AdminFeedback>> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("request_feedback").select("request_id, rating, comment, updated_at");
-  if (error) throw new Error(`만족도를 불러오지 못했습니다: ${error.message}`);
+  const [legacy, perMatch] = await Promise.all([
+    supabase.from("request_feedback").select("request_id, rating, comment, updated_at"),
+    supabase.from("match_feedback").select("request_id, rating, rehire, updated_at").not("request_id", "is", null),
+  ]);
+  if (legacy.error) throw new Error(`만족도를 불러오지 못했습니다: ${legacy.error.message}`);
+  if (perMatch.error) throw new Error(`만족도를 불러오지 못했습니다: ${perMatch.error.message}`);
   const map = new Map<string, AdminFeedback>();
-  for (const r of data as { request_id: number; rating: number; comment: string | null; updated_at: string }[]) {
-    map.set(String(r.request_id), { rating: r.rating, comment: r.comment?.trim() || undefined, date: seoulDateOf(r.updated_at) });
+  for (const r of legacy.data as { request_id: number; rating: number; comment: string | null; updated_at: string }[]) {
+    map.set(String(r.request_id), { rating: r.rating, count: 1, comment: r.comment?.trim() || undefined, date: seoulDateOf(r.updated_at) });
+  }
+
+  const sums = new Map<string, { total: number; count: number; rehire: number; date: string }>();
+  for (const f of perMatch.data as { request_id: number; rating: number; rehire: boolean; updated_at: string }[]) {
+    const key = String(f.request_id);
+    const s = sums.get(key) ?? { total: 0, count: 0, rehire: 0, date: "" };
+    s.total += f.rating;
+    s.count += 1;
+    if (f.rehire) s.rehire += 1;
+    const date = seoulDateOf(f.updated_at);
+    if (date > s.date) s.date = date;
+    sums.set(key, s);
+  }
+  for (const [key, s] of sums) {
+    map.set(key, { rating: Math.round(s.total / s.count), count: s.count, rehireCount: s.rehire, date: s.date });
   }
   return map;
 }

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { AdminProfile } from "@/lib/admin-profiles";
+import { CheckControl } from "@/components/admin-check-buttons";
+import { CheckBadge } from "@/components/check-badges";
+import ReviewSummary from "@/components/review-summary";
+import type { AdminProfile, ProfileCheck } from "@/lib/admin-profiles";
 import { formatPhone } from "@/lib/admin-requests";
 import { formatKoreanDate } from "@/lib/date";
 
@@ -86,6 +89,9 @@ export function ProfileRow({
                 {p.method === "file" ? "파일" : "양식"}
               </span>
               <span className="nums text-[12px] text-muted">{formatKoreanDate(p.updatedDate)} 저장</span>
+              <SummaryBadge label="프로필 확인" check={p.profileCheck} />
+              <SummaryBadge label="강의계획서 확인" check={p.planCheck} />
+              <ReviewSummary count={p.reviewCount ?? 0} average={p.reviewAverage} rehirePercent={p.rehirePercent} small />
               {badge}
             </div>
             <p className="text-[14px] text-ink">
@@ -117,6 +123,35 @@ export function ProfileRow({
               {p.intro && <Block title="자기소개" text={p.intro} />}
             </>
           )}
+          {p.samplePlanName && (
+            <a
+              href={`/admin/profiles/${p.memberId}/plan`}
+              className="flex h-11 w-fit items-center rounded-control bg-white px-4 text-[14px] font-semibold text-brand hover:bg-brand/10"
+            >
+              대표 강의계획서 내려받기 · <span className="ml-1 max-w-[220px] truncate">{p.samplePlanName}</span>
+            </a>
+          )}
+          <div className="flex flex-col gap-2 border-t border-line pt-3">
+            <p className="text-[13px] font-semibold text-muted">
+              운영자 확인 <span className="font-normal">(확인하면 기관 화면의 추천 강사 카드에 배지가 붙어요)</span>
+            </p>
+            <div className="grid gap-2 md:grid-cols-2">
+              <CheckControl id={p.memberId} kind="profile" label="프로필 확인" check={p.profileCheck} />
+              <CheckControl
+                id={p.memberId}
+                kind="plan"
+                label="강의계획서 확인"
+                check={p.planCheck}
+                disabledReason={
+                  p.source === "admin"
+                    ? "운영자 등록 강사는 대표 강의계획서 칸이 없어요."
+                    : !p.samplePlanName
+                      ? "강사가 아직 대표 강의계획서를 올리지 않았어요."
+                      : undefined
+                }
+              />
+            </div>
+          </div>
           <p className="border-t border-line pt-3 text-[13px] text-muted">
             운영자 확인용 연락처 (기관에는 섭외 확정 뒤에만):{" "}
             <a href={`tel:${p.phone}`} className="nums text-ink hover:underline">
@@ -147,6 +182,12 @@ export function ProfileRow({
       {children && <div className="mt-3">{children}</div>}
     </li>
   );
+}
+
+/** 줄 제목 옆 배지: 붙은 배지와 '다시 확인'만 보인다 (아직 확인 전이면 안 보임) */
+function SummaryBadge({ label, check }: { label: string; check?: ProfileCheck }) {
+  if (!check) return null;
+  return <CheckBadge label={label} state={check.status === "확인" ? "done" : "stale"} small />;
 }
 
 function Block({ title, text }: { title: string; text: string }) {

@@ -92,6 +92,11 @@ export default function RequestCard({
           <b className="text-accent">
             만족도 <span className="nums">{"★".repeat(feedback.rating)}{"☆".repeat(5 - feedback.rating)}</span>
           </b>
+          {feedback.rehireCount !== undefined && (
+            <span className="nums ml-2 text-[13px] font-semibold">
+              {feedback.count > 1 && <>강사 {feedback.count}명 평균 · </>}다시 부르고 싶다 {feedback.rehireCount}/{feedback.count}
+            </span>
+          )}
           <span className="nums ml-2 text-[12px] text-muted">{formatKoreanDate(feedback.date)}</span>
           {feedback.comment && <span className="mt-1 block">&ldquo;{feedback.comment}&rdquo;</span>}
         </p>

@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { CHECK_BADGE_HELP, CheckBadge } from "@/components/check-badges";
 import FeedbackForm from "@/components/feedback-form";
 import { ChooseButton, ClosePostingButton, MoreForm } from "@/components/my-request-buttons";
 import NotFoundCard from "@/components/not-found-card";
+import ReviewSummary from "@/components/review-summary";
 import { formatPhone } from "@/lib/admin-requests";
 import { formatKoreanDate } from "@/lib/date";
 import type { MatchStatus } from "@/lib/match-status";
 import { getCurrentMember } from "@/lib/member";
-import { type MyFeedback, getMyFeedback } from "@/lib/my-feedback";
+import { type MyMatchFeedback, getMyMatchFeedbacks } from "@/lib/my-feedback";
 import { type MyPosting, getMyPosting } from "@/lib/my-postings";
 import { type MyMatch, getMyRequest, getMyRequestMatches } from "@/lib/my-requests";
 
@@ -18,6 +20,10 @@ export const metadata: Metadata = { title: "추천 강사", robots: { index: fal
 /** 버튼을 누르고 돌아왔을 때(?done=… / ?failed=…) 띄울 안내 */
 const NOTICES: Record<string, { ok: boolean; text: string }> = {
   "done=chosen": { ok: true, text: "강사님을 골랐어요. 운영자가 강사님과 일정을 맞춘 뒤 연락드릴게요." },
+  "done=chosen-closed": {
+    ok: true,
+    text: "강사님을 골랐어요. 필요한 인원을 다 고르셔서 모집 공고를 자동으로 마감했어요. 운영자가 일정을 맞춘 뒤 연락드릴게요.",
+  },
   "done=unchosen": { ok: true, text: "선택을 취소했어요." },
   "done=more": { ok: true, text: "다른 강사를 찾아 달라고 전했어요. 새 강사님이 추천되면 이 화면에 보여요." },
   "failed=choose": { ok: false, text: "강사님을 고르지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
@@ -25,8 +31,11 @@ const NOTICES: Record<string, { ok: boolean; text: string }> = {
   "done=posting": { ok: true, text: "모집 공고를 냈어요. 운영자가 검토한 뒤 공고 목록에 올려 드릴게요." },
   "done=closed": { ok: true, text: "모집을 마감했어요. 공고가 목록에서 내려갔어요." },
   "failed=close": { ok: false, text: "모집을 마감하지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
-  "done=feedback": { ok: true, text: "만족도를 남겨 주셔서 고마워요. 운영자만 보고, 더 나은 강사님을 찾는 데 써요." },
-  "failed=feedback": { ok: false, text: "만족도를 저장하지 못했어요. 별점을 고른 뒤 다시 시도해 주세요." },
+  "done=feedback": {
+    ok: true,
+    text: "만족도를 남겨 주셔서 고마워요. 다른 기관이 강사님을 고를 때 요약(건수·평균 별점·다시 부르고 싶다는 비율)으로 도움이 돼요.",
+  },
+  "failed=feedback": { ok: false, text: "만족도를 저장하지 못했어요. 별점과 '다시 부르고 싶은지'를 고른 뒤 다시 시도해 주세요." },
 };
 
 /** 기관에 보여 줄 진행 상태 (운영자 상태를 기관 말로) */
@@ -63,10 +72,10 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
     );
   }
   const done = request.status === "완료";
-  const [matches, posting, feedback] = await Promise.all([
+  const [matches, posting, feedbacks] = await Promise.all([
     request.verified && !done ? getMyRequestMatches(request.id) : [],
     getMyPosting(request.id),
-    request.status === "완료" ? getMyFeedback(request.id) : null,
+    request.verified ? getMyMatchFeedbacks(request.id) : [],
   ]);
   const open = matches.filter((m) => m.status !== "불발");
 
@@ -125,7 +134,7 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
           </p>
         </div>
       )}
-      {done && <FeedbackCard requestId={request.id} feedback={feedback} />}
+      {feedbacks.length > 0 && <FeedbackCard requestId={request.id} feedbacks={feedbacks} />}
 
       <PostingCard requestId={request.id} posting={posting} />
 
@@ -176,21 +185,40 @@ export default async function MyRequestPage({ params, searchParams }: PageProps<
   );
 }
 
-/** 완료된 의뢰의 강의 만족도 칸. 남긴 뒤에도 고칠 수 있다. */
-function FeedbackCard({ requestId, feedback }: { requestId: string; feedback: MyFeedback | null }) {
+/**
+ * 확정된 강사마다 강의 만족도 칸. 강사가 '확정'되면 바로 열리고(의뢰 '완료'를 기다리지 않음), 남긴 뒤에도 고칠 수 있다.
+ * 아직 안 남긴 강사는 펼쳐 두고, 남긴 강사는 접어 둔다.
+ */
+function FeedbackCard({ requestId, feedbacks }: { requestId: string; feedbacks: MyMatchFeedback[] }) {
+  const left = feedbacks.filter((f) => !f.rating).length;
   return (
     <div className="mt-4 rounded-card bg-white p-5 md:p-6">
       <h2 className="text-[17px] font-bold text-ink">강의는 어떠셨나요?</h2>
       <p className="mt-1 text-[14px] leading-relaxed text-muted">
-        {feedback ? (
-          <>
-            <span className="nums">{formatKoreanDate(feedback.updatedDate)}</span>에 남기셨어요. 고치고 싶으면 다시 저장해 주세요.
-          </>
-        ) : (
-          "별점과 한 줄 의견을 남겨 주세요. 운영자만 보고, 강사님에게는 보이지 않아요."
-        )}
+        {left > 0 ? "강의가 끝나면 강사님별로 만족도를 남겨 주세요. " : "모두 남기셨어요. 고치고 싶으면 펼쳐서 다시 저장해 주세요. "}
+        별점과 &lsquo;다시 부르고 싶은지&rsquo;는 다른 기관에 <b className="text-ink">요약(건수·평균)으로만</b> 보이고, 한 줄 의견은 운영자만 봐요.
       </p>
-      <FeedbackForm requestId={requestId} initial={feedback ?? undefined} />
+      <ul className="mt-3 flex flex-col gap-2">
+        {feedbacks.map((f) => (
+          <li key={f.matchId} className="rounded-control bg-bg/60 p-4">
+            <details open={!f.rating} className="group">
+              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2">
+                <span className="text-[16px] font-bold text-ink">{f.name} 강사님</span>
+                {f.rating ? (
+                  <span className="nums text-[13px] font-semibold text-muted">
+                    <span className="text-accent">{"★".repeat(f.rating)}{"☆".repeat(5 - f.rating)}</span>
+                    {f.updatedDate && <> · {formatKoreanDate(f.updatedDate)} 남김</>}
+                  </span>
+                ) : (
+                  <span className="rounded-badge bg-accent/10 px-2.5 py-0.5 text-[12px] font-semibold text-accent">아직 안 남김</span>
+                )}
+                <span className="ml-auto text-[13px] font-semibold text-brand group-open:hidden">{f.rating ? "고치기 ▾" : "남기기 ▾"}</span>
+              </summary>
+              <FeedbackForm requestId={requestId} matchId={f.matchId} initial={f} />
+            </details>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -289,6 +317,18 @@ function MatchCard({ requestId, match: m }: { requestId: string; match: MyMatch 
           <span className="mx-1.5 text-line">|</span>
           <span className="text-muted">{m.regions.join(" · ")}</span>
         </p>
+      )}
+      {m.reviewCount > 0 && (
+        <div className="mt-2">
+          <ReviewSummary count={m.reviewCount} average={m.reviewAverage} rehirePercent={m.rehirePercent} />
+        </div>
+      )}
+      {(m.profileChecked || m.planChecked) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {m.profileChecked && <CheckBadge label="프로필 확인" />}
+          {m.planChecked && <CheckBadge label="강의계획서 확인" />}
+          <span className="text-[12px] text-muted">{CHECK_BADGE_HELP}</span>
+        </div>
       )}
       {m.applyMessage && (
         <p className="mt-2 rounded-control bg-ok/10 px-4 py-3 text-[14px] leading-relaxed text-ink">
