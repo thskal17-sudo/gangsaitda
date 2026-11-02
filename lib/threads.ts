@@ -337,20 +337,24 @@ type JobRow = { id: number; title: string; created_at: string; hidden_at: string
  * 새로 사이트에 보이게 된 공고들을 Threads 에 올린다. 공고를 저장한 곳에서 after(() => shareNewJobsOnThreads(ids)) 로 부른다.
  * 연결이 없으면 조용히 끝난다. 실패해도 예외를 던지지 않는다 (이유는 last_error 에).
  */
-export async function shareNewJobsOnThreads(jobIds: (number | string)[]): Promise<void> {
+/** 올리기 결과: 올린 공고 수와 실패 이유 (없으면 null) */
+export type ShareResult = { posted: number; error: string | null };
+
+export async function shareNewJobsOnThreads(jobIds: (number | string)[], opts: { retry?: boolean } = {}): Promise<ShareResult> {
   const ids = [...new Set(jobIds.map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))];
   // Threads 앱 열쇠를 넣지 않았으면 이 기능을 안 쓰는 것 → 아무것도 하지 않는다
-  if (ids.length === 0 || !(await threadsKeysConfigured())) return;
+  if (ids.length === 0 || !(await threadsKeysConfigured())) return { posted: 0, error: null };
   const supabase = createServiceClient();
-  if (!supabase) return;
+  if (!supabase) return { posted: 0, error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
 
   let claimed: number[] = [];
   try {
     const row = await getConnection();
     if (!row) {
       // 연결한 적이 있는데 만료된 경우만 알린다 (연결 안 했으면 이 기능을 안 쓰는 것)
-      if (await readRow()) await recordError("Threads 연결이 만료돼 새 공고를 올리지 못했어요. 관리자 화면에서 다시 연결해 주세요.");
-      return;
+      const expired = "Threads 연결이 만료돼 새 공고를 올리지 못했어요. 관리자 화면에서 다시 연결해 주세요.";
+      if (await readRow()) await recordError(expired);
+      return { posted: 0, error: expired };
     }
 
     // 올릴 공고 고르기: 보이는 공고, 마감 전, Threads 를 연결한 뒤에 만든 공고
@@ -360,9 +364,10 @@ export async function shareNewJobsOnThreads(jobIds: (number | string)[]): Promis
     const connectedAt = Date.parse(row.connected_at);
     const candidates = ((data ?? []) as JobRow[]).filter((job) => {
       const detail = Array.isArray(job.job_details) ? job.job_details[0] : job.job_details;
-      return job.hidden_at === null && detail && detail.deadline >= today && Date.parse(job.created_at) >= connectedAt;
+      // 다시 올리기(retry)는 연결 시각과 상관없이 올린다 (한 번 올리려다 실패한 공고라서)
+      return job.hidden_at === null && detail && detail.deadline >= today && (opts.retry || Date.parse(job.created_at) >= connectedAt);
     });
-    if (candidates.length === 0) return;
+    if (candidates.length === 0) return { posted: 0, error: null };
 
     // 같은 공고를 두 번 올리지 않게 먼저 표에 '올리는 중'으로 적는다. 이미 있는 공고는 건너뛴다.
     const { data: inserted, error: claimError } = await supabase
@@ -371,13 +376,14 @@ export async function shareNewJobsOnThreads(jobIds: (number | string)[]): Promis
       .select("job_id");
     if (claimError) throw new Error(`올린 공고 기록을 쓰지 못했어요: ${claimError.message}`);
     claimed = (inserted ?? []).map((r: { job_id: number }) => Number(r.job_id));
-    if (claimed.length === 0) return;
+    if (claimed.length === 0) return { posted: 0, error: null };
 
     const jobs = candidates.filter((job) => claimed.includes(job.id)).sort((a, b) => a.id - b.id);
     const threadId = await publishText(row, composeThreadsText(jobs));
 
     await supabase.from("threads_posts").update({ status: "올림", thread_id: threadId, posted_at: new Date().toISOString(), error: null }).in("job_id", claimed);
     await recordError(null);
+    return { posted: claimed.length, error: null };
   } catch (err) {
     const message = (err instanceof Error ? err.message : String(err)).slice(0, 300);
     console.error("[threads] 새 공고 올리기 실패", message);
@@ -385,7 +391,25 @@ export async function shareNewJobsOnThreads(jobIds: (number | string)[]): Promis
     if (claimed.length > 0) {
       await supabase.from("threads_posts").update({ status: "실패", error: message }).in("job_id", claimed).then(undefined, () => {});
     }
+    return { posted: 0, error: message };
   }
+}
+
+/**
+ * 관리자 · '실패한 공고 다시 올리기'. 기록이 '실패'인 공고를 지우고 다시 올린다 (글 하나로 묶음).
+ * 숨겼거나 마감이 지난 공고는 올리지 않고 기록만 지운다.
+ */
+export async function retryFailedThreadsPosts(): Promise<ShareResult & { failed: number }> {
+  const supabase = createServiceClient();
+  if (!supabase) return { posted: 0, failed: 0, error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
+  const { data, error } = await supabase.from("threads_posts").select("job_id").eq("status", "실패");
+  if (error) return { posted: 0, failed: 0, error: `실패 기록을 읽지 못했어요: ${error.message}` };
+  const ids = (data ?? []).map((r: { job_id: number }) => Number(r.job_id));
+  if (ids.length === 0) return { posted: 0, failed: 0, error: null };
+  const { error: delError } = await supabase.from("threads_posts").delete().in("job_id", ids).eq("status", "실패");
+  if (delError) return { posted: 0, failed: ids.length, error: `실패 기록을 지우지 못했어요: ${delError.message}` };
+  const result = await shareNewJobsOnThreads(ids, { retry: true });
+  return { ...result, failed: ids.length };
 }
 
 export type ThreadsStatus = {
@@ -453,4 +477,12 @@ export async function getRecentThreadsPosts(): Promise<ThreadsPostRow[]> {
     const job = Array.isArray(r.jobs) ? r.jobs[0] : r.jobs;
     return { jobId: Number(r.job_id), title: job?.title ?? "(지운 공고)", status: r.status, postedAt: r.posted_at, createdAt: r.created_at, error: r.error };
   });
+}
+
+/** 관리자 화면 · '실패'로 남은 공고 수 (다시 올리기 버튼에 보여줌) */
+export async function countFailedThreadsPosts(): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) return 0;
+  const { count, error } = await supabase.from("threads_posts").select("job_id", { count: "exact", head: true }).eq("status", "실패");
+  return error ? 0 : (count ?? 0);
 }
