@@ -153,16 +153,19 @@ export async function connectThreads(rawCode: string): Promise<void> {
     "Threads 장기 토큰 받기",
   );
 
-  // 3) 계정 이름 (화면에 보여줄 용도, 실패해도 연결은 된다)
+  // 3) 계정 번호·이름. 번호는 꼭 /me 의 글자(string) 값을 쓴다.
+  //    (1단계 응답의 user_id 는 JSON 숫자라 자릿수가 커서 끝자리가 바뀔 수 있다 → '없는 ID' 오류. 11/2 실제로 겪음)
   let username: string | null = null;
+  let userId = String(short.user_id);
   try {
-    const me = await readGraph<{ username?: string }>(
+    const me = await readGraph<{ id?: string; username?: string }>(
       await fetch(`${GRAPH}/v1.0/me?${new URLSearchParams({ fields: "id,username", access_token: long.access_token })}`),
       "Threads 계정 확인",
     );
     username = me.username ?? null;
+    if (me.id) userId = String(me.id);
   } catch (err) {
-    console.error("[threads] 계정 이름 확인 실패", err instanceof Error ? err.message : err);
+    console.error("[threads] 계정 확인 실패", err instanceof Error ? err.message : err);
   }
 
   const now = new Date();
@@ -172,7 +175,7 @@ export async function connectThreads(rawCode: string): Promise<void> {
       id: 1,
       access_token: long.access_token,
       expires_at: new Date(now.getTime() + long.expires_in * 1000).toISOString(),
-      user_id: String(short.user_id),
+      user_id: userId,
       username,
       connected_at: now.toISOString(),
       refreshed_at: now.toISOString(),
@@ -237,10 +240,31 @@ export async function checkThreadsConnection(): Promise<{ ok: true; username: st
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * 글을 올릴 계정 번호. /me 에 물어 글자 그대로 받는다 (표에 잘못 저장된 번호가 있으면 고쳐 둔다).
+ * /me 를 못 읽으면 표의 번호를 쓴다.
+ */
+async function resolveUserId(row: TokenRow): Promise<string> {
+  try {
+    const me = await readGraph<{ id?: string }>(
+      await fetch(`${GRAPH}/v1.0/me?${new URLSearchParams({ fields: "id", access_token: row.access_token })}`),
+      "Threads 계정 확인",
+    );
+    if (me.id && String(me.id) !== row.user_id) {
+      await serviceClient().from("threads_tokens").update({ user_id: String(me.id), updated_at: new Date().toISOString() }).eq("id", 1);
+    }
+    return me.id ? String(me.id) : row.user_id;
+  } catch (err) {
+    console.error("[threads] 계정 번호 확인 실패", err instanceof Error ? err.message : err);
+    return row.user_id;
+  }
+}
+
 /** Threads 에 글 하나를 올린다: 글 상자(컨테이너) 만들기 → 준비될 때까지 잠깐 기다림 → 게시. 글 번호를 돌려준다. */
 async function publishText(row: TokenRow, text: string): Promise<string> {
+  const userId = await resolveUserId(row);
   const container = await readGraph<{ id: string }>(
-    await fetch(`${GRAPH}/v1.0/${encodeURIComponent(row.user_id)}/threads`, {
+    await fetch(`${GRAPH}/v1.0/${encodeURIComponent(userId)}/threads`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ media_type: "TEXT", text, access_token: row.access_token }),
@@ -266,7 +290,7 @@ async function publishText(row: TokenRow, text: string): Promise<string> {
   }
 
   const published = await readGraph<{ id: string }>(
-    await fetch(`${GRAPH}/v1.0/${encodeURIComponent(row.user_id)}/threads_publish`, {
+    await fetch(`${GRAPH}/v1.0/${encodeURIComponent(userId)}/threads_publish`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ creation_id: container.id, access_token: row.access_token }),
