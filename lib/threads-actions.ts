@@ -2,7 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { getAdminStatus } from "@/lib/admin";
-import { checkThreadsConnection, disconnectThreads, retryFailedThreadsPosts, saveThreadsAppKeys } from "@/lib/threads";
+import {
+  checkThreadsConnection,
+  cleanDraftBody,
+  disconnectThreads,
+  discardThreadsDraft,
+  postThreadsDraft,
+  retryFailedThreadsPosts,
+  saveThreadsAppKeys,
+} from "@/lib/threads";
 
 /* 관리자 · Threads 자동 게시 화면의 버튼들. 결과는 주소 끝(?checked=1 등)으로 알려 화면이 안내를 띄운다. */
 
@@ -54,4 +62,36 @@ export async function retryFailedThreadsAction(): Promise<void> {
   const result = await retryFailedThreadsPosts();
   if (result.error) redirect("/admin/threads?failed=retry");
   redirect(`/admin/threads?retried=${result.posted}&of=${result.failed}`);
+}
+
+/** 올릴 글 번호 (폼의 숨은 칸) */
+function draftId(formData: FormData): number | null {
+  const id = Number(formData.get("id"));
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+/** 올릴 글 · [올리기]. 칸에서 고친 글 그대로 Threads 에 올린다. */
+export async function postThreadsDraftAction(formData: FormData): Promise<void> {
+  if ((await getAdminStatus()) !== "admin") redirect("/admin/threads?failed=admin");
+  const id = draftId(formData);
+  const body = cleanDraftBody(formData.get("body"));
+  if (id === null) redirect("/admin/threads?failed=draft");
+  if (body === null) redirect("/admin/threads?failed=draftlength");
+  const result = await postThreadsDraft(id, body);
+  if (!result.ok) redirect(`/admin/threads?failed=draftpost&why=${encodeURIComponent(result.error.slice(0, 160))}`);
+  redirect("/admin/threads?draftPosted=1");
+}
+
+/** 올릴 글 · [버리기]. 올리지 않고 목록에서 치운다. */
+export async function discardThreadsDraftAction(formData: FormData): Promise<void> {
+  if ((await getAdminStatus()) !== "admin") redirect("/admin/threads?failed=admin");
+  const id = draftId(formData);
+  if (id === null) redirect("/admin/threads?failed=draft");
+  try {
+    await discardThreadsDraft(id);
+  } catch (err) {
+    console.error("[threads] 올릴 글 버리기 실패", err instanceof Error ? err.message : err);
+    redirect("/admin/threads?failed=draft");
+  }
+  redirect("/admin/threads?draftDiscarded=1");
 }
