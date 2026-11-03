@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
-import { AppKeysForm, CheckButton, DisconnectButton, DraftCard, RetryFailedButton } from "@/components/threads-buttons";
+import { AppKeysForm, CheckButton, DisconnectButton, DraftCard, DraftKeyForm, RetryFailedButton } from "@/components/threads-buttons";
 import { checkAdmin } from "@/lib/admin";
 import { formatKoreanDate, seoulDateOf } from "@/lib/date";
-import { countFailedThreadsPosts, getRecentThreadsPosts, getThreadsDrafts, getThreadsStatus, type ThreadsDraft } from "@/lib/threads";
+import { countFailedThreadsPosts, getRecentThreadsPosts, getDraftKeyStatus, getThreadsDrafts, getThreadsStatus, type ThreadsDraft } from "@/lib/threads";
 
 export const metadata: Metadata = { title: "Threads 게시", robots: { index: false, follow: false } };
 
@@ -76,7 +76,7 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
   // 연결 실패 이유 (callback 이 붙여 보냄). 글자만 보여주고 링크·코드로 해석하지 않는다.
   const why = typeof params.why === "string" ? params.why.slice(0, 160) : "";
 
-  const [status, posts, drafts] = await Promise.all([getThreadsStatus(), getRecentThreadsPosts(), getThreadsDrafts()]);
+  const [status, posts, drafts, draftKey] = await Promise.all([getThreadsStatus(), getRecentThreadsPosts(), getThreadsDrafts(), getDraftKeyStatus()]);
   const ready = status.keysConfigured && status.storageReady;
   const failedCount = await countFailedThreadsPosts();
 
@@ -163,6 +163,24 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
             ))}
           </ul>
         )}
+
+        <div className="mt-4 border-t border-line pt-4">
+          <h3 className="text-[15px] font-bold">받는 문 열쇠</h3>
+          <p className="mt-1 text-[13px] text-muted">
+            홍보 담당이 이 상자로 글을 보낼 때 쓰는 비밀 열쇠예요.{" "}
+            {draftKey.source === "env"
+              ? "사이트 환경 변수(THREADS_DRAFT_TOKEN)에 넣어 둔 열쇠를 쓰고 있어요."
+              : draftKey.source === "admin" && draftKey.createdAt
+                ? `${formatKoreanDate(seoulDateOf(draftKey.createdAt))}에 만들었어요.`
+                : "아직 없어요. 만들어야 글이 들어와요."}
+          </p>
+          {draftKey.source !== "env" &&
+            (draftKey.ready ? (
+              <DraftKeyForm hasKey={draftKey.source === "admin"} />
+            ) : (
+              <p className="mt-2 text-[13px] text-warn">먼저 Supabase SQL Editor 에서 supabase/threads-drafts.sql 을 실행해 주세요.</p>
+            ))}
+        </div>
       </div>
 
       <div className="mt-5 rounded-card bg-white p-5 md:p-6">

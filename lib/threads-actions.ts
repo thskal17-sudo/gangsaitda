@@ -5,6 +5,7 @@ import { getAdminStatus } from "@/lib/admin";
 import {
   checkThreadsConnection,
   cleanDraftBody,
+  createDraftKey,
   disconnectThreads,
   discardThreadsDraft,
   postThreadsDraft,
@@ -94,4 +95,18 @@ export async function discardThreadsDraftAction(formData: FormData): Promise<voi
     redirect("/admin/threads?failed=draft");
   }
   redirect("/admin/threads?draftDiscarded=1");
+}
+
+/** 받는 문 열쇠 만들기 결과. 열쇠는 이 응답으로 한 번만 화면에 간다 (주소·기록에 남기지 않음). */
+export type DraftKeyState = { token?: string; error?: string };
+
+/** 올릴 글 · [받는 문 열쇠 만들기]. 새 열쇠를 만들면 이전 열쇠는 바로 못 쓴다. */
+export async function createDraftKeyAction(): Promise<DraftKeyState> {
+  if ((await getAdminStatus()) !== "admin") return { error: "관리자만 할 수 있어요. 다시 로그인해 주세요." };
+  try {
+    return { token: await createDraftKey() };
+  } catch (err) {
+    console.error("[threads] 받는 문 열쇠 만들기 실패", err instanceof Error ? err.message : err);
+    return { error: "열쇠를 만들지 못했어요. supabase/threads-drafts.sql 을 실행했는지 확인해 주세요." };
+  }
 }

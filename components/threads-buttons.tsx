@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  type DraftKeyState,
   checkThreadsAction,
+  createDraftKeyAction,
   discardThreadsDraftAction,
   disconnectThreadsAction,
   postThreadsDraftAction,
@@ -114,6 +116,48 @@ export function DraftCard({ id, initialBody, canPost, posting }: { id: number; i
         <Submit label="버리기" pendingLabel="치우는 중…" formAction={discardThreadsDraftAction} />
       </div>
     </form>
+  );
+}
+
+/**
+ * 관리자 · 받는 문 열쇠. [받는 문 열쇠 만들기]를 누르면 새 열쇠를 이 화면에 한 번만 보여준다.
+ * 이미 있으면 [새 열쇠로 바꾸기] (누르기 전에 확인을 묻는다. 바꾸면 이전 열쇠는 바로 못 쓴다).
+ */
+export function DraftKeyForm({ hasKey }: { hasKey: boolean }) {
+  const [state, action] = useActionState<DraftKeyState, FormData>(createDraftKeyAction, {});
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-3">
+      {state.token ? (
+        <div className="rounded-control bg-ok/10 px-4 py-3">
+          <p className="text-[14px] font-semibold text-ok">새 열쇠를 만들었어요. 이 화면을 벗어나면 다시 볼 수 없어요.</p>
+          <p className="mt-2 select-all break-all rounded-control bg-white px-3 py-2 font-mono text-[15px] tabular-nums">{state.token}</p>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard?.writeText(state.token ?? "").then(
+                () => setCopied(true),
+                () => setCopied(false),
+              );
+            }}
+            className="mt-2 flex h-12 w-full items-center justify-center rounded-control bg-brand text-[15px] font-semibold text-white hover:bg-brand/90"
+          >
+            {copied ? "복사했어요" : "열쇠 복사"}
+          </button>
+          <p className="mt-2 text-[13px] text-muted">복사한 열쇠를 홍보 담당(Claude) 예약 작업에 알려 주세요. 다른 사람에게는 보여 주지 마세요.</p>
+        </div>
+      ) : (
+        <form
+          action={action}
+          onSubmit={(e) => {
+            if (hasKey && !window.confirm("새 열쇠로 바꿀까요? 지금 쓰는 열쇠는 바로 못 쓰게 돼요.")) e.preventDefault();
+          }}
+        >
+          <Submit label={hasKey ? "새 열쇠로 바꾸기" : "받는 문 열쇠 만들기"} pendingLabel="만드는 중…" primary={!hasKey} />
+        </form>
+      )}
+      {state.error && <p className="mt-2 text-[13px] text-warn">{state.error}</p>}
+    </div>
   );
 }
 

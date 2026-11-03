@@ -1,6 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { addThreadsDraft, cleanDraftBody, THREADS_DRAFT_MAX } from "@/lib/threads";
+import { addThreadsDraft, checkDraftKey, cleanDraftBody, THREADS_DRAFT_MAX } from "@/lib/threads";
 
 /*
  * Threads '올릴 글' 받는 문. 매일 아침 홍보 담당(예약 작업)이 쓴 짧은 글을 넣는다.
@@ -8,30 +7,23 @@ import { addThreadsDraft, cleanDraftBody, THREADS_DRAFT_MAX } from "@/lib/thread
  * 운영자가 [올리기]를 눌러야 올라간다.
  *
  *   POST /api/threads/drafts
- *   Authorization: Bearer <THREADS_DRAFT_TOKEN>
+ *   Authorization: Bearer <받는 문 열쇠>
  *   { "text": "글 내용 (500자까지)", "date": "2026-11-04" }   ← date 는 선택. 같은 날짜 글은 하나만 받는다.
  *
  * 돌려주는 값: { id, duplicate }  (duplicate=true 면 그 날짜 글이 이미 있어서 새로 넣지 않음)
- * 비밀 열쇠(THREADS_DRAFT_TOKEN, 20자 이상)는 Vercel 환경 변수에 둔다. 공고 받는 문의 열쇠와 다른 값으로 둔다.
+ * 받는 문 열쇠는 관리자 화면(/admin/threads)의 [받는 문 열쇠 만들기]로 만든다 (데이터베이스에는 해시만 보관).
+ * 사이트 환경 변수 THREADS_DRAFT_TOKEN(20자 이상)이 있으면 그 값을 먼저 쓴다. 공고 받는 문의 열쇠와는 다른 값이다.
  */
 
-const MIN_TOKEN_LENGTH = 20;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** 글자 길이가 달라도 시간 차이로 열쇠를 알아낼 수 없게 비교한다. */
-function sameSecret(given: string, expected: string): boolean {
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 export async function POST(request: Request) {
-  const token = process.env.THREADS_DRAFT_TOKEN;
-  if (!token || token.length < MIN_TOKEN_LENGTH) {
-    return NextResponse.json({ error: "받는 문이 아직 열리지 않았어요 (THREADS_DRAFT_TOKEN 없음)." }, { status: 503 });
-  }
   const given = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ?? "";
-  if (!sameSecret(given, token)) {
+  const key = await checkDraftKey(given);
+  if (key === "none") {
+    return NextResponse.json({ error: "받는 문이 아직 열리지 않았어요 (관리자 화면에서 받는 문 열쇠를 만들어 주세요)." }, { status: 503 });
+  }
+  if (key === "wrong") {
     return NextResponse.json({ error: "열쇠가 맞지 않아요." }, { status: 401 });
   }
 

@@ -1,3 +1,4 @@
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { todayInSeoul } from "@/lib/date";
 import { SITE_URL } from "@/lib/site";
@@ -608,4 +609,57 @@ export async function discardThreadsDraft(id: number): Promise<void> {
     // '올리는 중'에서 멈춘 글(서버가 중간에 끊긴 경우)도 치울 수 있게
     .in("status", ["대기", "올리는 중"]);
   if (error) throw new Error(`글을 버리지 못했어요: ${error.message}`);
+}
+
+/* ───────── 올릴 글 받는 문 열쇠 ─────────
+ * 사이트 환경 변수 THREADS_DRAFT_TOKEN 이 있으면 그것을 쓴다.
+ * 없으면 관리자 화면의 [받는 문 열쇠 만들기]로 만든 열쇠를 쓴다. 표(threads_draft_key)에는 열쇠의 SHA-256 값만 둔다.
+ * 열쇠는 만들 때 한 번만 화면에 보여준다. 새로 만들면 이전 열쇠는 바로 못 쓴다.
+ */
+
+const MIN_DRAFT_TOKEN_LENGTH = 20;
+
+function sha256(text: string): Buffer {
+  return createHash("sha256").update(text).digest();
+}
+
+export type DraftKeyStatus = { source: "env" | "admin" | null; createdAt: string | null; ready: boolean };
+
+/** 관리자 화면 · 받는 문 열쇠가 있는지, 어디에 있는지 */
+export async function getDraftKeyStatus(): Promise<DraftKeyStatus> {
+  const env = process.env.THREADS_DRAFT_TOKEN?.trim();
+  if (env && env.length >= MIN_DRAFT_TOKEN_LENGTH) return { source: "env", createdAt: null, ready: true };
+  const supabase = createServiceClient();
+  if (!supabase) return { source: null, createdAt: null, ready: false };
+  const { data, error } = await supabase.from("threads_draft_key").select("created_at").eq("id", 1).maybeSingle();
+  if (error) return { source: null, createdAt: null, ready: false };
+  return data ? { source: "admin", createdAt: (data as { created_at: string }).created_at, ready: true } : { source: null, createdAt: null, ready: true };
+}
+
+/** 관리자 · 새 받는 문 열쇠를 만들어 해시만 보관하고, 열쇠는 돌려준다 (화면에 한 번만 보여줌). */
+export async function createDraftKey(): Promise<string> {
+  const token = randomBytes(24).toString("hex");
+  const { error } = await serviceClient()
+    .from("threads_draft_key")
+    .upsert({ id: 1, token_hash: sha256(token).toString("hex"), created_at: new Date().toISOString() });
+  if (error) throw new Error(`열쇠를 저장하지 못했어요: ${error.message}`);
+  return token;
+}
+
+/** 받는 문 · 들어온 열쇠가 맞는지. 열쇠가 하나도 없으면 "none". */
+export async function checkDraftKey(given: string): Promise<"ok" | "wrong" | "none"> {
+  const env = process.env.THREADS_DRAFT_TOKEN?.trim();
+  let expected: Buffer | null = null;
+  if (env && env.length >= MIN_DRAFT_TOKEN_LENGTH) {
+    expected = sha256(env);
+  } else {
+    const supabase = createServiceClient();
+    if (!supabase) return "none";
+    const { data, error } = await supabase.from("threads_draft_key").select("token_hash").eq("id", 1).maybeSingle();
+    if (error || !data) return "none";
+    expected = Buffer.from((data as { token_hash: string }).token_hash, "hex");
+  }
+  // 둘 다 해시(32바이트)라 길이가 같다 → 시간 차이로 열쇠를 알아낼 수 없게 비교
+  const actual = sha256(given);
+  return expected.length === actual.length && timingSafeEqual(expected, actual) ? "ok" : "wrong";
 }
