@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import AdminShell, { NotAdminCard } from "@/components/admin-shell";
-import { AppKeysForm, CheckButton, DisconnectButton, RetryFailedButton } from "@/components/threads-buttons";
+import { AppKeysForm, CheckButton, DisconnectButton, DraftCard, DraftKeyForm, RetryFailedButton } from "@/components/threads-buttons";
 import { checkAdmin } from "@/lib/admin";
 import { formatKoreanDate, seoulDateOf } from "@/lib/date";
-import { countFailedThreadsPosts, getRecentThreadsPosts, getThreadsStatus } from "@/lib/threads";
+import { countFailedThreadsPosts, getRecentThreadsPosts, getDraftKeyStatus, getThreadsDrafts, getThreadsStatus, type ThreadsDraft } from "@/lib/threads";
 
 export const metadata: Metadata = { title: "Threads 게시", robots: { index: false, follow: false } };
 
@@ -29,7 +29,17 @@ const NOTICES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "failed=retry": { tone: "warn", text: "다시 올리지 못했어요. 아래 '마지막 오류'를 확인해 주세요." },
   "failed=check": { tone: "warn", text: "연결 확인에 실패했어요. 아래 '마지막 오류'를 확인해 주세요." },
   "failed=disconnect": { tone: "warn", text: "연결을 끊지 못했어요. 잠시 뒤에 다시 시도해 주세요." },
+  draftPosted: { tone: "ok", text: "Threads 에 올렸어요. Threads 앱에서 확인해 보세요." },
+  draftDiscarded: { tone: "ok", text: "글을 버렸어요. Threads 에는 올리지 않았어요." },
+  "failed=draft": { tone: "warn", text: "글을 처리하지 못했어요. 화면을 새로 고친 뒤 다시 눌러 주세요." },
+  "failed=draftlength": { tone: "warn", text: "글이 비어 있거나 500자를 넘어요. 고친 뒤 다시 올려 주세요." },
+  "failed=draftpost": { tone: "warn", text: "Threads 에 올리지 못했어요. 글은 그대로 남아 있으니 다시 눌러 보세요." },
 };
+
+/** 올릴 글 카드 위의 날짜 (어느 날 글인지. 날짜가 없으면 들어온 날) */
+function draftDate(d: ThreadsDraft) {
+  return formatKoreanDate(d.forDate ?? seoulDateOf(d.createdAt));
+}
 
 /** 관리자 · Threads 자동 게시. 운영자 Threads 계정을 연결해 두면 새 공고의 제목과 링크를 자동으로 올린다. */
 export default async function AdminThreadsPage({ searchParams }: PageProps<"/admin/threads">) {
@@ -45,6 +55,10 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
         ? "keys"
         : params.disconnected
         ? "disconnected"
+        : params.draftPosted
+        ? "draftPosted"
+        : params.draftDiscarded
+        ? "draftDiscarded"
         : params.failed
           ? `failed=${params.failed}`
           : null;
@@ -62,7 +76,7 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
   // 연결 실패 이유 (callback 이 붙여 보냄). 글자만 보여주고 링크·코드로 해석하지 않는다.
   const why = typeof params.why === "string" ? params.why.slice(0, 160) : "";
 
-  const [status, posts] = await Promise.all([getThreadsStatus(), getRecentThreadsPosts()]);
+  const [status, posts, drafts, draftKey] = await Promise.all([getThreadsStatus(), getRecentThreadsPosts(), getThreadsDrafts(), getDraftKeyStatus()]);
   const ready = status.keysConfigured && status.storageReady;
   const failedCount = await countFailedThreadsPosts();
 
@@ -109,6 +123,65 @@ export default async function AdminThreadsPage({ searchParams }: PageProps<"/adm
           {why && <span className="mt-1 block text-[13px] opacity-80">이유: {why}</span>}
         </p>
       )}
+
+      <div className="mt-5 rounded-card bg-white p-5 md:p-6">
+        <h2 className="text-[17px] font-bold">올릴 글</h2>
+        <p className="mt-1 text-[14px] text-muted">
+          홍보 담당이 쓴 글이 여기에 쌓여요. 읽고 고친 뒤 [올리기]를 눌러야 Threads 에 올라가요. 누르기 전에는 아무것도 올라가지 않아요.
+        </p>
+        {!drafts.ready ? (
+          <p className="mt-3 text-[14px] text-warn">먼저 Supabase SQL Editor 에서 supabase/threads-drafts.sql 을 실행해 주세요.</p>
+        ) : drafts.waiting.length === 0 ? (
+          <p className="mt-3 rounded-control bg-bg px-4 py-3 text-[15px] text-muted">올릴 글이 없어요.</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {drafts.waiting.map((d) => (
+              <li key={d.id} className="py-4">
+                <p className="text-[14px] font-semibold">
+                  {draftDate(d)} · <span className={d.status === "올리는 중" ? "text-warn" : "text-accent"}>{d.status}</span>
+                </p>
+                {d.status === "올리는 중" && (
+                  <p className="mt-1 text-[13px] text-warn">올리다 멈춘 글이에요. Threads 앱에서 올라갔는지 확인한 뒤, 올라갔으면 [버리기]로 치워 주세요.</p>
+                )}
+                {d.error && d.status === "대기" && <p className="mt-1 text-[13px] text-warn">지난번 실패 이유: {d.error}</p>}
+                <DraftCard id={d.id} initialBody={d.body} canPost={status.connected} posting={d.status === "올리는 중"} />
+              </li>
+            ))}
+          </ul>
+        )}
+        {drafts.ready && !status.connected && drafts.waiting.length > 0 && (
+          <p className="mt-2 text-[13px] text-warn">Threads 가 연결돼 있지 않아 [올리기]를 누를 수 없어요. 아래 &lsquo;연결 상태&rsquo;에서 먼저 연결해 주세요.</p>
+        )}
+        {drafts.done.length > 0 && (
+          <ul className="mt-2 divide-y divide-line border-t border-line">
+            {drafts.done.map((d) => (
+              <li key={d.id} className="flex items-center gap-3 py-3 text-[14px]">
+                <span className="shrink-0 tabular-nums text-muted">{draftDate(d)}</span>
+                <span className="min-w-0 flex-1 truncate text-muted">{d.body.split("\n")[0]}</span>
+                <span className={`shrink-0 font-semibold ${d.status === "올림" ? "text-ok" : "text-muted"}`}>{d.status === "올림" ? "올림 ✓" : "버림"}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-4 border-t border-line pt-4">
+          <h3 className="text-[15px] font-bold">받는 문 열쇠</h3>
+          <p className="mt-1 text-[13px] text-muted">
+            홍보 담당이 이 상자로 글을 보낼 때 쓰는 비밀 열쇠예요.{" "}
+            {draftKey.source === "env"
+              ? "사이트 환경 변수(THREADS_DRAFT_TOKEN)에 넣어 둔 열쇠를 쓰고 있어요."
+              : draftKey.source === "admin" && draftKey.createdAt
+                ? `${formatKoreanDate(seoulDateOf(draftKey.createdAt))}에 만들었어요.`
+                : "아직 없어요. 만들어야 글이 들어와요."}
+          </p>
+          {draftKey.source !== "env" &&
+            (draftKey.ready ? (
+              <DraftKeyForm hasKey={draftKey.source === "admin"} />
+            ) : (
+              <p className="mt-2 text-[13px] text-warn">먼저 Supabase SQL Editor 에서 supabase/threads-drafts.sql 을 실행해 주세요.</p>
+            ))}
+        </div>
+      </div>
 
       <div className="mt-5 rounded-card bg-white p-5 md:p-6">
         <h2 className="text-[17px] font-bold">연결 상태</h2>

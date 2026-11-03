@@ -3,7 +3,7 @@
 -- 중간에 하나라도 오류가 나면 아무것도 만들어지지 않습니다 (전부 되돌림). 오류 문구를 그대로 알려 주세요.
 --
 -- 아래 파일들을 순서대로 이어 붙인 것입니다. 각 파일을 따로 실행할 필요는 없습니다.
---   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql, job-region-group.sql, kakao-notify.sql, request-matching.sql, request-portal.sql, admin-instructors.sql, member-type.sql, sms-consent.sql, request-postings.sql, job-apply.sql, request-feedback.sql, request-complete-hide.sql, page-views.sql, home-ads.sql, threads-post.sql
+--   members.sql, jobs.sql, find-email.sql, instructor-requests.sql, instructor-requests-change-1.sql, today-job-count.sql, today-job-titles.sql, admins.sql, admin-job-create.sql, admin-job-edit.sql, admin-requests.sql, admin-members.sql, delete-account.sql, today-deadline-count.sql, instructor-requests-change-2.sql, instructor-profiles.sql, job-import.sql, job-region-group.sql, kakao-notify.sql, request-matching.sql, request-portal.sql, admin-instructors.sql, member-type.sql, sms-consent.sql, request-postings.sql, job-apply.sql, request-feedback.sql, request-complete-hide.sql, page-views.sql, home-ads.sql, threads-post.sql, threads-drafts.sql
 -- (jobs-change-1.sql, jobs-change-2.sql 은 jobs.sql 에 이미 반영되어 있어 뺐습니다.
 --  admin-add.sql, admin-reset-password.sql 은 운영자가 그때그때 쓰는 파일이라 뺐습니다.)
 
@@ -2669,6 +2669,53 @@ revoke all on public.threads_posts from public, anon, authenticated;
 grant all on public.threads_app_keys to service_role;
 grant all on public.threads_tokens to service_role;
 grant all on public.threads_posts to service_role;
+-- 읽기 규칙(policy)을 하나도 만들지 않으므로 service_role 말고는 아무도 못 읽는다.
+
+-- ============================================================
+-- threads-drafts.sql
+-- ============================================================
+
+-- 강사잇다 · Threads '올릴 글' (홍보 담당이 쓴 글을 쌓아 두고, 운영자가 [올리기]를 눌러야 Threads 에 올라감)
+-- Supabase SQL Editor 에 붙여넣고 Run 을 한 번 누릅니다. 여러 번 실행해도 괜찮습니다.
+-- 먼저 threads-post.sql 을 실행해 두어야 합니다 (Threads 연결 표).
+--
+-- 표 두 개. 사이트 서버(service_role)만 읽고 씁니다. 회원·비회원·관리자 화면 모두 직접 읽을 수 없습니다.
+--   threads_drafts    : 올릴 글. 받는 문(/api/threads/drafts)으로 들어오면 '대기',
+--                       관리자 화면(/admin/threads)에서 [올리기] → '올림', [버리기] → '버림'.
+--   threads_draft_key : 받는 문 열쇠. 관리자 화면의 [받는 문 열쇠 만들기]로 만든다.
+--                       열쇠 자체가 아니라 열쇠를 바꾼 값(해시)만 보관한다 (열쇠는 만들 때 한 번만 화면에 보임).
+--   글 하나는 많아야 약 2KB 라 평일마다 쌓여도 1년에 0.5MB 정도입니다.
+-- 이미 한 번 실행했어도 다시 실행하면 새 표만 더해집니다 (있던 글은 그대로).
+
+create table if not exists public.threads_drafts (
+  id          bigint generated always as identity primary key,
+  body        text not null check (char_length(body) between 1 and 500),  -- Threads 글은 500자까지
+  for_date    date,                          -- 어느 날 올릴 글인지 (같은 날짜 글은 하나만 받음)
+  status      text not null default '대기' check (status in ('대기', '올리는 중', '올림', '버림')),
+  thread_id   text,                          -- Threads 가 돌려준 글 번호
+  error       text,                          -- 마지막으로 올리기 실패한 이유 (실패하면 다시 '대기')
+  created_at  timestamptz not null default now(),
+  decided_at  timestamptz                    -- 올리거나 버린 시각
+);
+
+comment on table public.threads_drafts is 'Threads 올릴 글. 운영자가 관리자 화면에서 [올리기]를 눌러야 올라간다. 사이트 서버만 읽고 쓴다.';
+create unique index if not exists threads_drafts_for_date_key on public.threads_drafts (for_date);
+create index if not exists threads_drafts_created_idx on public.threads_drafts (created_at desc);
+
+create table if not exists public.threads_draft_key (
+  id          integer primary key default 1 check (id = 1),  -- 항상 한 줄
+  token_hash  text not null,                 -- 열쇠의 SHA-256 값 (열쇠 자체는 보관하지 않음)
+  created_at  timestamptz not null default now()
+);
+
+comment on table public.threads_draft_key is '올릴 글 받는 문 열쇠의 해시 (관리자 화면에서 만듦). 사이트 서버만 읽고 쓴다.';
+
+alter table public.threads_drafts enable row level security;
+revoke all on public.threads_drafts from public, anon, authenticated;
+grant all on public.threads_drafts to service_role;
+alter table public.threads_draft_key enable row level security;
+revoke all on public.threads_draft_key from public, anon, authenticated;
+grant all on public.threads_draft_key to service_role;
 -- 읽기 규칙(policy)을 하나도 만들지 않으므로 service_role 말고는 아무도 못 읽는다.
 
 -- Supabase에게 새 표가 생겼다고 알리기 (이게 없으면 'schema cache' 오류가 날 수 있음)

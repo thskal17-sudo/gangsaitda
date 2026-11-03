@@ -1,3 +1,4 @@
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { todayInSeoul } from "@/lib/date";
 import { SITE_URL } from "@/lib/site";
@@ -485,4 +486,180 @@ export async function countFailedThreadsPosts(): Promise<number> {
   if (!supabase) return 0;
   const { count, error } = await supabase.from("threads_posts").select("job_id", { count: "exact", head: true }).eq("status", "실패");
   return error ? 0 : (count ?? 0);
+}
+
+/* ───────── 올릴 글 (supabase/threads-drafts.sql) ─────────
+ * 홍보 담당(예약 작업)이 쓴 Threads 글을 받는 문(/api/threads/drafts)으로 넣으면 '대기'로 쌓인다.
+ * 운영자가 관리자 화면에서 글을 읽고(고치고) [올리기]를 눌러야 Threads 에 올라간다. [버리기]는 올리지 않고 치운다.
+ * 같은 날짜(for_date) 글은 하나만 받는다. 올리다 실패하면 다시 '대기'로 두고 이유를 error 에 남긴다.
+ */
+
+/** Threads 글 최대 글자 수 (Meta 규칙) */
+export const THREADS_DRAFT_MAX = 500;
+
+export type ThreadsDraft = {
+  id: number;
+  body: string;
+  forDate: string | null;
+  status: "대기" | "올리는 중" | "올림" | "버림";
+  threadId: string | null;
+  error: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+type DraftRow = {
+  id: number;
+  body: string;
+  for_date: string | null;
+  status: ThreadsDraft["status"];
+  thread_id: string | null;
+  error: string | null;
+  created_at: string;
+  decided_at: string | null;
+};
+
+function toDraft(r: DraftRow): ThreadsDraft {
+  return {
+    id: Number(r.id),
+    body: r.body,
+    forDate: r.for_date,
+    status: r.status,
+    threadId: r.thread_id,
+    error: r.error,
+    createdAt: r.created_at,
+    decidedAt: r.decided_at,
+  };
+}
+
+/** 줄바꿈을 \n 으로 맞추고 앞뒤 빈칸을 지운다. 빈 글이나 500자를 넘으면 null. */
+export function cleanDraftBody(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const body = raw.replace(/\r\n?/g, "\n").trim();
+  if (body.length === 0 || body.length > THREADS_DRAFT_MAX) return null;
+  return body;
+}
+
+/** 받는 문 · 올릴 글 하나를 '대기'로 넣는다. 같은 날짜 글이 이미 있으면 넣지 않고 그 글 번호를 돌려준다. */
+export async function addThreadsDraft(body: string, forDate: string | null): Promise<{ id: number; duplicate: boolean }> {
+  const supabase = serviceClient();
+  const { data, error } = await supabase
+    .from("threads_drafts")
+    .upsert({ body, for_date: forDate }, { onConflict: "for_date", ignoreDuplicates: true })
+    .select("id");
+  if (error) throw new Error(`올릴 글을 저장하지 못했어요: ${error.message}`);
+  const inserted = (data ?? []) as { id: number }[];
+  if (inserted.length > 0) return { id: Number(inserted[0].id), duplicate: false };
+  // 같은 날짜 글이 이미 있음
+  const { data: existing, error: readError } = await supabase.from("threads_drafts").select("id").eq("for_date", forDate).maybeSingle();
+  if (readError || !existing) throw new Error(`올릴 글을 저장하지 못했어요: ${readError?.message ?? "같은 날짜 글을 찾지 못함"}`);
+  return { id: Number((existing as { id: number }).id), duplicate: true };
+}
+
+/** 관리자 화면 · '대기' 글 전부(오래된 것 먼저) + 최근에 올리거나 버린 글 5개 */
+export async function getThreadsDrafts(): Promise<{ waiting: ThreadsDraft[]; done: ThreadsDraft[]; ready: boolean }> {
+  const supabase = createServiceClient();
+  if (!supabase) return { waiting: [], done: [], ready: false };
+  const cols = "id, body, for_date, status, thread_id, error, created_at, decided_at";
+  const [waiting, done] = await Promise.all([
+    supabase.from("threads_drafts").select(cols).in("status", ["대기", "올리는 중"]).order("created_at", { ascending: true }).limit(30),
+    supabase.from("threads_drafts").select(cols).in("status", ["올림", "버림"]).order("decided_at", { ascending: false }).limit(5),
+  ]);
+  if (waiting.error || done.error) return { waiting: [], done: [], ready: false };
+  return { waiting: (waiting.data as DraftRow[]).map(toDraft), done: (done.data as DraftRow[]).map(toDraft), ready: true };
+}
+
+/**
+ * 관리자 · [올리기]. 고친 글로 바꾼 뒤 Threads 에 올린다.
+ * 두 번 눌러도 한 번만 올라가게, 먼저 '대기' → '올리는 중'으로 바꾼 경우에만 올린다.
+ */
+export async function postThreadsDraft(id: number, body: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = serviceClient();
+  const { data: claimed, error: claimError } = await supabase
+    .from("threads_drafts")
+    .update({ body, status: "올리는 중", error: null })
+    .eq("id", id)
+    .eq("status", "대기")
+    .select("id");
+  if (claimError) return { ok: false, error: `글을 읽지 못했어요: ${claimError.message}` };
+  if (!claimed || claimed.length === 0) return { ok: false, error: "이미 올렸거나 버린 글이에요." };
+
+  try {
+    const row = await getConnection();
+    if (!row) throw new Error("Threads 연결이 없거나 만료됐어요. 위에서 다시 연결해 주세요.");
+    const threadId = await publishText(row, body);
+    await supabase.from("threads_drafts").update({ status: "올림", thread_id: threadId, decided_at: new Date().toISOString() }).eq("id", id);
+    await recordError(null).catch(() => {});
+    return { ok: true };
+  } catch (err) {
+    const message = (err instanceof Error ? err.message : String(err)).slice(0, 300);
+    console.error("[threads] 올릴 글 게시 실패", message);
+    // 다시 누를 수 있게 '대기'로 되돌린다
+    await supabase.from("threads_drafts").update({ status: "대기", error: message }).eq("id", id).then(undefined, () => {});
+    return { ok: false, error: message };
+  }
+}
+
+/** 관리자 · [버리기]. 올리지 않고 치운다 (이미 올렸거나 버린 글은 그대로). */
+export async function discardThreadsDraft(id: number): Promise<void> {
+  const { error } = await serviceClient()
+    .from("threads_drafts")
+    .update({ status: "버림", decided_at: new Date().toISOString() })
+    .eq("id", id)
+    // '올리는 중'에서 멈춘 글(서버가 중간에 끊긴 경우)도 치울 수 있게
+    .in("status", ["대기", "올리는 중"]);
+  if (error) throw new Error(`글을 버리지 못했어요: ${error.message}`);
+}
+
+/* ───────── 올릴 글 받는 문 열쇠 ─────────
+ * 사이트 환경 변수 THREADS_DRAFT_TOKEN 이 있으면 그것을 쓴다.
+ * 없으면 관리자 화면의 [받는 문 열쇠 만들기]로 만든 열쇠를 쓴다. 표(threads_draft_key)에는 열쇠의 SHA-256 값만 둔다.
+ * 열쇠는 만들 때 한 번만 화면에 보여준다. 새로 만들면 이전 열쇠는 바로 못 쓴다.
+ */
+
+const MIN_DRAFT_TOKEN_LENGTH = 20;
+
+function sha256(text: string): Buffer {
+  return createHash("sha256").update(text).digest();
+}
+
+export type DraftKeyStatus = { source: "env" | "admin" | null; createdAt: string | null; ready: boolean };
+
+/** 관리자 화면 · 받는 문 열쇠가 있는지, 어디에 있는지 */
+export async function getDraftKeyStatus(): Promise<DraftKeyStatus> {
+  const env = process.env.THREADS_DRAFT_TOKEN?.trim();
+  if (env && env.length >= MIN_DRAFT_TOKEN_LENGTH) return { source: "env", createdAt: null, ready: true };
+  const supabase = createServiceClient();
+  if (!supabase) return { source: null, createdAt: null, ready: false };
+  const { data, error } = await supabase.from("threads_draft_key").select("created_at").eq("id", 1).maybeSingle();
+  if (error) return { source: null, createdAt: null, ready: false };
+  return data ? { source: "admin", createdAt: (data as { created_at: string }).created_at, ready: true } : { source: null, createdAt: null, ready: true };
+}
+
+/** 관리자 · 새 받는 문 열쇠를 만들어 해시만 보관하고, 열쇠는 돌려준다 (화면에 한 번만 보여줌). */
+export async function createDraftKey(): Promise<string> {
+  const token = randomBytes(24).toString("hex");
+  const { error } = await serviceClient()
+    .from("threads_draft_key")
+    .upsert({ id: 1, token_hash: sha256(token).toString("hex"), created_at: new Date().toISOString() });
+  if (error) throw new Error(`열쇠를 저장하지 못했어요: ${error.message}`);
+  return token;
+}
+
+/** 받는 문 · 들어온 열쇠가 맞는지. 열쇠가 하나도 없으면 "none". */
+export async function checkDraftKey(given: string): Promise<"ok" | "wrong" | "none"> {
+  const env = process.env.THREADS_DRAFT_TOKEN?.trim();
+  let expected: Buffer | null = null;
+  if (env && env.length >= MIN_DRAFT_TOKEN_LENGTH) {
+    expected = sha256(env);
+  } else {
+    const supabase = createServiceClient();
+    if (!supabase) return "none";
+    const { data, error } = await supabase.from("threads_draft_key").select("token_hash").eq("id", 1).maybeSingle();
+    if (error || !data) return "none";
+    expected = Buffer.from((data as { token_hash: string }).token_hash, "hex");
+  }
+  // 둘 다 해시(32바이트)라 길이가 같다 → 시간 차이로 열쇠를 알아낼 수 없게 비교
+  const actual = sha256(given);
+  return expected.length === actual.length && timingSafeEqual(expected, actual) ? "ok" : "wrong";
 }
