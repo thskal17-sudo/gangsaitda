@@ -16,6 +16,7 @@ import {
 } from "@/components/job-detail";
 import { daysBetween, formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { getJobDetail, getJobTitle } from "@/lib/jobs";
+import { readableText } from "@/lib/readable-text";
 import { getMyApplication } from "@/lib/apply";
 import { getCurrentMember, getMemberType } from "@/lib/member";
 import { getMySavedJobIds } from "@/lib/saved-jobs";
@@ -115,7 +116,8 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
 
           <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
             <TextSection title="상세 내용">
-              <p className="whitespace-pre-line">{detail.description}</p>
+              {/* 수집 공고문에서 뽑은 한 덩어리 글은 항목별로 줄을 나눠 보여 준다 (lib/readable-text.ts, 저장된 글은 그대로) */}
+              <p className="whitespace-pre-line">{readableText(detail.description)}</p>
             </TextSection>
             {detail.qualifications && (
               <TextSection title="지원 자격">
