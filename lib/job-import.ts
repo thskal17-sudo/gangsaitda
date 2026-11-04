@@ -44,6 +44,8 @@ export type ImportSummary = {
    * 전체 제목 공고가 이미 따로 들어와 있으면 잘린 쪽을 숨긴다 (중복이라서).
    */
   titleFixed: number;
+  /** 원문 링크 없이 먼저 들어온 공고에, 같은 공고 줄의 원문 링크를 채운 수 */
+  sourceUrlFilled: number;
 };
 
 /**
@@ -75,6 +77,7 @@ export async function importJobs(
     review: [],
     regionUpdated: 0,
     titleFixed: 0,
+    sourceUrlFilled: 0,
   };
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
@@ -118,6 +121,7 @@ export async function importJobs(
   const byKey = new Map<string, (typeof existingJobs)[number]>();
   for (const job of existingJobs) for (const k of jobKeys(job.title, job.organization)) if (!byKey.has(k)) byKey.set(k, job);
   const regionFixed = new Set<number>();
+  const urlFilled = new Set<number>();
 
   const parsed = parseJobSheet(toSheet(rows), existing);
   if ("error" in parsed) return { error: parsed.error };
@@ -136,6 +140,17 @@ export async function importJobs(
           else {
             regionFixed.add(job.id);
             summary.regionUpdated += 1;
+          }
+        }
+        // 원문 링크 없이 먼저 들어온 공고: 새로 받은 줄에 원문 링크가 있으면 채운다
+        // (경남 시군 새올의 http:// 주소를 수집 프로그램이 빼고 보낸 적이 있다. 2026-11-04 창녕·거제·하동)
+        const sourceUrl = row.values.sourceUrl.trim();
+        if (job && !job.fromRequest && !job.sourceUrl && !urlFilled.has(job.id) && /^https?:\/\/\S+$/i.test(sourceUrl)) {
+          const { error } = await supabase.from("job_details").update({ source_url: sourceUrl }).eq("job_id", job.id).is("source_url", null);
+          if (error) console.error("[import] 원문 링크 채우기 실패", error.code, error.message);
+          else {
+            urlFilled.add(job.id);
+            summary.sourceUrlFilled += 1;
           }
         }
         // 전체 제목 공고가 이미 따로 있으면, 같은 원문의 잘린 제목 공고는 중복이라 숨긴다
@@ -286,7 +301,7 @@ export const MAX_REMOVED = 100;
  * (지우지 않는다. 관리자 공고 관리의 '숨김'에서 '다시 올리기'로 되돌릴 수 있다). 이미 숨긴 공고는 그대로라 여러 번 받아도 된다.
  */
 export async function hideRemovedJobs(urls: string[], today: string): Promise<HiddenJob[] | { error: string }> {
-  const wanted = [...new Set(urls.map((u) => u.trim()).filter((u) => /^https:\/\//i.test(u)))].slice(0, MAX_REMOVED);
+  const wanted = [...new Set(urls.map((u) => u.trim()).filter((u) => /^https?:\/\//i.test(u)))].slice(0, MAX_REMOVED);
   if (wanted.length === 0) return [];
   const supabase = createServiceClient();
   if (!supabase) return { error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
