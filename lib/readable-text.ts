@@ -63,14 +63,108 @@ function breakLines(text: string): string {
   );
 }
 
-/** 화면에 보여 줄 상세 내용. 줄바꿈 없는 긴 글이면 줄을 나누고 띄어쓰기를 고친다. */
-export function readableText(text: string): string {
-  if (!text || text.length < MIN_LENGTH || alreadyFormatted(text)) return text;
-  const out = breakLines(fixSpacing(text))
-    .split("\n")
-    .map((line) => line.replace(/\s{2,}/g, " ").trim())
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-  return out;
+/** 화면에 보여 줄 상세 내용. 줄바꿈 없는 긴 글이면 줄을 나누고 띄어쓰기를 고친다.
+ *  collected: 수집 프로그램이 가져온 공고면 '수집 공고 상세 내용 규칙'(tidyCollected)도 적용한다. */
+export function readableText(text: string, options: { collected?: boolean } = {}): string {
+  if (!text) return text;
+  let out = text;
+  if (out.length >= MIN_LENGTH && !alreadyFormatted(out)) {
+    out = breakLines(fixSpacing(out))
+      .split("\n")
+      .map((line) => line.replace(/\s{2,}/g, " ").trim())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+  return options.collected ? tidyCollected(out) : out;
+}
+
+/*
+ * 수집 공고 상세 내용 규칙 (2026-11-04)
+ *
+ * 수집 프로그램은 공고문 본문을 통째로 가져온다. 공고문 안의 표(강좌명·요일·시간·장소·인원)는 글자로 풀리면
+ * 칸이 다 붙은 한 줄('노래교실월 10:00～12:0020취미교실1,21명…')과 칸마다 한 줄씩 쪼개진 조각('강 좌 명' / '노래교실' / …)이
+ * 되어 읽을 수 없다 (김해시 칠산서부동 교양강좌 강사 공고).
+ *  1) 표에서 풀린 글은 빼고, 그 자리에 '원문 공고에서 확인' 안내를 한 줄 넣는다
+ *  2) 한글 문서 기호 글꼴의 머리표(화면에 '≣'처럼 보임)는 '-'로 바꾼다
+ *  3) 800자까지만 둔다 (줄 단위로 자르고, 잘랐으면 안내를 붙인다)
+ * 받는 문(lib/job-import.ts)이 저장하기 전에, 공고 화면이 이미 올라간 공고를 보여 줄 때 이 규칙을 쓴다.
+ * 기관·운영자가 직접 쓴 공고에는 쓰지 않는다.
+ */
+
+/** 수집 공고 상세 내용 길이 한도 */
+export const COLLECTED_MAX = 800;
+export const TABLE_NOTICE = "(표로 된 내용은 원문 공고에서 확인해 주세요)";
+export const MORE_NOTICE = "… 나머지 내용은 원문 공고에서 확인해 주세요.";
+
+/** 이만큼 짧은 줄이 이만큼 이어지면 표 칸이 쪼개진 것으로 본다 */
+const FRAGMENT_LENGTH = 20;
+const FRAGMENT_RUN = 6;
+/** 머리표·항목 번호로 시작하는 줄 (짧아도 목록이라 표 조각으로 보지 않는다) */
+const LIST_MARK = new RegExp(`^(?:[${BULLETS}${ROMAN}□\\-·•]|\\d{1,2}[.)]|[가-하][.)]|\\(\\d{1,2}\\)|<)`);
+const TIME_RANGE = /\d{1,2}:\d{2}\s*[~～∼-]\s*\d{1,2}:\d{2}/g;
+
+/** 칸이 다 붙은 표 줄인가: 빈칸이 매우 적은데 시간 범위가 여럿이거나, 길다 */
+function isMashedTableLine(line: string): boolean {
+  const spaces = (line.match(/\s/g) ?? []).length / Math.max(line.length, 1);
+  const times = (line.match(TIME_RANGE) ?? []).length;
+  return (times >= 3 && spaces < 0.12) || (line.length >= 100 && spaces < 0.08);
+}
+
+function isShort(line: string): boolean {
+  const t = line.trim();
+  return t !== "" && t.length <= FRAGMENT_LENGTH;
+}
+
+/** 머리표·번호가 없는 짧은 줄 (표 칸 조각일 수 있음) */
+function isFragment(line: string): boolean {
+  return isShort(line) && !LIST_MARK.test(line.trim());
+}
+
+/** 표에서 풀린 줄을 빼고 그 자리에 안내를 한 번 넣는다 */
+function dropTables(text: string): string {
+  const lines = text.split("\n");
+  const drop = lines.map((line) => isMashedTableLine(line));
+  // 짧은 줄이 이어진 덩어리. 머리표 없는 조각이 6줄 넘고 덩어리의 2/3 이상이면 표로 본다.
+  // ('12. 31.'처럼 번호처럼 보이는 조각도 덩어리 안에 있으면 함께 빼고, 덩어리 앞뒤의 '□ 모집강좌' 같은 머리표 줄은 남긴다.)
+  for (let i = 0; i < lines.length; ) {
+    if (!isShort(lines[i])) {
+      i += 1;
+      continue;
+    }
+    let j = i;
+    while (j < lines.length && isShort(lines[j])) j += 1;
+    let start = i;
+    let end = j;
+    while (start < end && !isFragment(lines[start])) start += 1;
+    while (end > start && !isFragment(lines[end - 1])) end -= 1;
+    const fragments = lines.slice(start, end).filter(isFragment).length;
+    if (fragments >= FRAGMENT_RUN && fragments * 3 >= (end - start) * 2) for (let k = start; k < end; k += 1) drop[k] = true;
+    i = j;
+  }
+  const out: string[] = [];
+  lines.forEach((line, i) => {
+    if (!drop[i]) out.push(line);
+    else if (out[out.length - 1] !== TABLE_NOTICE) out.push(TABLE_NOTICE);
+  });
+  return out.join("\n");
+}
+
+/** 800자까지만 (줄 단위로, 한 줄이 너무 길면 빈칸에서) 자르고 안내를 붙인다 */
+function capLength(text: string): string {
+  if (text.length <= COLLECTED_MAX) return text;
+  const limit = COLLECTED_MAX - MORE_NOTICE.length - 1;
+  let cut = text.lastIndexOf("\n", limit);
+  if (cut < limit / 2) cut = text.lastIndexOf(" ", limit);
+  if (cut < limit / 2) cut = limit;
+  return `${text.slice(0, cut).trimEnd()}\n${MORE_NOTICE}`;
+}
+
+/** 수집 공고 상세 내용 규칙을 적용한다 (위 설명 참고). 몇 번을 적용해도 결과가 같다. */
+export function tidyCollected(text: string): string {
+  if (!text) return text;
+  // 한글 문서의 기호 글꼴로 쓴 머리표(U+F06D 등 사용자 정의 영역 글자)는 화면에 '≣' 같은 이상한 모양으로 나온다 → '-'
+  const plain = text.replace(/^[ \t]*[\uE000-\uF8FF]+[ \t]*/gm, "- ").replace(/[\uE000-\uF8FF]/g, "");
+  const out = capLength(dropTables(plain).replace(/\n{3,}/g, "\n\n").trim());
+  return out || text;
 }
