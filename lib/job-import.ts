@@ -2,6 +2,7 @@ import { toRpcArgs } from "@/lib/admin-job-schema";
 import { MAX_ROWS, REQUIRED_COLUMN_NAMES, SAME_JOB_EXISTS, jobKeySet, jobKeys, parseJobSheet } from "@/lib/job-excel";
 import { createServiceClient } from "@/lib/supabase/service";
 import { deadlineReviewReasons } from "@/lib/deadline-review";
+import { tidyCollected } from "@/lib/readable-text";
 
 /*
  * 수집 프로그램이 보낸 공고를 사이트에 넣는다 (/api/jobs/import 가 부른다).
@@ -10,6 +11,7 @@ import { deadlineReviewReasons } from "@/lib/deadline-review";
  * 엑셀 올리기와 같은 규칙(lib/job-excel.ts)으로 확인하므로 결과도 같다:
  *   - 사이트에 같은 공고가 이미 있으면 건너뜀 (같은 공고가 매일 다시 와도, 다른 곳에서 기관 이름을 붙인 제목으로 와도 한 번만 들어감.
  *     같은 공고인지는 lib/job-excel.ts 의 jobKeys: 제목이 같거나, 기관명이 같고 기관 이름을 뺀 제목이 같음)
+ *   - 상세 내용은 수집 공고 규칙대로 정리해 넣음 (표에서 풀린 글 빼기, 800자까지. lib/readable-text.ts 의 tidyCollected)
  *   - '처리' 칸이 제외·보류면 건너뜀
  *   - 꼭 있어야 하는 칸이 비었거나 마감이 지났으면 넣지 않음 (이유를 돌려줌)
  */
@@ -110,7 +112,9 @@ export async function importJobs(
     }
     // 마감일을 믿기 어려운 공고(수시 접수 등)는 숨김으로 넣고 운영자가 확인한다.
     const reasons = deadlineReviewReasons(row.values);
-    const { data, error } = await supabase.rpc("import_job", { ...toRpcArgs(row.values), p_hidden: hidden || reasons.length > 0 });
+    // 상세 내용은 '수집 공고 상세 내용 규칙'대로 정리해 넣는다 (표에서 풀린 글 빼기, 800자까지. lib/readable-text.ts)
+    const values = { ...row.values, description: tidyCollected(row.values.description) };
+    const { data, error } = await supabase.rpc("import_job", { ...toRpcArgs(values), p_hidden: hidden || reasons.length > 0 });
     if (error) {
       console.error("[import] 공고 저장 실패", error.code, error.message);
       summary.failed.push({ title, reason: "저장하지 못했어요" });
