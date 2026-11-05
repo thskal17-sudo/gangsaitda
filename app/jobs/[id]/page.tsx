@@ -117,7 +117,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
           <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
             <TextSection title="상세 내용">
               {/* 수집 공고문에서 뽑은 한 덩어리 글은 항목별로 줄을 나눠 보여 준다 (lib/readable-text.ts, 저장된 글은 그대로) */}
-              <p className="whitespace-pre-line">{readableText(detail.description, { collected: !detail.fromRequest && Boolean(detail.sourceUrl) })}</p>
+              <p className="whitespace-pre-line">{readableText(detail.description, { collected: !detail.fromRequest && Boolean(detail.sourceUrl), title: detail.title })}</p>
             </TextSection>
             {detail.qualifications && (
               <TextSection title="지원 자격">

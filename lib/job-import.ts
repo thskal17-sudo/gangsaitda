@@ -2,7 +2,7 @@ import { toRpcArgs } from "@/lib/admin-job-schema";
 import { MAX_ROWS, REQUIRED_COLUMN_NAMES, SAME_JOB_EXISTS, jobKeySet, jobKeys, parseJobSheet } from "@/lib/job-excel";
 import { createServiceClient } from "@/lib/supabase/service";
 import { deadlineReviewReasons } from "@/lib/deadline-review";
-import { tidyCollected } from "@/lib/readable-text";
+import { NO_BODY, tidyCollected } from "@/lib/readable-text";
 
 /*
  * 수집 프로그램이 보낸 공고를 사이트에 넣는다 (/api/jobs/import 가 부른다).
@@ -12,7 +12,8 @@ import { tidyCollected } from "@/lib/readable-text";
  *   - 사이트에 같은 공고가 이미 있으면 건너뜀 (같은 공고가 매일 다시 와도, 다른 곳에서 기관 이름을 붙인 제목으로 와도 한 번만 들어감.
  *     같은 공고인지는 lib/job-excel.ts 의 jobKeys: 제목이 같거나, 기관명이 같고 기관 이름을 뺀 제목이 같음)
  *   - 잘린 제목('...강사 모집 …채용...')으로 먼저 들어온 공고는, 원문 주소가 같은 전체 제목 줄이 오면 제목을 고침 (titleFixed)
- *   - 상세 내용은 수집 공고 규칙대로 정리해 넣음 (표에서 풀린 글 빼기, 800자까지. lib/readable-text.ts 의 tidyCollected)
+ *   - 상세 내용은 수집 공고 규칙대로 정리해 넣음 (표에서 풀린 글 빼기, 800자까지, 끝에 같은 안내 한 줄. lib/readable-text.ts 의 tidyCollected)
+ *   - 본문 없이 먼저 들어온 공고는 같은 공고 줄의 본문으로 채움 (bodyFilled)
  *   - '처리' 칸이 제외·보류면 건너뜀
  *   - 꼭 있어야 하는 칸이 비었거나 마감이 지났으면 넣지 않음 (이유를 돌려줌)
  */
@@ -46,6 +47,8 @@ export type ImportSummary = {
   titleFixed: number;
   /** 원문 링크 없이 먼저 들어온 공고에, 같은 공고 줄의 원문 링크를 채운 수 */
   sourceUrlFilled: number;
+  /** 본문 없이 먼저 들어온 공고에, 같은 공고 줄의 본문을 넣은 수 (fillBodies) */
+  bodyFilled: number;
 };
 
 /**
@@ -78,6 +81,7 @@ export async function importJobs(
     regionUpdated: 0,
     titleFixed: 0,
     sourceUrlFilled: 0,
+    bodyFilled: 0,
   };
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
@@ -122,6 +126,7 @@ export async function importJobs(
   for (const job of existingJobs) for (const k of jobKeys(job.title, job.organization)) if (!byKey.has(k)) byKey.set(k, job);
   const regionFixed = new Set<number>();
   const urlFilled = new Set<number>();
+  const bodyWanted = new Map<number, { body: string; title: string }>();
 
   const parsed = parseJobSheet(toSheet(rows), existing);
   if ("error" in parsed) return { error: parsed.error };
@@ -153,6 +158,11 @@ export async function importJobs(
             summary.sourceUrlFilled += 1;
           }
         }
+        // 본문 없이 먼저 들어온 공고: 새로 받은 줄에 본문이 있으면 나중에 한꺼번에 채운다 (아래 fillBodies)
+        if (job && !job.fromRequest && !bodyWanted.has(job.id)) {
+          const body = tidyCollected(row.values.description, job.title);
+          if (body !== NO_BODY) bodyWanted.set(job.id, { body, title: job.title });
+        }
         // 전체 제목 공고가 이미 따로 있으면, 같은 원문의 잘린 제목 공고는 중복이라 숨긴다
         const cut = cutJobFor(row.values);
         if (job && cut && cut.id !== job.id) {
@@ -179,7 +189,7 @@ export async function importJobs(
     // 마감일을 믿기 어려운 공고(수시 접수 등)는 숨김으로 넣고 운영자가 확인한다.
     const reasons = deadlineReviewReasons(row.values);
     // 상세 내용은 '수집 공고 상세 내용 규칙'대로 정리해 넣는다 (표에서 풀린 글 빼기, 800자까지. lib/readable-text.ts)
-    const values = { ...row.values, description: tidyCollected(row.values.description) };
+    const values = { ...row.values, description: tidyCollected(row.values.description, row.values.title) };
     const { data, error } = await supabase.rpc("import_job", { ...toRpcArgs(values), p_hidden: hidden || reasons.length > 0 });
     if (error) {
       console.error("[import] 공고 저장 실패", error.code, error.message);
@@ -190,7 +200,39 @@ export async function importJobs(
     if (data) summary.createdIds.push(Number(data));
     if (data && reasons.length > 0) summary.review.push({ id: Number(data), title, reasons });
   }
+  summary.bodyFilled = await fillBodies(supabase, bodyWanted);
   return summary;
+}
+
+/**
+ * 본문 없이 먼저 들어온 공고(상세 내용이 예전 안내 글뿐이라 화면에 NO_BODY 한 줄만 보이는 공고)에, 같은 공고 줄로 받은 본문을 넣는다.
+ * 상세 내용 통일(2026-11-05) 전에 부산·경북·울산 수집 프로그램은 본문 대신 제목·분야·접수 마감·원문 주소만 보냈다.
+ * 본문이 이미 있는 공고는 건드리지 않는다 (운영자가 고친 글을 덮어쓰지 않게). 넣은 공고 수.
+ */
+async function fillBodies(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  wanted: Map<number, { body: string; title: string }>,
+): Promise<number> {
+  if (wanted.size === 0) return 0;
+  const ids = [...wanted.keys()];
+  const stubs: number[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await supabase.from("job_details").select("job_id, description").in("job_id", ids.slice(i, i + 200));
+    if (error) {
+      console.error("[import] 본문 채우기용 상세 내용 읽기 실패", error.code, error.message);
+      return 0;
+    }
+    for (const r of data as { job_id: number; description: string }[]) {
+      if (tidyCollected(r.description, wanted.get(r.job_id)?.title) === NO_BODY) stubs.push(r.job_id);
+    }
+  }
+  let filled = 0;
+  for (const id of stubs) {
+    const { error } = await supabase.from("job_details").update({ description: wanted.get(id)?.body }).eq("job_id", id);
+    if (error) console.error("[import] 본문 채우기 실패", error.code, error.message);
+    else filled += 1;
+  }
+  return filled;
 }
 
 /** 앞이나 끝이 '...'·'…'로 잘린 제목 */
