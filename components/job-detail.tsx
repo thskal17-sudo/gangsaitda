@@ -38,8 +38,14 @@ export function TextSection({ title, children }: { title: string; children: Reac
 }
 
 /** 한 줄에 하나씩 적은 글을 점 목록으로 보여준다. */
+/** 한글 문서 기호 글꼴의 머리표(U+F0A6 등 사용자 정의 영역 글자). 화면에 '≣' 같은 모양으로 나와 뺀다. 줄 앞 점은 목록이 붙인다. */
+const SYMBOL_GLYPH = /[\uE000-\uF8FF]/g;
+
 export function LineList({ text }: { text: string }) {
-  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((line) => line.replace(SYMBOL_GLYPH, "").trim())
+    .filter(Boolean);
 
   return (
     <ul className="list-disc space-y-1 pl-5 marker:text-muted">
