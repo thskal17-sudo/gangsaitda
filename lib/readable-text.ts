@@ -64,8 +64,8 @@ function breakLines(text: string): string {
 }
 
 /** 화면에 보여 줄 상세 내용. 줄바꿈 없는 긴 글이면 줄을 나누고 띄어쓰기를 고친다.
- *  collected: 수집 프로그램이 가져온 공고면 '수집 공고 상세 내용 규칙'(tidyCollected)도 적용한다. */
-export function readableText(text: string, options: { collected?: boolean } = {}): string {
+ *  collected: 수집 프로그램이 가져온 공고면 '수집 공고 상세 내용 규칙'(tidyCollected)도 적용한다 (title 은 공고 제목). */
+export function readableText(text: string, options: { collected?: boolean; title?: string } = {}): string {
   if (!text) return text;
   let out = text;
   if (out.length >= MIN_LENGTH && !alreadyFormatted(out)) {
@@ -76,7 +76,7 @@ export function readableText(text: string, options: { collected?: boolean } = {}
       .replace(/\n{3,}/g, "\n\n")
       .trim();
   }
-  return options.collected ? tidyCollected(out) : out;
+  return options.collected ? tidyCollected(out, options.title) : out;
 }
 
 /*
@@ -87,7 +87,9 @@ export function readableText(text: string, options: { collected?: boolean } = {}
  * 되어 읽을 수 없다 (김해시 칠산서부동 교양강좌 강사 공고).
  *  1) 표에서 풀린 글은 빼고, 그 자리에 '원문 공고에서 확인' 안내를 한 줄 넣는다
  *  2) 한글 문서 기호 글꼴의 머리표(화면에 '≣'처럼 보임)는 '-'로 바꾼다
- *  3) 800자까지만 둔다 (줄 단위로 자르고, 잘랐으면 안내를 붙인다)
+ *  3) 800자까지만 둔다 (줄 단위로 자르고, 잘랐으면 '…')
+ *  4) 모양 통일 (2026-11-05): 위 정보 칸과 겹치는 줄(예전 수집 프로그램이 본문 대신 쓰던 제목·분야·접수 마감·원문 주소)을 빼고,
+ *     끝에 늘 같은 안내 한 줄(CLOSING)을 붙인다. 남은 본문이 없으면 NO_BODY 한 줄만 둔다.
  * 받는 문(lib/job-import.ts)이 저장하기 전에, 공고 화면이 이미 올라간 공고를 보여 줄 때 이 규칙을 쓴다.
  * 기관·운영자가 직접 쓴 공고에는 쓰지 않는다.
  */
@@ -95,7 +97,33 @@ export function readableText(text: string, options: { collected?: boolean } = {}
 /** 수집 공고 상세 내용 길이 한도 */
 export const COLLECTED_MAX = 800;
 export const TABLE_NOTICE = "(표로 된 내용은 원문 공고에서 확인해 주세요)";
-export const MORE_NOTICE = "… 나머지 내용은 원문 공고에서 확인해 주세요.";
+/** 모든 수집 공고 상세 내용 끝에 붙는 안내 */
+export const CLOSING = "자세한 내용과 지원 방법은 '원문 공고 보기'에서 확인해 주세요.";
+/** 본문을 가져오지 못한 수집 공고의 상세 내용 */
+export const NO_BODY = "공고 내용은 '원문 공고 보기'에서 확인해 주세요.";
+/** 예전 규칙이 자른 글 끝에 붙이던 안내 (다시 정리할 때 뺀다) */
+const OLD_MORE_NOTICE = "… 나머지 내용은 원문 공고에서 확인해 주세요.";
+
+/** 예전 수집 프로그램이 본문 대신 쓰던 안내 글의 표시 줄. 이 줄이 있는 글에서만 아래 겹치는 줄을 뺀다. */
+const STUB_MARK = /^(?:자세한 내용과 지원 방법은 원문 공고를 확인해 주세요\.|원문 공고:\s*https?:\/\/\S+)$/;
+/** 위 정보 칸과 겹치는 줄 ('분야: 학교 시간강사', '접수 마감: 2026-11-04') */
+const STUB_LINE = /^(?:분야|접수 마감):\s/;
+
+function squash(s: string): string {
+  return s.replace(/\s+/g, "");
+}
+
+/** 예전 안내 글(제목·분야·접수 마감·원문 주소)에서 위 정보 칸과 겹치는 줄을 뺀다. 다른 글은 그대로. */
+function dropStub(lines: string[], title?: string): string[] {
+  if (!lines.some((line) => STUB_MARK.test(line.trim()))) return lines;
+  const key = title ? squash(title) : "";
+  return lines.filter((line, i) => {
+    const t = line.trim();
+    if (STUB_MARK.test(t) || STUB_LINE.test(t)) return false;
+    // 첫 줄의 원문 제목 ('2026학년도 한얼고등학교 …'은 사이트 제목 '한얼고등학교 …'을 품는다)
+    return !(i === 0 && key.length >= 5 && squash(t).includes(key));
+  });
+}
 
 /** 이만큼 짧은 줄이 이만큼 이어지면 표 칸이 쪼개진 것으로 본다 */
 const FRAGMENT_LENGTH = 20;
@@ -150,21 +178,23 @@ function dropTables(text: string): string {
   return out.join("\n");
 }
 
-/** 800자까지만 (줄 단위로, 한 줄이 너무 길면 빈칸에서) 자르고 안내를 붙인다 */
+/** 안내 한 줄까지 800자 안쪽이 되게 (줄 단위로, 한 줄이 너무 길면 빈칸에서) 자르고 '…'를 붙인다 */
 function capLength(text: string): string {
-  if (text.length <= COLLECTED_MAX) return text;
-  const limit = COLLECTED_MAX - MORE_NOTICE.length - 1;
+  const limit = COLLECTED_MAX - CLOSING.length - 3;
+  if (text.length <= limit) return text;
   let cut = text.lastIndexOf("\n", limit);
   if (cut < limit / 2) cut = text.lastIndexOf(" ", limit);
   if (cut < limit / 2) cut = limit;
-  return `${text.slice(0, cut).trimEnd()}\n${MORE_NOTICE}`;
+  return `${text.slice(0, cut).trimEnd()} …`;
 }
 
-/** 수집 공고 상세 내용 규칙을 적용한다 (위 설명 참고). 몇 번을 적용해도 결과가 같다. */
-export function tidyCollected(text: string): string {
-  if (!text) return text;
+/** 수집 공고 상세 내용 규칙을 적용한다 (위 설명 참고). 몇 번을 적용해도 결과가 같다. title: 공고 제목 */
+export function tidyCollected(text: string, title?: string): string {
+  if (!text) return NO_BODY;
   // 한글 문서의 기호 글꼴로 쓴 머리표(U+F06D 등 사용자 정의 영역 글자)는 화면에 '≣' 같은 이상한 모양으로 나온다 → '-'
   const plain = text.replace(/^[ \t]*[\uE000-\uF8FF]+[ \t]*/gm, "- ").replace(/[\uE000-\uF8FF]/g, "");
-  const out = capLength(dropTables(plain).replace(/\n{3,}/g, "\n\n").trim());
-  return out || text;
+  // 이미 붙은 안내 줄은 빼고 다시 붙인다 (여러 번 적용해도 한 번만 붙게)
+  const lines = plain.split("\n").filter((line) => ![CLOSING, NO_BODY, OLD_MORE_NOTICE].includes(line.trim()));
+  const body = capLength(dropTables(dropStub(lines, title).join("\n")).replace(/\n{3,}/g, "\n\n").trim());
+  return body ? `${body}\n\n${CLOSING}` : NO_BODY;
 }
