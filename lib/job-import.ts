@@ -11,6 +11,7 @@ import { tidyCollected } from "@/lib/readable-text";
  * 엑셀 올리기와 같은 규칙(lib/job-excel.ts)으로 확인하므로 결과도 같다:
  *   - 사이트에 같은 공고가 이미 있으면 건너뜀 (같은 공고가 매일 다시 와도, 다른 곳에서 기관 이름을 붙인 제목으로 와도 한 번만 들어감.
  *     같은 공고인지는 lib/job-excel.ts 의 jobKeys: 제목이 같거나, 기관명이 같고 기관 이름을 뺀 제목이 같음)
+ *   - 잘린 제목('...강사 모집 …채용...')으로 먼저 들어온 공고는, 원문 주소가 같은 전체 제목 줄이 오면 제목을 고침 (titleFixed)
  *   - 상세 내용은 수집 공고 규칙대로 정리해 넣음 (표에서 풀린 글 빼기, 800자까지. lib/readable-text.ts 의 tidyCollected)
  *   - '처리' 칸이 제외·보류면 건너뜀
  *   - 꼭 있어야 하는 칸이 비었거나 마감이 지났으면 넣지 않음 (이유를 돌려줌)
@@ -37,6 +38,14 @@ export type ImportSummary = {
    * 운영자가 원문을 보고 마감일을 고친 뒤 관리자 공고 관리의 '숨김'에서 '다시 올리기'로 공개한다. 받는 문이 운영자 카톡으로 알린다.
    */
   review: { id: number; title: string; reasons: string[] }[];
+  /**
+   * 잘린 제목('...강사 모집 (간호사면허)【경총 … 채용...')으로 먼저 들어온 공고를, 원문 주소가 같은 전체 제목 줄로 고친 수.
+   * 제목이 바뀌면 같은 공고로 알아보지 못하므로 여기서 고친다 (cutTitleFixedBy 참고).
+   * 전체 제목 공고가 이미 따로 들어와 있으면 잘린 쪽을 숨긴다 (중복이라서).
+   */
+  titleFixed: number;
+  /** 원문 링크 없이 먼저 들어온 공고에, 같은 공고 줄의 원문 링크를 채운 수 */
+  sourceUrlFilled: number;
 };
 
 /**
@@ -59,30 +68,60 @@ export async function importJobs(
   const supabase = createServiceClient();
   if (!supabase) return { error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
 
-  const summary: ImportSummary = { received: rows.length, created: 0, createdIds: [], skipped: [], failed: [], review: [], regionUpdated: 0 };
+  const summary: ImportSummary = {
+    received: rows.length,
+    created: 0,
+    createdIds: [],
+    skipped: [],
+    failed: [],
+    review: [],
+    regionUpdated: 0,
+    titleFixed: 0,
+    sourceUrlFilled: 0,
+  };
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
 
   const { data: existingRows, error: readError } = await supabase
     .from("jobs")
-    .select("id, title, request_id, job_details(organization, region)");
+    .select("id, title, request_id, hidden_at, job_details(organization, region, source_url)");
   if (readError) {
     console.error("[import] 기존 공고 제목 읽기 실패", readError.code, readError.message);
     return { error: "기존 공고를 읽지 못했어요." };
   }
-  type ExistingRow = { id: number; title: string; request_id: number | null; job_details: { organization: string; region: string } | null };
+  type ExistingRow = {
+    id: number;
+    title: string;
+    request_id: number | null;
+    hidden_at: string | null;
+    job_details: { organization: string; region: string; source_url: string | null } | null;
+  };
   const existingJobs = (existingRows as unknown as ExistingRow[]).map((job) => ({
     id: job.id,
     title: job.title,
     organization: job.job_details?.organization,
     region: job.job_details?.region ?? "",
+    sourceUrl: job.job_details?.source_url?.trim() ?? "",
+    hidden: job.hidden_at !== null,
     fromRequest: job.request_id !== null,
   }));
+  // 잘린 제목으로 들어온 공고 (원문 주소 → 공고). 기관이 직접 올린 공고·숨긴 공고는 건드리지 않는다.
+  const cutByUrl = new Map<string, (typeof existingJobs)[number]>();
+  for (const job of existingJobs) {
+    if (job.sourceUrl && !job.fromRequest && !job.hidden && isCutTitle(job.title)) cutByUrl.set(job.sourceUrl, job);
+  }
+  const titleDone = new Set<number>();
+  /** 이 줄이 전체 제목을 가진, 잘린 제목 공고 (없으면 undefined) */
+  const cutJobFor = (values: { title: string; sourceUrl: string }) => {
+    const job = cutByUrl.get(values.sourceUrl.trim());
+    return job && !titleDone.has(job.id) && cutTitleFixedBy(job.title, values.title) ? job : undefined;
+  };
   const existing = jobKeySet(existingJobs);
   // 같은 공고 찾기용: 열쇠 → 이미 있는 공고 (지역 고치기에 씀)
   const byKey = new Map<string, (typeof existingJobs)[number]>();
   for (const job of existingJobs) for (const k of jobKeys(job.title, job.organization)) if (!byKey.has(k)) byKey.set(k, job);
   const regionFixed = new Set<number>();
+  const urlFilled = new Set<number>();
 
   const parsed = parseJobSheet(toSheet(rows), existing);
   if ("error" in parsed) return { error: parsed.error };
@@ -103,7 +142,34 @@ export async function importJobs(
             summary.regionUpdated += 1;
           }
         }
+        // 원문 링크 없이 먼저 들어온 공고: 새로 받은 줄에 원문 링크가 있으면 채운다
+        // (경남 시군 새올의 http:// 주소를 수집 프로그램이 빼고 보낸 적이 있다. 2026-11-04 창녕·거제·하동)
+        const sourceUrl = row.values.sourceUrl.trim();
+        if (job && !job.fromRequest && !job.sourceUrl && !urlFilled.has(job.id) && /^https?:\/\/\S+$/i.test(sourceUrl)) {
+          const { error } = await supabase.from("job_details").update({ source_url: sourceUrl }).eq("job_id", job.id).is("source_url", null);
+          if (error) console.error("[import] 원문 링크 채우기 실패", error.code, error.message);
+          else {
+            urlFilled.add(job.id);
+            summary.sourceUrlFilled += 1;
+          }
+        }
+        // 전체 제목 공고가 이미 따로 있으면, 같은 원문의 잘린 제목 공고는 중복이라 숨긴다
+        const cut = cutJobFor(row.values);
+        if (job && cut && cut.id !== job.id) {
+          titleDone.add(cut.id);
+          const { error } = await supabase.from("jobs").update({ hidden_at: new Date().toISOString() }).eq("id", cut.id).is("hidden_at", null);
+          if (error) console.error("[import] 잘린 제목 중복 숨기기 실패", error.code, error.message);
+          else summary.titleFixed += 1;
+        }
       }
+      continue;
+    }
+    // 잘린 제목으로 먼저 들어온 공고가 있으면 새로 넣지 않고 그 공고의 제목을 고친다
+    const cut = cutJobFor(row.values);
+    if (cut) {
+      titleDone.add(cut.id);
+      if (await fixCutTitle(supabase, cut.id, cut.title, row.values.title)) summary.titleFixed += 1;
+      summary.skipped.push({ title, reason: "잘린 제목으로 이미 있던 공고의 제목을 고쳤어요" });
       continue;
     }
     if (row.problem) {
@@ -125,6 +191,44 @@ export async function importJobs(
     if (data && reasons.length > 0) summary.review.push({ id: Number(data), title, reasons });
   }
   return summary;
+}
+
+/** 앞이나 끝이 '...'·'…'로 잘린 제목 */
+const CUT_EDGES = /^\s*(?:\.{2,}|…)|(?:\.{2,}|…)\s*$/g;
+
+/** 수집할 때 잘린 제목인가 ('...강사 모집 (간호사면허)【경총 중장년내일센터 채용...') */
+export function isCutTitle(title: string): boolean {
+  return new RegExp(CUT_EDGES.source).test(title);
+}
+
+/**
+ * incoming 이 잘린 제목 cut 의 전체 제목인가: incoming 은 잘리지 않았고, cut 에서 '...'를 뺀 글이 incoming 안에 있다.
+ * 예) '...강사 모집 (간호사면허)【경총 중장년내일센터 채용...' → '요양보호사 교육원 강사 모집 (간호사면허)【경총 중장년내일센터 채용대행】'
+ */
+export function cutTitleFixedBy(cut: string, incoming: string): boolean {
+  const core = cut.replace(CUT_EDGES, "").replace(/\s+/g, "");
+  return isCutTitle(cut) && !isCutTitle(incoming) && core.length >= 6 && incoming.replace(/\s+/g, "").includes(core);
+}
+
+/** 잘린 제목을 전체 제목으로 바꾼다. 상세 내용 첫머리에 잘린 제목이 그대로 들어 있으면 그것도 바꾼다. */
+async function fixCutTitle(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  id: number,
+  cut: string,
+  full: string,
+): Promise<boolean> {
+  const { error } = await supabase.from("jobs").update({ title: full }).eq("id", id);
+  if (error) {
+    console.error("[import] 잘린 제목 고치기 실패", error.code, error.message);
+    return false;
+  }
+  const { data } = await supabase.from("job_details").select("description").eq("job_id", id).maybeSingle();
+  const description = (data as { description: string } | null)?.description ?? "";
+  if (description.includes(cut)) {
+    const { error: e } = await supabase.from("job_details").update({ description: description.split(cut).join(full) }).eq("job_id", id);
+    if (e) console.error("[import] 잘린 제목(상세 내용) 고치기 실패", e.code, e.message);
+  }
+  return true;
 }
 
 /** 지금 지역이 시도만('경남')이고 새 지역이 그 시도의 시군·구('경남 창녕군')면 true */
@@ -197,7 +301,7 @@ export const MAX_REMOVED = 100;
  * (지우지 않는다. 관리자 공고 관리의 '숨김'에서 '다시 올리기'로 되돌릴 수 있다). 이미 숨긴 공고는 그대로라 여러 번 받아도 된다.
  */
 export async function hideRemovedJobs(urls: string[], today: string): Promise<HiddenJob[] | { error: string }> {
-  const wanted = [...new Set(urls.map((u) => u.trim()).filter((u) => /^https:\/\//i.test(u)))].slice(0, MAX_REMOVED);
+  const wanted = [...new Set(urls.map((u) => u.trim()).filter((u) => /^https?:\/\//i.test(u)))].slice(0, MAX_REMOVED);
   if (wanted.length === 0) return [];
   const supabase = createServiceClient();
   if (!supabase) return { error: "SUPABASE_SECRET_KEY 환경 변수가 없어요." };
