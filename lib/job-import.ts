@@ -14,6 +14,7 @@ import { NO_BODY, tidyCollected } from "@/lib/readable-text";
  *   - 잘린 제목('...강사 모집 …채용...')으로 먼저 들어온 공고는, 원문 주소가 같은 전체 제목 줄이 오면 제목을 고침 (titleFixed)
  *   - 상세 내용은 수집 공고 규칙대로 정리해 넣음 (표에서 풀린 글 빼기, 800자까지, 끝에 같은 안내 한 줄. lib/readable-text.ts 의 tidyCollected)
  *   - 본문 없이 먼저 들어온 공고는 같은 공고 줄의 본문으로 채움 (bodyFilled)
+ *   - 같은 자리의 다음 차수 공고(2차·재공고)가 오면 지난 차수 공고를 숨김 (superseded). 지난 차수 줄은 새로 넣지 않음
  *   - '처리' 칸이 제외·보류면 건너뜀
  *   - 꼭 있어야 하는 칸이 비었거나 마감이 지났으면 넣지 않음 (이유를 돌려줌)
  */
@@ -49,6 +50,8 @@ export type ImportSummary = {
   sourceUrlFilled: number;
   /** 본문 없이 먼저 들어온 공고에, 같은 공고 줄의 본문을 넣은 수 (fillBodies) */
   bodyFilled: number;
+  /** 같은 자리의 다음 차수 공고(2차·재공고)가 있어 숨긴 지난 차수 공고 (hideSupersededRounds). 받는 문이 카톡으로 알린다 */
+  superseded: HiddenJob[];
 };
 
 /**
@@ -82,6 +85,7 @@ export async function importJobs(
     titleFixed: 0,
     sourceUrlFilled: 0,
     bodyFilled: 0,
+    superseded: [],
   };
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
@@ -127,6 +131,7 @@ export async function importJobs(
   const regionFixed = new Set<number>();
   const urlFilled = new Set<number>();
   const bodyWanted = new Map<number, { body: string; title: string }>();
+  const createdJobs: SeriesJob[] = [];
 
   const parsed = parseJobSheet(toSheet(rows), existing);
   if ("error" in parsed) return { error: parsed.error };
@@ -186,6 +191,11 @@ export async function importJobs(
       summary.failed.push({ title, reason: row.problem });
       continue;
     }
+    // 같은 자리의 더 나중 차수 공고가 이미 있으면 지난 차수 줄은 넣지 않는다 ('… 공고(1차)' 뒤에 '… 공고(2차)'가 있음)
+    if (existingJobs.some((job) => !job.fromRequest && laterRoundOf(job, row.values))) {
+      summary.skipped.push({ title, reason: "같은 자리의 다음 차수 공고가 이미 있어요" });
+      continue;
+    }
     // 마감일을 믿기 어려운 공고(수시 접수 등)는 숨김으로 넣고 운영자가 확인한다.
     const reasons = deadlineReviewReasons(row.values);
     // 상세 내용은 '수집 공고 상세 내용 규칙'대로 정리해 넣는다 (표에서 풀린 글 빼기, 800자까지. lib/readable-text.ts)
@@ -197,11 +207,132 @@ export async function importJobs(
       continue;
     }
     summary.created += 1;
-    if (data) summary.createdIds.push(Number(data));
+    if (data) {
+      summary.createdIds.push(Number(data));
+      createdJobs.push({ id: Number(data), title: values.title, organization: values.organization, hidden: hidden || reasons.length > 0 });
+    }
     if (data && reasons.length > 0) summary.review.push({ id: Number(data), title, reasons });
   }
   summary.bodyFilled = await fillBodies(supabase, bodyWanted);
+  const series = [...existingJobs.filter((job) => !job.fromRequest), ...createdJobs];
+  summary.superseded = await hideSupersededRounds(supabase, series);
   return summary;
+}
+
+/*
+ * 지난 차수 공고 숨기기 (2026-11-06)
+ *
+ * 학교는 지원자가 없으면 같은 자리를 '(2차)', '재공고'로 다시 올린다. 수집 프로그램은 이것을 다른 공고로 보내서
+ * 사이트에 1차와 2차가 함께 남았다 ('[형곡초등학교] 계약제교원(전일제강사_1,2학년 담임, 전담) 채용 공고(1차)'와 '(2차)').
+ * 기관명이 같고, 연도·차수 표시를 뺀 제목이 거의 같으면(글자 짝 겹침 0.85 이상) 같은 자리로 보고, 차수가 낮은 쪽을 숨긴다.
+ * '(전일제강사_체육)'과 '(전일제강사_체육 전담)'은 같은 자리(0.88), '1,2학년 담임'과 '체육'은 다른 자리(0.67)로 본다.
+ */
+
+/** 차수 표시: '(2차)', '2차', '제2차', '재공고', '재재공고', '(재)' ('1차시'는 아님) */
+const ROUND_MARK = /\(?\s*(?:제\s*)?(\d{1,2})\s*차(?!시)\s*\)?|\(?\s*(재+)\s*공고\s*\)?|\(\s*재\s*\)/g;
+/** 같은 자리로 볼 제목 닮음 정도 */
+const SAME_SERIES = 0.85;
+
+type SeriesJob = { id: number; title: string; organization?: string; hidden: boolean };
+
+/** 차수: '(2차)' → 2, '재공고' → 2, '재재공고' → 3, 표시 없으면 1 */
+export function roundOf(title: string): number {
+  let round = 1;
+  for (const m of title.matchAll(ROUND_MARK)) {
+    if (m[1]) round = Math.max(round, Number(m[1]));
+    else if (m[2]) round = Math.max(round, m[2].length + 1);
+    else round = Math.max(round, 2);
+  }
+  return round;
+}
+
+/** 차수·연도·기관 이름·기호를 뺀 제목 (같은 자리인지 비교용) */
+function seriesTitle(title: string, organization = ""): string {
+  const org = organization.replace(/\s+/g, "");
+  return title
+    .replace(ROUND_MARK, " ")
+    .replace(/20\d\d\s*(?:학년도|년도|년)?/g, " ")
+    .replace(/\s+/g, "")
+    .split(org || "\u0000")
+    .join("")
+    .replace(/[^0-9A-Za-z가-힣]/g, "");
+}
+
+function bigrams(s: string): Map<string, number> {
+  const out = new Map<string, number>();
+  for (let i = 0; i < s.length - 1; i += 1) out.set(s.slice(i, i + 2), (out.get(s.slice(i, i + 2)) ?? 0) + 1);
+  return out;
+}
+
+/** 글자 짝(두 글자씩) 겹침 정도 0~1 */
+function likeness(a: string, b: string): number {
+  if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+  const A = bigrams(a);
+  const B = bigrams(b);
+  let common = 0;
+  for (const [k, n] of A) common += Math.min(n, B.get(k) ?? 0);
+  return (2 * common) / (a.length - 1 + (b.length - 1));
+}
+
+/** a 와 b 가 같은 자리 공고인가 (기관명 같고 차수 뺀 제목이 거의 같음) */
+export function sameSeries(a: { title: string; organization?: string }, b: { title: string; organization?: string }): boolean {
+  const orgA = (a.organization ?? "").replace(/\s+/g, "");
+  if (!orgA || orgA !== (b.organization ?? "").replace(/\s+/g, "")) return false;
+  const ta = seriesTitle(a.title, orgA);
+  const tb = seriesTitle(b.title, orgA);
+  return Math.min(ta.length, tb.length) >= 8 && likeness(ta, tb) >= SAME_SERIES;
+}
+
+/** later 가 earlier 와 같은 자리의 더 나중 차수 공고인가 */
+function laterRoundOf(later: { title: string; organization?: string }, earlier: { title: string; organization?: string }): boolean {
+  return roundOf(later.title) > roundOf(earlier.title) && sameSeries(later, earlier);
+}
+
+/** 같은 자리의 더 나중 차수 공고가 있는, 아직 보이는 공고를 숨긴다. 숨긴 공고 목록. */
+async function hideSupersededRounds(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  jobs: SeriesJob[],
+): Promise<HiddenJob[]> {
+  const byOrg = new Map<string, SeriesJob[]>();
+  for (const job of jobs) {
+    const org = (job.organization ?? "").replace(/\s+/g, "");
+    if (org) byOrg.set(org, [...(byOrg.get(org) ?? []), job]);
+  }
+  const stale = new Map<number, SeriesJob>();
+  for (const group of byOrg.values()) {
+    if (group.length < 2) continue;
+    for (const older of group) {
+      if (!older.hidden && group.some((newer) => newer.id !== older.id && laterRoundOf(newer, older))) stale.set(older.id, older);
+    }
+  }
+  if (stale.size === 0) return [];
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ hidden_at: new Date().toISOString() })
+    .in("id", [...stale.keys()])
+    .is("hidden_at", null)
+    .select("id");
+  if (error) {
+    console.error("[import] 지난 차수 공고 숨기기 실패", error.code, error.message);
+    return [];
+  }
+  return (data as { id: number }[]).map((r) => {
+    const job = stale.get(r.id);
+    return { id: r.id, title: job?.title ?? "", organization: job?.organization ?? "" };
+  });
+}
+
+/**
+ * 지난 차수 공고를 숨긴 카톡 문구.
+ * 예) [강사잇다] 다음 차수 공고가 올라와 지난 공고 1건을 숨겼어요
+ *     • [형곡초등학교] 계약제교원(전일제강사_1,… (형곡초등학교)
+ */
+export function supersededKakaoText(items: HiddenJob[]): string {
+  return kakaoListText(
+    `[강사잇다] 다음 차수 공고가 올라와 지난 공고 ${items.length}건을 숨겼어요`,
+    items.map((item) => `${shortTitle(item.title)} (${item.organization})`),
+    "같은 자리의 2차·재공고가 있어 지난 차수 공고를 숨겼어요. 잘못 숨겼으면 '다시 올리기'를 눌러 주세요.",
+  );
 }
 
 /**
