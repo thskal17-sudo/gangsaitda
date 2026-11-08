@@ -6,8 +6,9 @@ import { OPERATOR } from "@/lib/site";
  * 회원 종류가 맞지 않는 화면에 들어왔을 때의 안내.
  * 예) 기관 회원이 '내 프로필'에, 강사 회원이 '강사섭외 의뢰'에 들어왔을 때.
  * 종류는 회원이 바꿀 수 없어서 운영자에게 알려 달라고 안내하고, 그 회원이 쓰는 화면으로 보낸다.
+ * description: 화면에 맞는 설명 (없으면 기본 문구. 예: 출강잇다는 '출강잇다를 쓸 수 없어요')
  */
-export default function MemberTypeNotice({ need }: { need: MemberType }) {
+export default function MemberTypeNotice({ need, description }: { need: MemberType; description?: string }) {
   const text =
     need === "강사"
       ? {
@@ -22,6 +23,8 @@ export default function MemberTypeNotice({ need }: { need: MemberType }) {
           href: "/account/profile",
           cta: "내 프로필 등록하기",
         };
+
+  if (description) text.description = description;
 
   return (
     <section className="rounded-card bg-white p-6 text-center md:p-10">
