@@ -98,7 +98,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       {urgentSaved.length > 0 && <SavedDeadlineBox jobs={urgentSaved} today={today} />}
 
       {/* ② 바로가기. PC 에서는 나란히
-          비회원: 강사 가입 + 강사섭외 / 강사 회원: 내 프로필 + 내 지원 현황 / 기관 회원: 강사섭외 의뢰 + 내 의뢰
+          비회원: 강사 가입 + 강사섭외 / 강사 회원: 내 프로필 + 내 지원 현황 + 출강잇다(PC 두 칸) / 기관 회원: 강사섭외 의뢰 + 내 의뢰
           (회원 종류를 모르면 예전처럼 내 프로필 + 강사섭외) */}
       <div className="mt-5 grid grid-cols-1 gap-3 md:mt-12 md:grid-cols-2 md:gap-6">
         {memberType === "기관" ? (
@@ -125,6 +125,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             )}
             {memberType === "강사" && (
               <ShortcutBox href="/account/applications" title="내 지원 현황" description="담아 둔 관심 공고와 지원·추천 진행 보기" />
+            )}
+            {memberType === "강사" && (
+              <ShortcutBox href="/chulgang" title="출강잇다" description="내 구글 캘린더로 강의 일정·강의료·입금 관리" wide />
             )}
             {memberType !== "강사" && (
               <ShortcutBox href="/request" title="강사가 필요하신가요?" description="학교·기관 강사섭외 의뢰하기" />

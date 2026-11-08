@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "마이페이지", robots: { index: f
 
 /**
  * 마이페이지 (회원만). 위쪽 띠의 [마이페이지] 버튼으로 들어온다. 회원 종류에 따라 메뉴가 다르다.
- * - 강사 회원: 관심 공고(담은 수) · 지원·추천 현황(진행 중 수) · 내 프로필(등록 여부) · 문자 수신 설정 · 로그아웃
+ * - 강사 회원: 관심 공고(담은 수) · 지원·추천 현황(진행 중 수) · 내 프로필(등록 여부) · 출강잇다 · 문자 수신 설정 · 로그아웃
  * - 기관 회원: 내 의뢰(보낸 수) · 활용설명서 · 문자 수신 설정 · 로그아웃
  * 회원 종류를 아직 모르면(SQL 실행 전) 강사 메뉴를 보여 준다 (가입할 때 기본 종류가 강사).
  * 회원 탈퇴는 지금처럼 사이트 맨 아래 링크에 둔다.
@@ -59,6 +59,7 @@ export default async function MyPage() {
         infoTone: profile ? undefined : "text-accent",
         description: "기관 의뢰가 오면 운영자가 골라 전달하는 프로필",
       },
+      { href: "/chulgang", label: "출강잇다", description: "내 구글 캘린더로 강의 일정·강의료·입금 관리" },
       { href: "/account/sms", label: "문자 수신 설정", info: smsText },
     ];
   }
