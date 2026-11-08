@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "개인정보처리방침" };
 /*
  * 개인정보처리방침. 실제로 받는 정보(회원가입, 강사섭외 의뢰)와 동의 문구(components/privacy-consent.tsx)에 맞춘다.
  * 받는 항목·보관 기간·맡기는 회사가 바뀌면 이 화면도 함께 고친다.
- * 10번 'Google 캘린더 연동(출강잇다)'은 Google 검토(OAuth 앱 공개)에 꼭 있어야 하는 내용이다. 지우거나 바꾸면 검토에 걸릴 수 있다.
+ * 출강잇다(Google 캘린더 연동) 문단은 정식 오픈 전(특허 출원 전)이라 빼 두었다. Google 검토(앱 공개) 전에 다시 넣어야 한다 (docs/SPEC.md 4-7).
  */
 export default function PrivacyPage() {
   const o = OPERATOR;
@@ -177,26 +177,7 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section n={10} title="Google 캘린더 연동(출강잇다)">
-          <p>
-            강사 회원이 &lsquo;출강잇다&rsquo;에서 Google 캘린더를 연결하면, 강사잇다는 회원의 동의를 받아 Google 캘린더의 일정 정보를 읽고 수정합니다.
-          </p>
-          <Bullets
-            items={[
-              "이용 목적: 회원 본인의 강의 일정, 강의료, 입금 여부, 준비물을 화면에 보여 주고, 회원이 입력한 내용을 회원 본인의 Google 캘린더에 저장하기 위해서만 사용합니다.",
-              "저장: Google 캘린더에서 받은 정보는 회원의 브라우저 화면에서만 처리하며, 강사잇다 서버나 데이터베이스에 저장하지 않습니다. 회원이 입력한 강의료·입금 정보는 회원 본인의 Google 캘린더 일정 설명란에만 저장됩니다.",
-              "제3자 제공: Google 캘린더 정보를 다른 사람이나 회사에 제공하거나 판매하지 않으며, 광고에 사용하지 않습니다.",
-              "연결 해제: 출강잇다 화면의 ‘연결 해제’ 또는 Google 계정 설정(보안 → 서드파티 앱 및 서비스)에서 언제든 연결을 끊을 수 있습니다.",
-              <>
-                강사잇다의 Google API로부터 받은 정보의 사용 및 다른 앱으로의 전송은 제한적 사용 요구사항을 포함한{" "}
-                <LinkText href="https://developers.google.com/terms/api-services-user-data-policy">Google API 서비스 사용자 데이터 정책</LinkText>을
-                준수합니다.
-              </>,
-            ]}
-          />
-        </Section>
-
-        <Section n={11} title="개인정보 보호책임자">
+        <Section n={10} title="개인정보 보호책임자">
           <Table
             head={["구분", "내용"]}
             rows={[
@@ -206,7 +187,7 @@ export default function PrivacyPage() {
           />
         </Section>
 
-        <Section n={12} title="권익침해 구제 방법">
+        <Section n={11} title="권익침해 구제 방법">
           <p>개인정보 침해에 대한 상담이나 신고가 필요하면 아래 기관에 문의할 수 있습니다.</p>
           <Bullets
             items={[
@@ -218,7 +199,7 @@ export default function PrivacyPage() {
           />
         </Section>
 
-        <Section n={13} title="시행일">
+        <Section n={12} title="시행일">
           <p>이 개인정보처리방침은 {p.effectiveDate}부터 적용합니다. 내용이 바뀌면 시행 전에 사이트에 알립니다.</p>
         </Section>
       </div>
