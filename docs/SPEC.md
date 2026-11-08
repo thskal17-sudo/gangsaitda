@@ -596,8 +596,9 @@
 - 캘린더에 적는 형식 (일정 설명란 맨 위, 원래 메모는 그 아래에 그대로):
   `강의주제:` · `업체:` · `강사료:` · `공제:`(3.3% / 8.8% / 없음) · `입금:`(날짜) · `입금액:` · `준비: … ✓`. **'강사료:' 줄이 있는 일정을 강의로 봅니다.**
 - 권한: Google `calendar.events`(캘린더 일정 보기 및 수정) 하나만.
-- 환경 변수: **`NEXT_PUBLIC_GOOGLE_CLIENT_ID`** (Google OAuth 클라이언트 ID, 비밀 값 아님). 클라이언트 보안 비밀은 쓰지 않습니다.
-  없으면 화면은 열리지만 'Google 캘린더 연결'이 되지 않습니다.
+- Google 클라이언트 ID: `285647480179-…apps.googleusercontent.com` (Google Cloud 프로젝트 `chulgang-itda`, 비밀 값 아님).
+  `components/chulgang-app.tsx` 에 기본값으로 들어 있고, 환경 변수 **`NEXT_PUBLIC_GOOGLE_CLIENT_ID`** 가 있으면 그 값을 씁니다.
+  승인된 원본: `https://www.gangsaitda.com`, `https://gangsaitda.com`, `http://localhost:3000`. 클라이언트 보안 비밀은 쓰지 않습니다.
 - 파일: 화면 `components/chulgang-body.ts`, 모양 `app/chulgang/chulgang.css`(`.cg` 안에서만 적용), 동작 `public/chulgang/chulgang.js`, 연결 `components/chulgang-app.tsx`.
 - 개인정보처리방침 10번 'Google 캘린더 연동(출강잇다)' (Google 검토에 필요).
 
