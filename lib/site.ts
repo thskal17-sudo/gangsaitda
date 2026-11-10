@@ -9,7 +9,7 @@
 export const SITE_URL = "https://www.gangsaitda.com";
 
 /** 홈 첫 화면에 보여주는 함께하는 강사 수. 손으로 고친다 (예: "200+", "300+"). */
-export const INSTRUCTOR_COUNT_LABEL = "200+";
+export const INSTRUCTOR_COUNT_LABEL = "500+";
 
 /**
  * 운영자 정보. 사이트 맨 아래(푸터)에 공개된다.
