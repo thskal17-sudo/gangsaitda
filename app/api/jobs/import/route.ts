@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse, after } from "next/server";
 import { MAX_ROWS } from "@/lib/job-excel";
-import { MAX_REMOVED, hiddenKakaoText, hideRemovedJobs, importJobs, reviewKakaoText, supersededKakaoText } from "@/lib/job-import";
+import { MAX_REMOVED, hiddenKakaoText, hideRemovedJobs, importJobs, reviewKakaoText, supersededKakaoText, duplicateKakaoText } from "@/lib/job-import";
 import { todayInSeoul } from "@/lib/date";
 import { sendKakaoToMe } from "@/lib/kakao";
 import { SITE_URL } from "@/lib/site";
@@ -79,6 +79,10 @@ export async function POST(request: Request) {
   if (!review && shared.length > 0) after(() => shareNewJobsOnThreads(shared));
   if (result.review.length > 0) after(() => sendKakaoToMe(reviewKakaoText(result.review), `${SITE_URL}/admin/jobs?filter=hidden`, "숨긴 공고 보기"));
   // 같은 자리의 2차·재공고가 있어 지난 차수 공고를 숨겼으면 화면을 새로 그리고 운영자에게 알린다
+  if (result.duplicatesHidden.length > 0) {
+    revalidatePath("/", "layout");
+    after(() => sendKakaoToMe(duplicateKakaoText(result.duplicatesHidden), `${SITE_URL}/admin/jobs?filter=hidden`, "숨긴 공고 보기"));
+  }
   if (result.superseded.length > 0) {
     revalidatePath("/", "layout");
     after(() => sendKakaoToMe(supersededKakaoText(result.superseded), `${SITE_URL}/admin/jobs?filter=hidden`, "숨긴 공고 보기"));
