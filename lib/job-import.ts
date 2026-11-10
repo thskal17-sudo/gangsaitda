@@ -15,6 +15,7 @@ import { NO_BODY, tidyCollected } from "@/lib/readable-text";
  *   - 상세 내용은 수집 공고 규칙대로 정리해 넣음 (표에서 풀린 글 빼기, 800자까지, 끝에 같은 안내 한 줄. lib/readable-text.ts 의 tidyCollected)
  *   - 본문 없이 먼저 들어온 공고는 같은 공고 줄의 본문으로 채움 (bodyFilled)
  *   - 같은 자리의 다음 차수 공고(2차·재공고)가 오면 지난 차수 공고를 숨김 (superseded). 지난 차수 줄은 새로 넣지 않음
+ *   - 같은 기관·마감일에 제목만 조금 다른 같은 공고는 새로 넣지 않고, 이미 둘이 보이면 나중 것을 숨김 (duplicatesHidden)
  *   - '처리' 칸이 제외·보류면 건너뜀
  *   - 꼭 있어야 하는 칸이 비었거나 마감이 지났으면 넣지 않음 (이유를 돌려줌)
  */
@@ -52,6 +53,8 @@ export type ImportSummary = {
   bodyFilled: number;
   /** 같은 자리의 다음 차수 공고(2차·재공고)가 있어 숨긴 지난 차수 공고 (hideSupersededRounds). 받는 문이 카톡으로 알린다 */
   superseded: HiddenJob[];
+  /** 같은 기관·마감일에 제목만 조금 다른 같은 공고가 둘 보여 숨긴 쪽 (hideNearDuplicates). 받는 문이 카톡으로 알린다 */
+  duplicatesHidden: HiddenJob[];
 };
 
 /**
@@ -86,13 +89,14 @@ export async function importJobs(
     sourceUrlFilled: 0,
     bodyFilled: 0,
     superseded: [],
+    duplicatesHidden: [],
   };
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
 
   const { data: existingRows, error: readError } = await supabase
     .from("jobs")
-    .select("id, title, request_id, hidden_at, job_details(organization, region, source_url)");
+    .select("id, title, request_id, hidden_at, job_details(organization, region, source_url, deadline)");
   if (readError) {
     console.error("[import] 기존 공고 제목 읽기 실패", readError.code, readError.message);
     return { error: "기존 공고를 읽지 못했어요." };
@@ -102,7 +106,7 @@ export async function importJobs(
     title: string;
     request_id: number | null;
     hidden_at: string | null;
-    job_details: { organization: string; region: string; source_url: string | null } | null;
+    job_details: { organization: string; region: string; source_url: string | null; deadline: string | null } | null;
   };
   const existingJobs = (existingRows as unknown as ExistingRow[]).map((job) => ({
     id: job.id,
@@ -110,6 +114,7 @@ export async function importJobs(
     organization: job.job_details?.organization,
     region: job.job_details?.region ?? "",
     sourceUrl: job.job_details?.source_url?.trim() ?? "",
+    deadline: job.job_details?.deadline ?? "",
     hidden: job.hidden_at !== null,
     fromRequest: job.request_id !== null,
   }));
@@ -192,6 +197,11 @@ export async function importJobs(
       continue;
     }
     // 같은 자리의 더 나중 차수 공고가 이미 있으면 지난 차수 줄은 넣지 않는다 ('… 공고(1차)' 뒤에 '… 공고(2차)'가 있음)
+    // 같은 공고를 다른 게시판에 제목만 조금 다르게 올린 것 ('…및 학년말 방학 중…' / '…및 방학 중…')은 넣지 않는다
+    if (existingJobs.some((job) => !job.fromRequest && nearDuplicate(job, row.values))) {
+      summary.skipped.push({ title, reason: "같은 공고가 이미 있어요 (같은 기관·마감일, 제목이 조금 다름)" });
+      continue;
+    }
     if (existingJobs.some((job) => !job.fromRequest && laterRoundOf(job, row.values))) {
       summary.skipped.push({ title, reason: "같은 자리의 다음 차수 공고가 이미 있어요" });
       continue;
@@ -209,14 +219,92 @@ export async function importJobs(
     summary.created += 1;
     if (data) {
       summary.createdIds.push(Number(data));
-      createdJobs.push({ id: Number(data), title: values.title, organization: values.organization, hidden: hidden || reasons.length > 0 });
+      createdJobs.push({
+        id: Number(data),
+        title: values.title,
+        organization: values.organization,
+        deadline: values.deadline,
+        hidden: hidden || reasons.length > 0,
+      });
     }
     if (data && reasons.length > 0) summary.review.push({ id: Number(data), title, reasons });
   }
   summary.bodyFilled = await fillBodies(supabase, bodyWanted);
   const series = [...existingJobs.filter((job) => !job.fromRequest), ...createdJobs];
   summary.superseded = await hideSupersededRounds(supabase, series);
+  summary.duplicatesHidden = await hideNearDuplicates(supabase, series);
   return summary;
+}
+
+/*
+ * 제목만 조금 다른 같은 공고 (2026-11-10)
+ *
+ * 학교는 같은 공고를 교육청 게시판과 교육지원청 게시판에 함께 올리면서 제목을 조금 다르게 쓴다
+ * ('송정유치원 교육과정 겨울방학 및 학년말 방학 중 …' / '… 겨울방학 및 방학 중 …'). 제목이 똑같지 않아 같은 공고로 보지 못했다.
+ * 기관명·마감일·차수가 같고, 연도·기호를 뺀 제목 한쪽이 다른 쪽에서 글자 몇 개를 뺀 것(빠진 글자가 4분의 1 이하)이면 같은 공고로 본다.
+ * '방과후 영어 강사'와 '방과후 수학 강사'처럼 다른 낱말로 바뀐 제목은 같은 공고로 보지 않는다.
+ */
+
+/** short 의 글자가 long 안에 차례대로 모두 있는가 (long 에서 글자 몇 개를 빼면 short 가 되는가) */
+function isSubsequence(short: string, long: string): boolean {
+  let i = 0;
+  for (const ch of long) if (i < short.length && ch === short[i]) i += 1;
+  return i === short.length;
+}
+
+type DuplicateCandidate = { title: string; organization?: string; deadline?: string };
+
+/** a 와 b 가 제목만 조금 다른 같은 공고인가 */
+export function nearDuplicate(a: DuplicateCandidate, b: DuplicateCandidate): boolean {
+  const org = (a.organization ?? "").replace(/\s+/g, "");
+  if (!org || org !== (b.organization ?? "").replace(/\s+/g, "")) return false;
+  if (!a.deadline || a.deadline !== b.deadline || roundOf(a.title) !== roundOf(b.title)) return false;
+  const ta = seriesTitle(a.title, org);
+  const tb = seriesTitle(b.title, org);
+  if (ta === tb) return true;
+  const [short, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  return short.length >= 12 && short.length * 4 >= long.length * 3 && isSubsequence(short, long);
+}
+
+/** 제목만 조금 다른 같은 공고가 둘 이상 보이면 나중에 올라간 쪽(번호가 큰 쪽)을 숨긴다. 숨긴 공고 목록. */
+async function hideNearDuplicates(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  jobs: SeriesJob[],
+): Promise<HiddenJob[]> {
+  const visible = jobs.filter((job) => !job.hidden).sort((x, y) => x.id - y.id);
+  const dup = new Map<number, SeriesJob>();
+  visible.forEach((job, i) => {
+    if (dup.has(job.id)) return;
+    for (const later of visible.slice(i + 1)) if (!dup.has(later.id) && nearDuplicate(job, later)) dup.set(later.id, later);
+  });
+  if (dup.size === 0) return [];
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ hidden_at: new Date().toISOString() })
+    .in("id", [...dup.keys()])
+    .is("hidden_at", null)
+    .select("id");
+  if (error) {
+    console.error("[import] 같은 공고(제목 조금 다름) 숨기기 실패", error.code, error.message);
+    return [];
+  }
+  return (data as { id: number }[]).map((r) => {
+    const job = dup.get(r.id);
+    return { id: r.id, title: job?.title ?? "", organization: job?.organization ?? "" };
+  });
+}
+
+/**
+ * 같은 공고가 두 번 올라가 하나를 숨긴 카톡 문구.
+ * 예) [강사잇다] 같은 공고가 두 번 올라가 1건을 숨겼어요
+ *     • 송정유치원 교육과정 겨울방학 및 방학… (송정유치원)
+ */
+export function duplicateKakaoText(items: HiddenJob[]): string {
+  return kakaoListText(
+    `[강사잇다] 같은 공고가 두 번 올라가 ${items.length}건을 숨겼어요`,
+    items.map((item) => `${shortTitle(item.title)} (${item.organization})`),
+    "같은 기관·마감일에 제목만 조금 다른 공고를 하나만 남겼어요. 잘못 숨겼으면 '다시 올리기'를 눌러 주세요.",
+  );
 }
 
 /*
@@ -233,7 +321,7 @@ const ROUND_MARK = /\(?\s*(?:제\s*)?(\d{1,2})\s*차(?!시)\s*\)?|\(?\s*(재+)\s
 /** 같은 자리로 볼 제목 닮음 정도 */
 const SAME_SERIES = 0.85;
 
-type SeriesJob = { id: number; title: string; organization?: string; hidden: boolean };
+type SeriesJob = { id: number; title: string; organization?: string; deadline?: string; hidden: boolean };
 
 /** 차수: '(2차)' → 2, '재공고' → 2, '재재공고' → 3, 표시 없으면 1 */
 export function roundOf(title: string): number {
