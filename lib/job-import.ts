@@ -1,5 +1,6 @@
 import { toRpcArgs } from "@/lib/admin-job-schema";
 import { MAX_ROWS, REQUIRED_COLUMN_NAMES, SAME_JOB_EXISTS, jobKeySet, jobKeys, parseJobSheet } from "@/lib/job-excel";
+import { readAllRows } from "@/lib/supabase/read-all";
 import { createServiceClient } from "@/lib/supabase/service";
 import { deadlineReviewReasons } from "@/lib/deadline-review";
 import { NO_BODY, tidyCollected } from "@/lib/readable-text";
@@ -94,9 +95,14 @@ export async function importJobs(
   if (rows.length === 0) return summary;
   if (rows.length > MAX_ROWS) return { error: `한 번에 ${MAX_ROWS}줄까지 받을 수 있어요.` };
 
-  const { data: existingRows, error: readError } = await supabase
-    .from("jobs")
-    .select("id, title, request_id, hidden_at, job_details(organization, region, source_url, deadline)");
+  // 1000줄씩 나눠 끝까지 읽는다. 한 번에 읽으면 1000건 뒤 공고가 빠져 매번 '새 공고'로 다시 들어간다 (lib/supabase/read-all.ts)
+  const { data: existingRows, error: readError } = await readAllRows((from, to) =>
+    supabase
+      .from("jobs")
+      .select("id, title, request_id, hidden_at, job_details(organization, region, source_url, deadline)")
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
   if (readError) {
     console.error("[import] 기존 공고 제목 읽기 실패", readError.code, readError.message);
     return { error: "기존 공고를 읽지 못했어요." };
