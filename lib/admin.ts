@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { JobInput } from "@/lib/admin-job-schema";
 import { seoulDateOf } from "@/lib/date";
 import { getCurrentMember } from "@/lib/member";
+import { readAllPages } from "@/lib/supabase/pages";
 import { createClient } from "@/lib/supabase/server";
 
 /*
@@ -61,10 +62,14 @@ type AdminJobRow = {
 /** 모든 공고 — 마감된 것까지, 최근에 올린 순. 관리자 화면에서만 부른다. */
 export async function getAllJobsForAdmin(): Promise<AdminJob[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("jobs")
-    .select("id, title, created_at, hidden_at, job_details(organization, region, deadline)")
-    .order("id", { ascending: false });
+  // 1,000건이 넘어도 다 보이게 나눠 읽는다 (lib/supabase/pages.ts)
+  const { data, error } = await readAllPages((from, to) =>
+    supabase
+      .from("jobs")
+      .select("id, title, created_at, hidden_at, job_details(organization, region, deadline)")
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
   if (error) throw new Error(`공고를 불러오지 못했습니다 (관리자 목록): ${error.message}`);
 
   return (data as unknown as AdminJobRow[]).map((row) => ({

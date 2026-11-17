@@ -1,3 +1,4 @@
+import { readAllPages } from "@/lib/supabase/pages";
 import { createClient } from "@/lib/supabase/server";
 
 /*
@@ -126,7 +127,8 @@ export async function getTodayJobTitles(today: string): Promise<JobTitle[]> {
 /** 지원할 수 있는 공고의 번호·제목 — 비회원용. 마감이 지나지 않은 것만, 마감 가까운 순. */
 export async function getOpenJobTitles(today: string): Promise<JobTitle[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("open_job_titles", { today });
+  // 마감 전 공고가 1,000건을 넘어도 다 보이게 나눠 읽는다 (lib/supabase/pages.ts). 함수가 정렬해서 돌려준다
+  const { data, error } = await readAllPages<TitleRow>((from, to) => supabase.rpc("open_job_titles", { today }).range(from, to));
   if (error) fail("목록", error);
   return (data as TitleRow[]).map((row) => ({ id: String(row.id), title: row.title, regionGroup: row.region_group ?? undefined }));
 }
@@ -134,12 +136,9 @@ export async function getOpenJobTitles(today: string): Promise<JobTitle[]> {
 /** 지원할 수 있는 공고 — **회원용**. 마감이 지나지 않은 것만, 마감 가까운 순. */
 export async function getOpenJobs(today: string): Promise<Job[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("job_details")
-    .select(SUMMARY_COLUMNS)
-    .gte("deadline", today)
-    .order("deadline")
-    .order("job_id");
+  const { data, error } = await readAllPages((from, to) =>
+    supabase.from("job_details").select(SUMMARY_COLUMNS).gte("deadline", today).order("deadline").order("job_id").range(from, to),
+  );
   if (error) fail("목록", error);
   return (data as unknown as DetailRow[]).map(toSummary);
 }
