@@ -254,16 +254,68 @@ function isSubsequence(short: string, long: string): boolean {
 
 type DuplicateCandidate = { title: string; organization?: string; deadline?: string };
 
+/*
+ * 기관명이 다르게 적힌 같은 학교 (2026-11-17)
+ *
+ * 같은 공고가 게시판마다 기관명이 다르게 들어온다: '연천초등학교' / '연천초등학교병설유치원',
+ * '구미신평초등학교' / '경상북도구미교육지원청'(제목에 '(구미신평초병설유)유치원'). 기관명이 같아야 같은 공고로 봐서
+ * 사이트에 두 번 보였다. 기관명이나 (기관명이 학교가 아니면) 제목에서 읽은 학교 이름이 같으면 같은 기관으로 본다.
+ */
+
+const SCHOOL_SHORT: Record<string, string> = { 초등학교: "초", 중학교: "중", 고등학교: "고" };
+
+/** 학교 이름: '연천초등학교병설유치원'·'연천초병설유치원'·'연천초등학교' → '연천초'. 학교가 아니면 "" */
+export function schoolOf(text: string): string {
+  const s = text.replace(/\((?:공립|사립|국립)\)/g, "").replace(/\s+/g, "");
+  const annex = s.match(/([가-힣]{2,10}?)(?:초등학교|초)병설/);
+  if (annex) return `${annex[1]}초`;
+  const school = s.match(/([가-힣]{2,12}?)(초등학교|중학교|고등학교)/);
+  return school ? school[1] + SCHOOL_SHORT[school[2]] : "";
+}
+
+/** 같은 자리 공고를 묶어 볼 기관 열쇠: 학교 이름(기관명, 학교가 아니면 제목에서), 없으면 기관명 */
+function institutionKey(job: { title: string; organization?: string }): string {
+  const org = (job.organization ?? "").replace(/\s+/g, "");
+  return schoolOf(org) || schoolOf(job.title) || org;
+}
+
+/** 같은 공고를 낼 기관인가: 기관명이 같거나, 학교 이름이 같음 (기관명이 학교가 아니면 제목에서 읽는다) */
+function sameInstitution(a: { title: string; organization?: string }, b: { title: string; organization?: string }): boolean {
+  const orgA = (a.organization ?? "").replace(/\s+/g, "");
+  const orgB = (b.organization ?? "").replace(/\s+/g, "");
+  if (orgA && orgA === orgB) return true;
+  const schoolA = schoolOf(orgA) || schoolOf(a.title);
+  return schoolA !== "" && schoolA === (schoolOf(orgB) || schoolOf(b.title));
+}
+
+/** 비교에 상관없는 낱말: 공고 표시·수정·긴급 (같은 공고를 '…모집'·'…모집 공고문'·'(수정)…'으로 다시 올림) */
+const FILLER_WORDS = /공고문|공고|안내|채용|모집|수정|긴급|급구/g;
+
+/**
+ * 같은 공고인지 볼 제목: 차수·연도·기호·학교 이름·두 기관 이름·군더더기 낱말을 뺀다.
+ * a: 이 제목의 공고, b: 비교할 다른 공고
+ */
+function duplicateTitle(title: string, a: DuplicateCandidate, b: DuplicateCandidate): string {
+  let t = seriesTitle(title);
+  const school = schoolOf(a.organization ?? "") || schoolOf(a.title);
+  // '연천초' → '연천초등학교병설유치원'·'구미신평초병설유)유치원'·'연천초' 를 뺀다 ('○○중학교'는 '○○중'+'학교')
+  if (school) t = t.replace(new RegExp(`${school}(?:등학교|학교)?(?:병설유치원|병설유|병설)?(?:유치원)?`, "g"), "");
+  for (const org of [a.organization, b.organization]) {
+    const name = (org ?? "").replace(/[^0-9A-Za-z가-힣]/g, "");
+    if (name) t = t.split(name).join("");
+  }
+  return t.replace(FILLER_WORDS, "");
+}
+
 /** a 와 b 가 제목만 조금 다른 같은 공고인가 */
 export function nearDuplicate(a: DuplicateCandidate, b: DuplicateCandidate): boolean {
-  const org = (a.organization ?? "").replace(/\s+/g, "");
-  if (!org || org !== (b.organization ?? "").replace(/\s+/g, "")) return false;
-  if (!a.deadline || a.deadline !== b.deadline || roundOf(a.title) !== roundOf(b.title)) return false;
-  const ta = seriesTitle(a.title, org);
-  const tb = seriesTitle(b.title, org);
-  if (ta === tb) return true;
+  // 마감일 비교가 가장 가벼워 먼저 본다 (공고 수천 건을 서로 비교한다)
+  if (!a.deadline || a.deadline !== b.deadline || !sameInstitution(a, b) || roundOf(a.title) !== roundOf(b.title)) return false;
+  const ta = duplicateTitle(a.title, a, b);
+  const tb = duplicateTitle(b.title, b, a);
+  if (ta === tb) return ta.length >= 8;
   const [short, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
-  return short.length >= 12 && short.length * 4 >= long.length * 3 && isSubsequence(short, long);
+  return short.length >= 10 && short.length * 4 >= long.length * 3 && isSubsequence(short, long);
 }
 
 /** 제목만 조금 다른 같은 공고가 둘 이상 보이면 나중에 올라간 쪽(번호가 큰 쪽)을 숨긴다. 숨긴 공고 목록. */
@@ -364,10 +416,10 @@ function likeness(a: string, b: string): number {
 
 /** a 와 b 가 같은 자리 공고인가 (기관명 같고 차수 뺀 제목이 거의 같음) */
 export function sameSeries(a: { title: string; organization?: string }, b: { title: string; organization?: string }): boolean {
-  const orgA = (a.organization ?? "").replace(/\s+/g, "");
-  if (!orgA || orgA !== (b.organization ?? "").replace(/\s+/g, "")) return false;
-  const ta = seriesTitle(a.title, orgA);
-  const tb = seriesTitle(b.title, orgA);
+  // 기관명이 '서명초등학교' / '서명초병설유치원'처럼 달라도 학교가 같으면 같은 기관으로 본다 (sameInstitution)
+  if (!sameInstitution(a, b)) return false;
+  const ta = duplicateTitle(a.title, a, b);
+  const tb = duplicateTitle(b.title, b, a);
   return Math.min(ta.length, tb.length) >= 8 && likeness(ta, tb) >= SAME_SERIES;
 }
 
@@ -381,10 +433,11 @@ async function hideSupersededRounds(
   supabase: NonNullable<ReturnType<typeof createServiceClient>>,
   jobs: SeriesJob[],
 ): Promise<HiddenJob[]> {
+  // 기관(학교)별로 묶어 그 안에서만 비교한다. 기관명이 '서명초등학교'/'서명초병설유치원'처럼 달라도 같은 학교면 한 묶음
   const byOrg = new Map<string, SeriesJob[]>();
   for (const job of jobs) {
-    const org = (job.organization ?? "").replace(/\s+/g, "");
-    if (org) byOrg.set(org, [...(byOrg.get(org) ?? []), job]);
+    const key = institutionKey(job);
+    if (key) byOrg.set(key, [...(byOrg.get(key) ?? []), job]);
   }
   const stale = new Map<number, SeriesJob>();
   for (const group of byOrg.values()) {
