@@ -1,5 +1,5 @@
 import { toRpcArgs } from "@/lib/admin-job-schema";
-import { MAX_ROWS, REQUIRED_COLUMN_NAMES, SAME_JOB_EXISTS, jobKeySet, jobKeys, parseJobSheet } from "@/lib/job-excel";
+import { MAX_ROWS, REQUIRED_COLUMN_NAMES, SAME_JOB_EXISTS, jobKeySet, jobKeys, parseJobSheet, titleKey } from "@/lib/job-excel";
 import { readAllPages } from "@/lib/supabase/pages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { deadlineReviewReasons } from "@/lib/deadline-review";
@@ -17,6 +17,7 @@ import { NO_BODY, tidyCollected } from "@/lib/readable-text";
  *   - 본문 없이 먼저 들어온 공고는 같은 공고 줄의 본문으로 채움 (bodyFilled)
  *   - 같은 자리의 다음 차수 공고(2차·재공고)가 오면 지난 차수 공고를 숨김 (superseded). 지난 차수 줄은 새로 넣지 않음
  *   - 같은 기관·마감일에 제목만 조금 다른 같은 공고는 새로 넣지 않고, 이미 둘이 보이면 나중 것을 숨김 (duplicatesHidden)
+ *     제목·학교가 똑같은 복사본은 마감일이 달라도 가장 최근 것만 남김
  *   - '처리' 칸이 제외·보류면 건너뜀
  *   - 꼭 있어야 하는 칸이 비었거나 마감이 지났으면 넣지 않음 (이유를 돌려줌)
  */
@@ -54,7 +55,7 @@ export type ImportSummary = {
   bodyFilled: number;
   /** 같은 자리의 다음 차수 공고(2차·재공고)가 있어 숨긴 지난 차수 공고 (hideSupersededRounds). 받는 문이 카톡으로 알린다 */
   superseded: HiddenJob[];
-  /** 같은 기관·마감일에 제목만 조금 다른 같은 공고가 둘 보여 숨긴 쪽 (hideNearDuplicates). 받는 문이 카톡으로 알린다 */
+  /** 같은 공고가 둘 보여 숨긴 쪽 (hideNearDuplicates: 제목만 조금 다름, 또는 제목이 같은 복사본). 받는 문이 카톡으로 알린다 */
   duplicatesHidden: HiddenJob[];
 };
 
@@ -331,6 +332,15 @@ async function hideNearDuplicates(
 ): Promise<HiddenJob[]> {
   const visible = jobs.filter((job) => !job.hidden).sort((x, y) => x.id - y.id);
   const dup = new Map<number, SeriesJob>();
+  // 제목·학교가 똑같은 복사본: 마감일이 달라도 같은 공고다. 가장 최근에 받은 것(번호가 가장 큰 것)만 남긴다
+  // (2026-11-17: 받는 문이 공고를 1,000건만 읽던 동안 같은 공고가 브리핑마다 다시 만들어졌고, 그사이 마감일을
+  // 고쳐 읽은 복사본은 마감일이 달라 아래 규칙에 걸리지 않았다. '부산공업고등학교 시간강사 채용 공고(일본어)' 2건)
+  const copies = new Map<string, SeriesJob[]>();
+  for (const job of visible) {
+    const key = `${institutionKey(job)}|${titleKey(job.title)}`;
+    copies.set(key, [...(copies.get(key) ?? []), job]);
+  }
+  for (const group of copies.values()) for (const older of group.slice(0, -1)) dup.set(older.id, older);
   visible.forEach((job, i) => {
     if (dup.has(job.id)) return;
     for (const later of visible.slice(i + 1)) if (!dup.has(later.id) && nearDuplicate(job, later)) dup.set(later.id, later);
@@ -361,7 +371,7 @@ export function duplicateKakaoText(items: HiddenJob[]): string {
   return kakaoListText(
     `[강사잇다] 같은 공고가 두 번 올라가 ${items.length}건을 숨겼어요`,
     items.map((item) => `${shortTitle(item.title)} (${item.organization})`),
-    "같은 기관·마감일에 제목만 조금 다른 공고를 하나만 남겼어요. 잘못 숨겼으면 '다시 올리기'를 눌러 주세요.",
+    "같은 기관의 같은 공고(제목이 같거나 조금 다름)를 하나만 남겼어요. 잘못 숨겼으면 '다시 올리기'를 눌러 주세요.",
   );
 }
 
