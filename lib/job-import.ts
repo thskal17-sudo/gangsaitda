@@ -1,5 +1,6 @@
 import { toRpcArgs } from "@/lib/admin-job-schema";
 import { MAX_ROWS, REQUIRED_COLUMN_NAMES, SAME_JOB_EXISTS, jobKeySet, jobKeys, parseJobSheet, titleKey } from "@/lib/job-excel";
+import { addDays } from "@/lib/date";
 import { readAllPages } from "@/lib/supabase/pages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { deadlineReviewReasons } from "@/lib/deadline-review";
@@ -521,6 +522,54 @@ async function fillBodies(
     else filled += 1;
   }
   return filled;
+}
+
+/*
+ * 지난 공고 지우기 (2026-11-17)
+ *
+ * 마감일이 지난 지 한 달(OLD_JOB_DAYS)이 넘은 수집 공고는 지운다. 공고가 1,000건을 넘어 쌓이면서 관리자 목록·중복 확인이
+ * 무거워졌고, 오래 지난 공고는 다시 볼 일이 없다. 기관이 직접 올린 공고(request_id 있음)는 지원 기록이 걸려 있어 남긴다.
+ * 지우면 그 공고의 상세·관심 공고·스레드 게시 기록도 함께 지워진다 (데이터베이스 on delete cascade). 되돌릴 수 없다.
+ * 수집 프로그램은 마감 전 공고만 보내므로 지운 공고가 다시 들어오지 않는다.
+ */
+
+/** 마감일이 이 날수보다 더 지난 수집 공고를 지운다 */
+export const OLD_JOB_DAYS = 30;
+
+/** 마감일이 OLD_JOB_DAYS 일보다 더 지난 수집 공고를 지운다. 지운 공고 수 (실패하면 0). */
+export async function deleteOldJobs(today: string): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) return 0;
+  const cutoff = addDays(today, -OLD_JOB_DAYS);
+  const { data, error } = await readAllPages((from, to) =>
+    supabase
+      .from("job_details")
+      .select("job_id, jobs!inner(request_id)")
+      .lt("deadline", cutoff)
+      .is("jobs.request_id", null)
+      .order("job_id")
+      .range(from, to),
+  );
+  if (error) {
+    console.error("[import] 지난 공고 찾기 실패", error.code, error.message);
+    return 0;
+  }
+  const ids = (data as unknown as { job_id: number }[]).map((r) => r.job_id);
+  let deleted = 0;
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data: gone, error: deleteError } = await supabase
+      .from("jobs")
+      .delete()
+      .in("id", ids.slice(i, i + 200))
+      .is("request_id", null)
+      .select("id");
+    if (deleteError) {
+      console.error("[import] 지난 공고 지우기 실패", deleteError.code, deleteError.message);
+      break;
+    }
+    deleted += (gone as { id: number }[]).length;
+  }
+  return deleted;
 }
 
 /** 앞이나 끝이 '...'·'…'로 잘린 제목 */

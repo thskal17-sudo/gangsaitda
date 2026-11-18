@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse, after } from "next/server";
 import { MAX_ROWS } from "@/lib/job-excel";
-import { MAX_REMOVED, hiddenKakaoText, hideRemovedJobs, importJobs, reviewKakaoText, supersededKakaoText, duplicateKakaoText } from "@/lib/job-import";
+import { MAX_REMOVED, deleteOldJobs, hiddenKakaoText, hideRemovedJobs, importJobs, reviewKakaoText, supersededKakaoText, duplicateKakaoText } from "@/lib/job-import";
 import { todayInSeoul } from "@/lib/date";
 import { sendKakaoToMe } from "@/lib/kakao";
 import { SITE_URL } from "@/lib/site";
@@ -23,6 +23,7 @@ import { shareNewJobsOnThreads } from "@/lib/threads";
  *
  * "removed": [원문 주소, ...] (선택, 최대 100개) — 원문에서 내려간 공고 (학교가 지워 원문이 '사이트 오류'가 된 것).
  * 원문 링크가 같은 공고를 숨기고(lib/job-import.ts 의 hideRemovedJobs) 돌려주는 값의 hidden 에 담아, 운영자 카톡으로 알린다.
+ * 받을 때마다 마감이 한 달 넘게 지난 수집 공고를 지우고, 지운 수를 deletedOld 로 돌려준다 (deleteOldJobs).
  */
 
 const MIN_TOKEN_LENGTH = 20;
@@ -87,6 +88,9 @@ export async function POST(request: Request) {
     revalidatePath("/", "layout");
     after(() => sendKakaoToMe(supersededKakaoText(result.superseded), `${SITE_URL}/admin/jobs?filter=hidden`, "숨긴 공고 보기"));
   }
-  return NextResponse.json({ ...result, hidden: hiddenJobs, ...("error" in hidden ? { hiddenError: hidden.error } : {}) });
+  // 마감이 한 달 넘게 지난 수집 공고 지우기 (lib/job-import.ts 의 deleteOldJobs). 실패해도 등록 결과는 그대로 돌려준다
+  const deletedOld = await deleteOldJobs(todayInSeoul());
+  if (deletedOld > 0) revalidatePath("/", "layout");
+  return NextResponse.json({ ...result, hidden: hiddenJobs, deletedOld, ...("error" in hidden ? { hiddenError: hidden.error } : {}) });
 }
 
