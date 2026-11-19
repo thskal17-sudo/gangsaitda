@@ -69,7 +69,8 @@ type DetailRow = {
   jobs: { title: string; request_id?: number | null } | null;
 };
 
-const SUMMARY_COLUMNS = "job_id, organization, region, deadline, jobs!inner(title, request_id)";
+/** 목록용 칸. 숨김 여부까지 받아 숨긴 공고를 뺀다 (getOpenJobs) */
+const LIST_COLUMNS = "job_id, organization, region, deadline, jobs!inner(title, request_id, hidden_at)";
 
 /** 공고 번호는 숫자만 받는다. 엉뚱한 주소(/jobs/abc)는 데이터베이스에 묻지 않고 '없음'으로 본다. */
 function toJobId(id: string): number | null {
@@ -133,11 +134,22 @@ export async function getOpenJobTitles(today: string): Promise<JobTitle[]> {
   return (data as TitleRow[]).map((row) => ({ id: String(row.id), title: row.title, regionGroup: row.region_group ?? undefined }));
 }
 
-/** 지원할 수 있는 공고 — **회원용**. 마감이 지나지 않은 것만, 마감 가까운 순. */
+/**
+ * 지원할 수 있는 공고 — **회원용**. 마감이 지나지 않은 것만, 마감 가까운 순. 숨긴 공고는 뺀다.
+ * 데이터베이스 규칙은 관리자에게 숨긴 공고도 내준다(관리 화면용). 그래서 여기서 따로 빼지 않으면, 관리자로 로그인했을 때
+ * 홈·공고 목록에 중복으로 숨긴 공고까지 보였다 (2026-11-19: 엄궁초 공고가 2건, 전체 576건 — 비회원에게는 1건, 264건).
+ */
 export async function getOpenJobs(today: string): Promise<Job[]> {
   const supabase = await createClient();
   const { data, error } = await readAllPages((from, to) =>
-    supabase.from("job_details").select(SUMMARY_COLUMNS).gte("deadline", today).order("deadline").order("job_id").range(from, to),
+    supabase
+      .from("job_details")
+      .select(LIST_COLUMNS)
+      .gte("deadline", today)
+      .is("jobs.hidden_at", null)
+      .order("deadline")
+      .order("job_id")
+      .range(from, to),
   );
   if (error) fail("목록", error);
   return (data as unknown as DetailRow[]).map(toSummary);
