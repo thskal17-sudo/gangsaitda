@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { todayInSeoul } from "@/lib/date";
+import { nearDuplicate, sameSeries } from "@/lib/job-import";
 import { SITE_URL } from "@/lib/site";
 
 /*
@@ -17,7 +18,7 @@ import { SITE_URL } from "@/lib/site";
  *
  * 무엇을 올리나: 공고 제목과 링크만. 기관·지역·마감일·지원 방법 같은 회원 전용 내용은 넣지 않는다.
  *   공고 한 건 → 그 공고 상세 링크. 여러 건이 한꺼번에 올라오면(엑셀·수집) → 제목 몇 개를 묶어 글 하나로, 공고 목록 링크.
- * 같은 공고는 두 번 올리지 않는다 (threads_posts 표). 숨긴 공고, 마감 지난 공고, Threads 를 연결하기 전에 만든 공고는 올리지 않는다.
+ * 같은 공고는 두 번 올리지 않는다 (threads_posts 표 + 번호가 달라도 같은 공고면 건너뜀, 아래 sameShare). 숨긴 공고, 마감 지난 공고, Threads 를 연결하기 전에 만든 공고는 올리지 않는다.
  * 실패해도 공고 저장은 그대로다 (응답을 보낸 뒤 after 로 올리고, 이유는 표의 last_error 에 남긴다).
  *
  * 열쇠(토큰): 장기 토큰은 60일 간다. 공고를 올릴 때 마지막으로 늘린 지 하루가 지났으면 다시 60일로 늘린다.
@@ -332,7 +333,73 @@ export function composeThreadsText(jobs: NewJob[]): string {
   return [`[강사잇다 새 공고 ${jobs.length}건]`, "", MEMBER_NOTE, `${SITE_URL}/jobs`].join("\n");
 }
 
-type JobRow = { id: number; title: string; created_at: string; hidden_at: string | null; job_details: { deadline: string } | { deadline: string }[] | null };
+type JobDetail = { deadline: string; organization: string | null; source_url: string | null };
+type JobRow = { id: number; title: string; created_at: string; hidden_at: string | null; job_details: JobDetail | JobDetail[] | null };
+
+/*
+ * 같은 공고 두 번 올리지 않기 (2026-11-17)
+ *
+ * threads_posts 는 공고 번호로만 막아서, 같은 공고가 사이트에 다른 번호로 한 번 더 들어오면 Threads 에도 또 올라갔다
+ * (두 게시판에 제목을 조금 다르게 올린 공고, 2차·재공고, 잘린 제목으로 먼저 들어온 공고 등).
+ * 올리기 전에 최근 SAME_POST_DAYS 일 안에 Threads 에 올린 공고, 그리고 이번에 함께 올릴 공고끼리 비교해서
+ * 같은 공고로 보이면 Threads 에는 올리지 않는다 (사이트 공고는 그대로 둔다).
+ * 같은 공고로 보는 경우: 원문 주소가 같음 / 제목이 거의 같은 같은 기관 공고(lib/job-import.ts 의 nearDuplicate·sameSeries) /
+ * 기관 이름 한쪽이 다른 쪽을 품고('가양초'/'가양초등학교') 기관·연도·차수·기호를 뺀 제목이 똑같음.
+ */
+const SAME_POST_DAYS = 30;
+
+type ShareKey = { title: string; organization: string; deadline: string; sourceUrl: string };
+
+function shareKey(title: string, detail: Partial<JobDetail> | null | undefined): ShareKey {
+  return {
+    title,
+    organization: detail?.organization?.trim() ?? "",
+    deadline: detail?.deadline ?? "",
+    sourceUrl: detail?.source_url?.trim() ?? "",
+  };
+}
+
+/** 기관 이름·연도·차수·기호를 뺀 제목 (기관 이름을 조금 다르게 적어도 같은 제목으로 보려고) */
+function bareTitle(key: ShareKey): string {
+  return key.title
+    .replace(/\(?\s*(?:제\s*)?\d{1,2}\s*차(?!시)\s*\)?|\(?\s*재+\s*공고\s*\)?|\(\s*재\s*\)/g, " ")
+    .replace(/20\d\d\s*(?:학년도|년도|년)?/g, " ")
+    .split(key.organization || "\u0000")
+    .join("")
+    .replace(/[^0-9A-Za-z가-힣]/g, "");
+}
+
+/** a 와 b 를 Threads 에 따로 올리면 같은 공고가 두 번 보이는가 */
+export function sameShare(a: ShareKey, b: ShareKey): boolean {
+  if (a.sourceUrl && a.sourceUrl === b.sourceUrl) return true;
+  const x = { title: a.title, organization: a.organization, deadline: a.deadline };
+  const y = { title: b.title, organization: b.organization, deadline: b.deadline };
+  if (nearDuplicate(x, y) || sameSeries(x, y)) return true;
+  // 기관 이름을 줄여 적은 경우('가양초' / '가양초등학교')만. 다른 학교가 흔한 제목('겨울방학 방과후 강사 모집')을 쓴 건 다른 공고다
+  const oa = a.organization.replace(/\s+/g, "");
+  const ob = b.organization.replace(/\s+/g, "");
+  if (!oa || !ob || !(oa.includes(ob) || ob.includes(oa))) return false;
+  const ta = bareTitle(a);
+  return ta.length >= 12 && ta === bareTitle(b);
+}
+
+/** 최근 SAME_POST_DAYS 일 안에 Threads 에 올렸거나 올리는 중인 공고 */
+async function recentlySharedKeys(supabase: NonNullable<ReturnType<typeof createServiceClient>>): Promise<ShareKey[]> {
+  const since = new Date(Date.now() - SAME_POST_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("threads_posts")
+    .select("job_id, jobs(title, job_details(deadline, organization, source_url))")
+    .in("status", ["올림", "올리는 중"])
+    .gte("created_at", since);
+  if (error) throw new Error(`최근에 올린 공고를 읽지 못했어요: ${error.message}`);
+  type Row = { jobs: { title: string; job_details: JobDetail | JobDetail[] | null } | { title: string; job_details: JobDetail | JobDetail[] | null }[] | null };
+  return ((data ?? []) as unknown as Row[]).flatMap((r) => {
+    const job = Array.isArray(r.jobs) ? r.jobs[0] : r.jobs;
+    if (!job) return [];
+    const detail = Array.isArray(job.job_details) ? job.job_details[0] : job.job_details;
+    return [shareKey(job.title, detail)];
+  });
+}
 
 /**
  * 새로 사이트에 보이게 된 공고들을 Threads 에 올린다. 공고를 저장한 곳에서 after(() => shareNewJobsOnThreads(ids)) 로 부른다.
@@ -359,15 +426,28 @@ export async function shareNewJobsOnThreads(jobIds: (number | string)[], opts: {
     }
 
     // 올릴 공고 고르기: 보이는 공고, 마감 전, Threads 를 연결한 뒤에 만든 공고
-    const { data, error } = await supabase.from("jobs").select("id, title, created_at, hidden_at, job_details(deadline)").in("id", ids);
+    const { data, error } = await supabase.from("jobs").select("id, title, created_at, hidden_at, job_details(deadline, organization, source_url)").in("id", ids);
     if (error) throw new Error(`공고를 읽지 못했어요: ${error.message}`);
     const today = todayInSeoul();
     const connectedAt = Date.parse(row.connected_at);
-    const candidates = ((data ?? []) as JobRow[]).filter((job) => {
-      const detail = Array.isArray(job.job_details) ? job.job_details[0] : job.job_details;
-      // 다시 올리기(retry)는 연결 시각과 상관없이 올린다 (한 번 올리려다 실패한 공고라서)
-      return job.hidden_at === null && detail && detail.deadline >= today && (opts.retry || Date.parse(job.created_at) >= connectedAt);
-    });
+    const open = ((data ?? []) as JobRow[])
+      .filter((job) => {
+        const detail = Array.isArray(job.job_details) ? job.job_details[0] : job.job_details;
+        // 다시 올리기(retry)는 연결 시각과 상관없이 올린다 (한 번 올리려다 실패한 공고라서)
+        return job.hidden_at === null && detail && detail.deadline >= today && (opts.retry || Date.parse(job.created_at) >= connectedAt);
+      })
+      .sort((a, b) => a.id - b.id);
+    if (open.length === 0) return { posted: 0, error: null };
+
+    // 최근에 Threads 에 올린 공고, 또는 이번에 먼저 고른 공고와 같은 공고면 빼기 (번호가 작은 = 먼저 들어온 쪽만 남김)
+    const shared = await recentlySharedKeys(supabase);
+    const candidates: JobRow[] = [];
+    for (const job of open) {
+      const key = shareKey(job.title, Array.isArray(job.job_details) ? job.job_details[0] : job.job_details);
+      if (shared.some((s) => sameShare(key, s))) continue;
+      shared.push(key);
+      candidates.push(job);
+    }
     if (candidates.length === 0) return { posted: 0, error: null };
 
     // 같은 공고를 두 번 올리지 않게 먼저 표에 '올리는 중'으로 적는다. 이미 있는 공고는 건너뛴다.
